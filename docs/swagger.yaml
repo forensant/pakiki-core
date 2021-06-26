@@ -1,0 +1,558 @@
+definitions:
+  project.InjectOperation:
+    properties:
+      archived:
+        type: boolean
+      error:
+        type: string
+      fuzzDB:
+        items:
+          type: string
+        type: array
+      guid:
+        type: string
+      host:
+        type: string
+      injectDescription:
+        type: string
+      iterateFrom:
+        type: integer
+      iterateTo:
+        type: integer
+      knownFiles:
+        items:
+          type: string
+        type: array
+      objectType:
+        type: string
+      percentCompleted:
+        description: Parts of the object which cannot be set by JSON
+        type: integer
+      request:
+        type: string
+      requestsMadeCount:
+        type: integer
+      ssl:
+        type: boolean
+      title:
+        type: string
+      totalRequestCount:
+        type: integer
+      url:
+        type: string
+    type: object
+  project.Request:
+    properties:
+      error:
+        type: string
+      guid:
+        type: string
+      hash:
+        type: string
+      notes:
+        type: string
+      objectType:
+        type: string
+      protocol:
+        type: string
+      responseContentType:
+        type: string
+      responseSize:
+        type: integer
+      responseStatusCode:
+        type: integer
+      responseTime:
+        type: integer
+      scanID:
+        type: string
+      time:
+        type: integer
+      url:
+        type: string
+      verb:
+        type: string
+    type: object
+  project.RequestSummary:
+    properties:
+      guid:
+        type: string
+      hostname:
+        type: string
+      protocol:
+        type: string
+      requestData:
+        type: string
+    type: object
+  proxy.AddRequestToQueueParameters:
+    properties:
+      host:
+        type: string
+      request:
+        example: <base64 encoded request>
+        type: string
+      scan_id:
+        type: string
+      ssl:
+        type: boolean
+    type: object
+  proxy.MakeRequestParameters:
+    properties:
+      host:
+        type: string
+      request:
+        example: <base64 encoded request>
+        type: string
+      ssl:
+        type: boolean
+    type: object
+  proxy.PayloadFile:
+    properties:
+      filename:
+        type: string
+      samplePayloads:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  proxy.PayloadOptions:
+    properties:
+      attack:
+        items:
+          $ref: '#/definitions/proxy.PayloadFile'
+        type: array
+      knownFiles:
+        items:
+          $ref: '#/definitions/proxy.PayloadFile'
+        type: array
+    type: object
+  proxy.ProxySettings:
+    properties:
+      http11ProxyAddr:
+        type: string
+      http11UpstreamProxyAddr:
+        type: string
+    type: object
+  scripting.RunScriptParameters:
+    properties:
+      script:
+        type: string
+    type: object
+host: localhost
+info:
+  contact:
+    email: support@forensant.com
+    name: API Support
+    url: https://forensant.com/support
+  description: This provides the common functions which are relied upon by the Proximity
+    frontends.
+  license:
+    name: Commercial
+    url: https://proximity.forensant.com/terms
+  termsOfService: https://forensant.com/terms/
+  title: Proximity Core
+  version: "1.0"
+paths:
+  /inject_operation:
+    put:
+      description: updates the properties of an inject operation
+      parameters:
+      - description: Injection details in JSON format (not all fields can be set)
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/project.InjectOperation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Update Inject Operation
+      tags:
+      - Injection Operations
+  /inject_operation/archive:
+    put:
+      description: updates the the archived status of an inject operation
+      parameters:
+      - description: inject operation guid
+        in: formData
+        name: guid
+        required: true
+        type: string
+      - description: archive status to set
+        in: formData
+        name: archive
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Archive Inject Operation
+      tags:
+      - Injection Operations
+  /inject_operation/run:
+    post:
+      consumes:
+      - application/json
+      description: creates and runs an injection operation
+      parameters:
+      - description: Injection details in JSON format (not all fields can be set)
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/project.InjectOperation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Run an Injection Operation
+      tags:
+      - Injection Operations
+  /inject_operations:
+    get:
+      description: gets a list of all injection operations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/project.InjectOperation'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get All Inject Operations
+      tags:
+      - Injection Operations
+  /inject_operations/payloads:
+    get:
+      description: gets all available payloads available for injection
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy.PayloadOptions'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Gets injection payloads
+      tags:
+      - Injection Operations
+  /project/request:
+    get:
+      description: gets a specific request
+      parameters:
+      - description: The GUID of the request to fetch
+        in: query
+        name: guid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project.RequestSummary'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get A Request
+      tags:
+      - Requests
+  /project/request_response:
+    get:
+      description: gets the full request and response of a given request
+      produces:
+      - text/text
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get Request and Response
+      tags:
+      - Requests
+  /project/requests:
+    get:
+      description: gets a list of all requests
+      parameters:
+      - description: Scan ID
+        in: query
+        name: scanid
+        type: string
+      - description: Column to sort by (default time)
+        in: query
+        name: sort_col
+        type: string
+      - description: Column direction to sort by (default asc)
+        in: query
+        name: sort_dir
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/project.Request'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get All Requests
+      tags:
+      - Requests
+  /project/update_request:
+    post:
+      description: updates a specific request
+      parameters:
+      - description: The GUID of the request to update
+        in: body
+        name: guid
+        required: true
+        schema:
+          type: string
+      - description: The notes for the request
+        in: body
+        name: notes
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Update A Request
+      tags:
+      - Requests
+  /proxy/add_request_to_queue:
+    put:
+      description: add a request to the queue for scanning sites
+      parameters:
+      - description: Request Details
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/proxy.AddRequestToQueueParameters'
+      responses:
+        "200":
+          description: ""
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Add Request to Queue
+      tags:
+      - Requests
+  /proxy/ca_certificate.pem:
+    get:
+      description: returns the certificate authority root certificate
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Gets the root CA
+      tags:
+      - Settings
+  /proxy/make_request:
+    post:
+      consumes:
+      - application/json
+      description: makes a single request to a given server
+      parameters:
+      - description: Make Request Parameters in JSON format
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/proxy.MakeRequestParameters'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Make a single request
+      tags:
+      - Requests
+  /proxy/settings:
+    get:
+      description: get proxy settings
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy.ProxySettings'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get Proxy Settings
+      tags:
+      - Settings
+    put:
+      description: set proxy settings
+      parameters:
+      - description: Proxy Settings Object
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/proxy.ProxySettings'
+      responses:
+        "200":
+          description: ""
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Set Proxy Settings
+      tags:
+      - Settings
+  /scripts/cancel:
+    put:
+      description: cancels the provided script
+      parameters:
+      - description: Script to cancel
+        in: query
+        name: guid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Cancel the running script
+      tags:
+      - Scripting
+  /scripts/run:
+    post:
+      description: runs the provided script
+      parameters:
+      - description: Run Script Parameters in JSON format
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/scripting.RunScriptParameters'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Run provided script
+      tags:
+      - Scripting
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+swagger: "2.0"

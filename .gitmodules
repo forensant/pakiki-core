@@ -1,0 +1,3 @@
+[submodule "html_frontend"]
+	path = html_frontend
+	url = https://github.com/pipeline/proximity-frontend-html.git
