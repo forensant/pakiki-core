@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
+        with:
+          submodules: true
         
       - name: Use Node.js 16.x
         uses: actions/setup-node@v1
@@ -42,6 +44,8 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
+        with:
+          submodules: true
       
       - name: Download frontend
         uses: actions/download-artifact@v2
@@ -78,8 +82,9 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
-        
-      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
