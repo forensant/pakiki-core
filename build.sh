@@ -16,7 +16,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     gcc $(arch --x86_64 /usr/local/bin/python3.9-config --cflags) $(arch --x86_64 /usr/local/bin/python3.9-config --ldflags) $(arch --x86_64 /usr/local/bin/python3.9-config --libs) -lpython3.9 -lstdc++ scripting/interpreter/PythonInterpreter.cpp -target x86_64-apple-macos10.12 -o build/PythonInterpreter_x86_64
     lipo -create -output build/pythoninterpreter build/PythonInterpreter_arm64 build/PythonInterpreter_x86_64
     rm -rf build/PythonInterpreter_*
-    ln -s /opt/homebrew/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/ build/python39/lib/
+    ln -s $(python3.9 -c "import sys; print(sys.base_prefix + '/lib/python3.9/')") build/python39/lib/
 
     echo "# Building Proximity Core"
     CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o build/ProximityCore_amd64
@@ -27,7 +27,7 @@ else
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
     gcc $(python3.9-config --cflags) $(python3.9-config --ldflags) $(python3.9-config --libs) -fPIC scripting/interpreter/PythonInterpreter.cpp -o build/pythoninterpreter -lstdc++ -lpython3.9
-    ln -s /usr/lib/python3.9/ build/python39/lib
+    ln -s $(python3.9 -c "import sys; print(sys.base_prefix + '/lib/python3.9/')") build/python39/lib
 
     echo "# Building Proximity Core"
     go build -o build/proximitycore

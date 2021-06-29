@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -43,6 +44,21 @@ func CancelScriptInternal(guid string) error {
 	return nil
 }
 
+func readString(delimeter byte, r *bufio.Reader) (string, error) {
+	for {
+		str, err := r.ReadString(delimeter)
+		if err == nil {
+			return str, nil
+		} else if err != io.EOF {
+			return "", err
+		} else {
+			if str != "" {
+				fmt.Printf("EOF reached, string: %s\n", str)
+			}
+		}
+	}
+}
+
 func StartScript(hostPort string, script string, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
 
 	if guid == "" {
@@ -55,7 +71,6 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 	}
 
 	pythonPath := path + "/pythoninterpreter"
-	fmt.Println("Python path: " + pythonPath)
 	pythonCmd := exec.Command(pythonPath)
 	pythonIn, err := pythonCmd.StdinPipe()
 	if err != nil {
@@ -80,8 +95,7 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 		}
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
 
-		output, err := bufferedOutput.ReadString('\n')
-		fmt.Println("Output: " + output)
+		output, err := readString('\n', bufferedOutput)
 		if err != nil {
 			err := "Error running script: " + err.Error()
 			if scriptCaller != nil {
@@ -89,6 +103,10 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 			} else {
 				fmt.Println(err)
 			}
+
+			pythonCmd.Process.Kill()
+			delete(runningScripts, guid)
+
 			return
 		}
 
@@ -99,21 +117,31 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 			} else {
 				fmt.Println(err)
 			}
+			pythonCmd.Process.Kill()
+			delete(runningScripts, guid)
 			return
 		}
 
 		pythonIn.Write([]byte(script))
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER\n"))
 
-		outputBytes, err := ioutil.ReadAll(pythonOut)
-		if err != nil {
-			fmt.Println("Error reading output from script: " + err.Error())
-			return
-		}
+		go func() {
+			for {
+				outputBytes, err := ioutil.ReadAll(pythonOut)
 
-		outputToRecord := stripOutputTags(outputBytes)
+				if err != nil {
+					// will indicate that the file has been closed
+					return
+				}
 
-		fmt.Printf("Script output: %s\n", outputToRecord)
+				outputToRecord := stripOutputTags(outputBytes)
+				if string(outputToRecord) != "" {
+					fmt.Printf("Script output: %s\n", outputToRecord)
+				}
+			}
+		}()
+
+		pythonCmd.Wait()
 
 		delete(runningScripts, guid)
 	}()

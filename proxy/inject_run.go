@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -18,7 +19,6 @@ var scriptTemplate string
 
 func runInjection(inject *project.InjectOperation, port string, apiKey string) {
 	script, err := generateScriptForInjection(inject)
-	fmt.Printf("Script: %s\n", script)
 
 	if err != nil {
 		fmt.Printf("Error generating script: %s\n", err)
@@ -29,8 +29,6 @@ func runInjection(inject *project.InjectOperation, port string, apiKey string) {
 	_, err = scripting.StartScript(port, script, inject.GUID, apiKey, inject)
 	if err != nil {
 		inject.RecordError("Error running script: " + err.Error())
-	} else {
-		fmt.Printf("Script GUID:\n%s\n", inject.GUID)
 	}
 }
 
@@ -139,8 +137,16 @@ func injectionPointsToPython(points []injectionPoint) string {
 	return output
 }
 
-func parseInjectionPoints(request string) (string, []injectionPoint) {
+func parseInjectionPoints(requestBase64 string) (string, []injectionPoint) {
 	injectionPoints := make([]injectionPoint, 0)
+
+	requestBytes, err := base64.StdEncoding.DecodeString(requestBase64)
+	if err != nil {
+		fmt.Printf("Error decoding request to parse injection points: %s\n", err.Error())
+		return requestBase64, injectionPoints
+	}
+	request := string(requestBytes)
+
 	for startIdx := strings.Index(request, "#{"); startIdx != -1; startIdx = strings.Index(request, "#{") {
 		request = strings.Replace(request, "#{", "", 1)
 		endIdx := strings.Index(request, "}")
@@ -155,7 +161,7 @@ func parseInjectionPoints(request string) (string, []injectionPoint) {
 		request = strings.Replace(request, "}", "", 1)
 	}
 
-	return request, injectionPoints
+	return base64.StdEncoding.EncodeToString([]byte(request)), injectionPoints
 }
 
 func stringListToPython(strs []string) string {
