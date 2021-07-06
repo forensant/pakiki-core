@@ -110,7 +110,7 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 			return
 		}
 
-		if output != "PROXIMITY_PYTHON_INTERPRETER_READY\n" {
+		if strings.TrimSpace(output) != "PROXIMITY_PYTHON_INTERPRETER_READY" {
 			err := "Unexpected output running script: " + output
 			if scriptCaller != nil {
 				scriptCaller.RecordError(err)

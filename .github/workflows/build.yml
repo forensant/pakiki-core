@@ -92,7 +92,9 @@ jobs:
           path: html_frontend/dist/
           
       - name: Create build directories
-        run: mkdir build\python39\lib
+        run: |
+          mkdir build\python39\lib
+          mkdir build\python39\DLLs
         
       - name: Launch compiler
         shell: cmd
@@ -101,7 +103,11 @@ jobs:
           call cl.exe /EHsc scripting/interpreter/PythonInterpreter.cpp /I${{ env.pythonLocation }}\include python39.lib /link /LIBPATH:${{ env.pythonLocation}}\libs /out:build\pythoninterpreter.exe
 
       - name: Copy Python
-        run: xcopy /E ${{env.pythonLocation}}\Lib build\python39\lib\
+        run: |
+          dir ${{env.pythonLocation}}
+          xcopy /E ${{env.pythonLocation}}\Lib build\python39\lib\
+          xcopy ${{env.pythonLocation}}\python39.dll build\
+          xcopy /E ${{env.pythonLocation}}\DLLs\*.dll build\python39\DLLs\
 
       - name: Install golang
         uses: actions/setup-go@v2
