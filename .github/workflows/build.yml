@@ -97,9 +97,7 @@ jobs:
           path: html_frontend/dist/
           
       - name: Create build directories
-        run: |
-          mkdir build\python39\lib
-          mkdir build\python39\DLLs
+        run: mkdir build
         
       - name: Launch compiler
         shell: cmd
