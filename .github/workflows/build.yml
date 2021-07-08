@@ -97,7 +97,7 @@ jobs:
           path: html_frontend/dist/
           
       - name: Create build directories
-        run: mkdir build\python39\lib
+        run: mkdir build
         
       - name: Launch compiler
         shell: cmd
@@ -105,8 +105,11 @@ jobs:
           call "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
           call cl.exe /EHsc scripting/interpreter/PythonInterpreter.cpp /I${{ env.pythonLocation }}\include python39.lib /link /LIBPATH:${{ env.pythonLocation}}\libs /out:build\pythoninterpreter.exe
 
-      - name: Copy Python
-        run: xcopy /E ${{env.pythonLocation}}\Lib build\python39\lib\
+      - name: Download and extract Python
+        run: |
+          Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.9.6/python-3.9.6-embed-amd64.zip" -OutFile python-embedded.zip
+          Expand-Archive -LiteralPath python-embedded.zip -DestinationPath build
+          rm python-embedded.zip
 
       - name: Install golang
         uses: actions/setup-go@v2
