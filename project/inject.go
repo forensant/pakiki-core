@@ -38,6 +38,7 @@ type InjectOperation struct {
 	InjectDescription string `gorm:"-"`
 	RequestsMadeCount int    `gorm:"-"`
 	TotalRequestCount int
+	DoNotRecord       bool `gorm:"-"`
 }
 
 func InjectFromGUID(guid string) *InjectOperation {
@@ -50,7 +51,7 @@ func InjectFromGUID(guid string) *InjectOperation {
 	return &operation
 }
 
-// Record sends the inject operation to the user interface and records it in the database
+// Record sends the inject operation to the user interface and/or records it in the database
 func (injectOperation *InjectOperation) Record() {
 	injectOperation.ObjectType = "Inject Operation"
 	injectOperation.FuzzDBGorm = strings.Join(injectOperation.FuzzDB[:], ";")
@@ -59,7 +60,9 @@ func (injectOperation *InjectOperation) Record() {
 		injectOperation.GUID = uuid.NewString()
 	}
 
-	ioHub.databaseWriter <- injectOperation
+	if !injectOperation.DoNotRecord {
+		ioHub.databaseWriter <- injectOperation
+	}
 
 	injectOperation.UpdateForDisplay()
 	ioHub.broadcast <- injectOperation
@@ -150,6 +153,7 @@ func updateRequestCountForScan(scanId string) {
 	}
 
 	scan.updatePercentCompleted()
+	scan.DoNotRecord = true
 
 	scan.UpdateForDisplay()
 	scan.Record()
