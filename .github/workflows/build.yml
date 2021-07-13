@@ -71,6 +71,18 @@ jobs:
         run: |
           go get -u github.com/swaggo/swag/cmd/swag
           ./build.sh
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.6 # Not needed with a .ruby-version file
+
+      - name: Copy Dependencies
+        working-directory: build
+        run: ../copy_lib_linux.rb
+
+      - name: Set permissions
+        run: chmod +x build/*
   
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3
