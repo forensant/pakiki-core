@@ -79,7 +79,7 @@ jobs:
 
       - name: Copy Dependencies
         working-directory: build
-        run: ../copy_lib_linux.rb
+        run: ../copy_lib_linux.rb ./
 
       - name: Set permissions
         run: chmod +x build/*
