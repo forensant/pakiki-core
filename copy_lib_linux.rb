@@ -15,14 +15,16 @@ while copied_files == true do
     required_libs.each_line do |lib|
       file_path = lib.split[2]
 
-      if lib.include?('/usr/') then
-        filename = file_path.split('/').last
-        next if File.exist?(copy_to + filename) || !File.exist?(file_path)
-      
-        puts "Copying #{file_path} to #{copy_to}"
-        `cp -L #{file_path} #{copy_to}`
-	copied_files = true
+      if file_path == nil || file_path.index('/lib/') == 0 then
+	next
       end
+
+      filename = file_path.split('/').last
+      next if File.exist?(copy_to + filename) || !File.exist?(file_path)
+      
+      puts "Copying #{file_path} to #{copy_to}"
+      `cp -L #{file_path} #{copy_to}`
+      copied_files = true
     end
   end
 end
