@@ -60,7 +60,7 @@ jobs:
             
         
       - name: Install system dependencies
-        run: sudo apt install build-essential
+        run: sudo apt install build-essential p7zip-full
 
       - name: Install golang
         uses: actions/setup-go@v2

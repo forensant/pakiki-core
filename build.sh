@@ -27,7 +27,7 @@ else
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
     gcc $(python3.9-config --cflags) $(python3.9-config --ldflags) $(python3.9-config --libs) -fPIC scripting/interpreter/PythonInterpreter.cpp -o build/pythoninterpreter -lstdc++ -lpython3.9
-    zip build/python39/lib/python39.zip -r $(python3.9 -c "import sys; print(sys.base_prefix + '/lib/python3.9')")
+    7z a build/python39/lib/python39.zip -r $(python3.9 -c "import sys; print(sys.base_prefix + '/lib/python3.9')")
 
     cp run.sh build/
 
