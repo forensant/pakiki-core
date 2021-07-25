@@ -21,7 +21,17 @@ To run, type: `./proximitycore -project PROJECT_FILENAME`
 ## Development/build instructions
 
 ### Building
-Ensure dependencies (below) have been met, then to build, run ```./build.sh```
+Ensure dependencies (below) have been met.
+
+After checking out the repository, you'll need to retrieve the code for the HTML frontend with:
+```
+git submodule init
+git submodule update
+```
+
+You can then cd into the html_frontend directory and run ```./build.sh``` to build the frontend.
+
+Then to build the main core, from the root directory of the project run ```./build.sh```
 
 If you're going to be running a development build, then will also need to copy the pythoninterpreter executable and the python39 dependency directory (generated as part of the build script) into the working directory.
 
@@ -60,7 +70,7 @@ The installation will depend on your particular distribution.
 
 #### Debian-based distributions (including Ubuntu)
 
-```apt install build-essential python3.9-dev```
+```sudo apt install build-essential python3.9-dev```
 
 ### Launching for development
 To launch the development version, from the root of the project run: ```go run main.go -project sample_project```
