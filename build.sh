@@ -27,10 +27,11 @@ else
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
     gcc $(python3.9-config --cflags) $(python3.9-config --ldflags) $(python3.9-config --libs) -fPIC scripting/interpreter/PythonInterpreter.cpp -o build/pythoninterpreter -lstdc++ -lpython3.9
-    current_path=$(pwd)
-    cd $(python3.9 -c "import sys; print(sys.base_prefix + '/lib/')")
-    zip $current_path/build/python39/lib/python39.zip -r python3.9
-    cd $current_path
+    
+    wget "https://www.python.org/ftp/python/3.9.6/python-3.9.6-embed-amd64.zip"
+    unzip python-3.9.6-embed-amd64.zip python39.zip
+    rm python-3.9.6-embed-amd64.zip 
+    mv python39.zip build/python39/lib/
 
     cp run.sh build/
 
