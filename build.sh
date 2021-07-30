@@ -27,7 +27,13 @@ else
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
     gcc $(python3.9-config --cflags) $(python3.9-config --ldflags) $(python3.9-config --libs) -fPIC scripting/interpreter/PythonInterpreter.cpp -o build/pythoninterpreter -lstdc++ -lpython3.9
-    ln -s $(python3.9 -c "import sys; print(sys.base_prefix + '/lib/python3.9/')") build/python39/lib
+    
+    wget "https://www.python.org/ftp/python/3.9.6/python-3.9.6-embed-amd64.zip"
+    unzip python-3.9.6-embed-amd64.zip python39.zip
+    rm python-3.9.6-embed-amd64.zip 
+    mv python39.zip build/python39/lib/
+
+    cp run.sh build/
 
     echo "# Building Proximity Core"
     go build -o build/proximitycore

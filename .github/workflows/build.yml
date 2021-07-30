@@ -46,6 +46,11 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: true
+          
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
       
       - name: Download frontend
         uses: actions/download-artifact@v2
@@ -55,7 +60,7 @@ jobs:
             
         
       - name: Install system dependencies
-        run: sudo apt install build-essential python3.9-dev
+        run: sudo apt install build-essential
 
       - name: Install golang
         uses: actions/setup-go@v2
@@ -66,6 +71,18 @@ jobs:
         run: |
           go get -u github.com/swaggo/swag/cmd/swag
           ./build.sh
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.6 # Not needed with a .ruby-version file
+
+      - name: Copy Dependencies
+        working-directory: build
+        run: ../copy_lib_linux.rb ./
+
+      - name: Set permissions
+        run: chmod +x build/*
   
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3
