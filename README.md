@@ -16,7 +16,9 @@ Feedback would be greatly appreciated.
 ## Installation
 Download from the latest release from [https://github.com/pipeline/proximity-core/releases](https://github.com/pipeline/proximity-core/releases)
 
-To run, type: `./proximitycore -project PROJECT_FILENAME`
+The Linux releases will require that you set the build to be executable from the directory: `chmod +x *`
+
+For Linux then run `./run.sh -project PROJECT_FILENAME` for other platforms run: `./proximitycore -project PROJECT_FILENAME`
 
 ## Development/build instructions
 
