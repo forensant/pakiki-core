@@ -12,12 +12,14 @@ package scripting
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	_ "embed"
@@ -65,12 +67,25 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 		guid = uuid.NewString()
 	}
 
-	path, err := os.Getwd()
+	executablePath, err := os.Executable()
 	if err != nil {
-		log.Println(err)
+		return "", err
+	}
+	executablePath = filepath.Dir(executablePath)
+	pythonPath := executablePath + "/pythoninterpreter"
+
+	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
+		currentPath, err := os.Getwd()
+		if err != nil {
+			log.Println(err)
+		}
+		pythonPath = currentPath + "/pythoninterpreter"
 	}
 
-	pythonPath := path + "/pythoninterpreter"
+	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
+		return "", errors.New("Could not find Python interpreter")
+	}
+
 	pythonCmd := exec.Command(pythonPath)
 	pythonIn, err := pythonCmd.StdinPipe()
 	if err != nil {

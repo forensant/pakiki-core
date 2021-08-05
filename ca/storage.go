@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"encoding/hex"
 	"io"
 	"path/filepath"
@@ -29,7 +28,7 @@ type CertificateRecord struct {
 }
 
 func decryptPEMData(encryptedData string) (plaintext []byte, err error) {
-	unencodedData, err := base64.StdEncoding.DecodeString(encryptedData)
+	unencodedData, err := hex.DecodeString(encryptedData)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func encryptPEMData(plaintext string) (base64CipherText string, err error) {
 
 	cipherText := aesGCM.Seal(nonce, nonce, []byte(plaintext), nil)
 
-	return base64.StdEncoding.EncodeToString(cipherText), nil
+	return hex.EncodeToString(cipherText), nil
 }
 
 func getDatabase() (*sql.DB, error) {
