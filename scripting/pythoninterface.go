@@ -75,18 +75,19 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 	pythonPath := executablePath + "/pythoninterpreter"
 
 	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
-		currentPath, err := os.Getwd()
+		executablePath, err = os.Getwd()
 		if err != nil {
 			log.Println(err)
 		}
-		pythonPath = currentPath + "/pythoninterpreter"
+		pythonPath = executablePath + "/pythoninterpreter"
 	}
 
 	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
-		return "", errors.New("Could not find Python interpreter")
+		return "", errors.New("could not find Python interpreter")
 	}
 
 	pythonCmd := exec.Command(pythonPath)
+	pythonCmd.Dir = executablePath
 	pythonIn, err := pythonCmd.StdinPipe()
 	if err != nil {
 		return "", err
