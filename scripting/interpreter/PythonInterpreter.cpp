@@ -9,6 +9,10 @@ using std::endl;
 using std::string;
 using std::wcout;
 
+#if defined(__linux__)
+#include <filesystem>
+#endif
+
 #ifdef _WIN32
 #include <direct.h>
 #else
@@ -97,7 +101,16 @@ char* getDir() {
 #ifdef _WIN32
   char* dir = concatenateDir("\\python39");
 #elif defined(__linux__)
-  char* dir = concatenateDir("/python39");
+  const char* pythonSubdir = "/python39";
+
+  // identify the current path of the executable - so that we can run cleanly under flatpak
+  std::filesystem::path path = std::filesystem::canonical("/proc/self/exe").parent_path();
+  const char* pathStr = path.c_str();
+
+  char* dir = (char*)malloc(strlen(pathStr) + strlen(pythonSubdir) + 1);
+  memcpy(dir, pathStr, strlen(pathStr));
+  memcpy(dir + strlen(pathStr), pythonSubdir, strlen(pythonSubdir) + 1);
+
 #else
 
   char* dir = concatenateDir("/python39");

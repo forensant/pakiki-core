@@ -26,7 +26,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 else
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
-    gcc $(python3.9-config --cflags) $(python3.9-config --ldflags) $(python3.9-config --libs) -fPIC scripting/interpreter/PythonInterpreter.cpp -o build/pythoninterpreter -lstdc++ -lpython3.9
+    gcc $(python3.9-config --cflags) $(python3.9-config --ldflags) $(python3.9-config --libs) -std=c++17 -fPIC scripting/interpreter/PythonInterpreter.cpp -o build/pythoninterpreter -lstdc++ -lpython3.9
     
     wget "https://www.python.org/ftp/python/3.9.6/python-3.9.6-embed-amd64.zip"
     unzip python-3.9.6-embed-amd64.zip python39.zip

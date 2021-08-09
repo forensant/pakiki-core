@@ -37,7 +37,7 @@ jobs:
           path: html_frontend/dist
       
   Linux:  
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     
     needs: HTML-Frontend
       

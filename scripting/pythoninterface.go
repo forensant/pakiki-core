@@ -87,7 +87,6 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 	}
 
 	pythonCmd := exec.Command(pythonPath)
-	pythonCmd.Dir = executablePath + "/"
 	pythonIn, err := pythonCmd.StdinPipe()
 	if err != nil {
 		return "", err
