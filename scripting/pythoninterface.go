@@ -25,6 +25,8 @@ import (
 	_ "embed"
 
 	"github.com/google/uuid"
+
+	"dev.forensant.com/pipeline/razor/proximitycore/project"
 )
 
 //go:embed common.py
@@ -59,6 +61,16 @@ func readString(delimeter byte, r *bufio.Reader) (string, error) {
 			}
 		}
 	}
+}
+
+func recordInProject(guid string, script string, output string, err string) {
+	scriptRun := project.ScriptRun{
+		GUID:   guid,
+		Script: script,
+		Output: output,
+		Error:  err,
+	}
+	scriptRun.Record()
 }
 
 func StartScript(hostPort string, script string, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
@@ -119,6 +131,8 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 				fmt.Println(err)
 			}
 
+			recordInProject(guid, script, "", err)
+
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
 
@@ -132,6 +146,9 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 			} else {
 				fmt.Println(err)
 			}
+
+			recordInProject(guid, script, "", err)
+
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
 			return
@@ -141,15 +158,18 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER\n"))
 
 		go func() {
+			fullOutput := ""
 			for {
 				outputBytes, err := ioutil.ReadAll(pythonOut)
 
 				if err != nil {
 					// will indicate that the file has been closed
+					recordInProject(guid, script, fullOutput, "")
 					return
 				}
 
 				outputToRecord := stripOutputTags(outputBytes)
+				fullOutput += string(outputToRecord)
 				if string(outputToRecord) != "" {
 					fmt.Printf("Script output: %s\n", outputToRecord)
 				}
