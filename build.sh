@@ -28,10 +28,7 @@ else
     echo "# Building Python interpreter"
     gcc $(python3.9-config --cflags) $(python3.9-config --ldflags) $(python3.9-config --libs) -std=c++17 -fPIC scripting/interpreter/PythonInterpreter.cpp -o build/pythoninterpreter -lstdc++ -lpython3.9
     
-    wget "https://www.python.org/ftp/python/3.9.6/python-3.9.6-embed-amd64.zip"
-    unzip python-3.9.6-embed-amd64.zip python39.zip
-    rm python-3.9.6-embed-amd64.zip 
-    mv python39.zip build/python39/lib/
+    cp -r $(python3.9-config --prefix)/lib/python3.9 build/python39/lib
 
     cp run.sh build/
 
