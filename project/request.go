@@ -39,6 +39,7 @@ type Request struct {
 	Notes               string
 	Error               string
 	DataPackets         []DataPacket `json:"-"`
+	InterceptResponse   bool         `gorm:"-" json:"-"`
 }
 
 // RequestSummary represents all of the fields required by the GUI
@@ -57,6 +58,7 @@ type DataPacket struct {
 	Data      []byte
 	RequestID uint
 	Direction string
+	Modified  bool
 }
 
 // NewRequest creates a new request from a byte stream
@@ -106,6 +108,17 @@ func NewRequestFromHttp(httpRequest *http.Request, rawBytes []byte) *Request {
 	return r
 }
 
+func (request *Request) GetModifiedRequest() []byte {
+	req := make([]byte, 0)
+	for _, dataPacket := range request.DataPackets {
+		if dataPacket.Direction == "Request" && dataPacket.Modified {
+			req = append(req, dataPacket.Data...)
+		}
+	}
+
+	return req
+}
+
 func (request *Request) HandleResponse(resp *http.Response) {
 	var body []byte
 	if resp.Body != nil {
@@ -135,7 +148,7 @@ func (request *Request) HandleResponse(resp *http.Response) {
 	request.ResponseTime = int(time.Since(startTime).Milliseconds())
 	request.ResponseSize = len(responseBytes)
 
-	request.DataPackets = append(request.DataPackets, DataPacket{Data: responseBytes, Direction: "Response"})
+	request.DataPackets = append(request.DataPackets, DataPacket{Data: responseBytes, Direction: "Response", Modified: false})
 }
 
 // Record sends the request to the user interface and record it in the database

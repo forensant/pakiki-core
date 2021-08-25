@@ -11,6 +11,7 @@
 package proxy
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
@@ -54,15 +55,52 @@ func onRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request,
 	}
 
 	request := project.NewRequestFromHttp(req, requestBytes)
+	var response *http.Response
+
+	if interceptSettings.BrowserToServer {
+		interceptedRequest := interceptRequest(request, "browser_to_server", requestBytes)
+		<-interceptedRequest.ResponseReady
+
+		modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(request.GetModifiedRequest())))
+
+		switch interceptedRequest.RequestAction {
+		case "forward":
+			// modified, potentially
+			oldUrl := req.URL
+			req, err = http.ReadRequest(modifiedRequest)
+			req.URL.Scheme = oldUrl.Scheme
+			req.URL.Host = oldUrl.Host
+		case "forward_and_intercept_response":
+			oldUrl := req.URL
+			req, err = http.ReadRequest(modifiedRequest)
+			req.URL.Scheme = oldUrl.Scheme
+			req.URL.Host = oldUrl.Host
+
+			request.InterceptResponse = true
+		default:
+			response = goproxy.NewResponse(req,
+				goproxy.ContentTypeText, http.StatusForbidden,
+				"Request dropped by Proximity")
+		}
+
+		if err != nil {
+			// it was an error reading the new request
+			request.Error = "Error reading modified request: " + err.Error()
+		}
+
+		removeInterceptedRequest(interceptedRequest)
+	}
+
 	if ctx.Error != nil {
 		fmt.Printf("Error: %v", ctx.Error.Error())
 		request.Error = ctx.Error.Error()
 	}
+
 	request.Record()
 
 	ctx.UserData = request
 
-	return req, nil
+	return req, response
 }
 
 func onResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
@@ -91,13 +129,15 @@ func onResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Respon
 		errorToReport = err
 	}
 
-	request.HandleResponse(resp)
+	if request != nil {
+		request.HandleResponse(resp)
 
-	if errorToReport != nil {
-		request.Error = errorToReport.Error()
+		if errorToReport != nil {
+			request.Error = errorToReport.Error()
+		}
+
+		request.Record()
 	}
-
-	request.Record()
 
 	return resp
 }

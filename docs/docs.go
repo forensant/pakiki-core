@@ -270,6 +270,55 @@ var doc = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates a specific request",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Update A Request",
+                "parameters": [
+                    {
+                        "description": "The GUID of the request to update",
+                        "name": "guid",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "The notes for the request",
+                        "name": "notes",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             }
         },
         "/project/request_response": {
@@ -357,59 +406,8 @@ var doc = `{
                 }
             }
         },
-        "/project/update_request": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "updates a specific request",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Requests"
-                ],
-                "summary": "Update A Request",
-                "parameters": [
-                    {
-                        "description": "The GUID of the request to update",
-                        "name": "guid",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The notes for the request",
-                        "name": "notes",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/proxy/add_request_to_queue": {
-            "put": {
+            "post": {
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -465,6 +463,68 @@ var doc = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/proxy/intercept_settings": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "get intercept settings",
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Get Intercept Settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/proxy.InterceptSettings"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "set intercept settings",
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Set Intercept Settings",
+                "parameters": [
+                    {
+                        "description": "Proxy Intercept Settings Object",
+                        "name": "default",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/proxy.InterceptSettings"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -678,6 +738,9 @@ var doc = `{
                 "archived": {
                     "type": "boolean"
                 },
+                "doNotRecord": {
+                    "type": "boolean"
+                },
                 "error": {
                     "type": "string"
                 },
@@ -813,6 +876,17 @@ var doc = `{
                     "type": "string"
                 },
                 "ssl": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "proxy.InterceptSettings": {
+            "type": "object",
+            "properties": {
+                "browserToServer": {
+                    "type": "boolean"
+                },
+                "serverToBrowser": {
                     "type": "boolean"
                 }
             }
