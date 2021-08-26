@@ -66,7 +66,7 @@ func removeInterceptedRequest(request *project.InterceptedRequest) {
 // @Tags Requests
 // @Produce  json
 // @Security ApiKeyAuth
-// @Success 200 {array} proxy.InterceptedRequest
+// @Success 200 {array} project.InterceptedRequest
 // @Failure 500 {string} string Error
 // @Router /proxy/intercepted_requests [get]
 func GetInterceptedRequests(w http.ResponseWriter, r *http.Request) {
@@ -164,6 +164,7 @@ func SetInterceptedResponse(w http.ResponseWriter, r *http.Request) {
 			}
 			req.RequestAction = response.RequestAction
 			req.Request.DataPackets = append(req.Request.DataPackets, project.DataPacket{Data: requestBytes, Direction: direction, Modified: true})
+			req.Request.CorrectModifiedRequestResponse(direction)
 			req.ResponseReady <- true
 			req.Record(project.RecordActionDelete)
 		}

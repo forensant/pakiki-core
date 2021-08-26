@@ -61,7 +61,7 @@ func onRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request,
 		interceptedRequest := interceptRequest(request, "browser_to_server", requestBytes)
 		<-interceptedRequest.ResponseReady
 
-		modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(request.GetModifiedRequest())))
+		modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(request.GetRequestResponseData("Request", true))))
 
 		switch interceptedRequest.RequestAction {
 		case "forward":
@@ -131,6 +131,23 @@ func onResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Respon
 
 	if request != nil {
 		request.HandleResponse(resp)
+
+		if interceptSettings.ServerToBrowser || request.InterceptResponse {
+			interceptedResponse := interceptRequest(request, "server_to_browser", request.GetRequestResponseData("Response", false))
+			<-interceptedResponse.ResponseReady
+
+			modifiedResponse := bufio.NewReader(io.NopCloser(bytes.NewBuffer(request.GetRequestResponseData("Response", true))))
+
+			newResponse, err := http.ReadResponse(modifiedResponse, resp.Request)
+
+			if err != nil {
+				request.Error = "Error reading modified response: " + err.Error()
+			} else {
+				resp = newResponse
+			}
+
+			removeInterceptedRequest(interceptedResponse)
+		}
 
 		if errorToReport != nil {
 			request.Error = errorToReport.Error()

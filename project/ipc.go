@@ -191,15 +191,6 @@ func (c *WebSocketClient) writePump(filter string) {
 				w.Write(marshalObject(message))
 			}
 
-			// add queued chat messages to the current websocket message
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				if !message.ShouldFilter(filter) {
-					w.Write(newline)
-					w.Write(marshalObject(<-c.send))
-				}
-			}
-
 			if err := w.Close(); err != nil {
 				return
 			}

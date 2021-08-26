@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"regexp"
 	"strings"
 	"time"
 
@@ -108,10 +109,20 @@ func NewRequestFromHttp(httpRequest *http.Request, rawBytes []byte) *Request {
 	return r
 }
 
-func (request *Request) GetModifiedRequest() []byte {
+func (request *Request) CorrectModifiedRequestResponse(direction string) {
+	// remove the headers which can cause problems, and let go recalculate one
+	re := regexp.MustCompile(`\s*(Transfer-Encoding|Content-Length|Content-Encoding): [a-z]*`)
+	for i, dataPacket := range request.DataPackets {
+		if dataPacket.Direction == direction && dataPacket.Modified {
+			request.DataPackets[i].Data = re.ReplaceAll(dataPacket.Data, []byte(""))
+		}
+	}
+}
+
+func (request *Request) GetRequestResponseData(direction string, modified bool) []byte {
 	req := make([]byte, 0)
 	for _, dataPacket := range request.DataPackets {
-		if dataPacket.Direction == "Request" && dataPacket.Modified {
+		if dataPacket.Direction == direction && dataPacket.Modified == modified {
 			req = append(req, dataPacket.Data...)
 		}
 	}
