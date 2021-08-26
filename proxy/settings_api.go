@@ -7,6 +7,11 @@ import (
 	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 )
 
+var interceptSettings = &InterceptSettings{
+	BrowserToServer: false,
+	ServerToBrowser: false,
+}
+
 // CACertificate godoc
 // @Summary Gets the root CA
 // @Description returns the certificate authority root certificate

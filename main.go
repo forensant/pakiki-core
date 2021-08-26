@@ -104,10 +104,13 @@ func main() {
 	http.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
 	http.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
 
-	http.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
-	http.HandleFunc("/proxy/make_request", authenticate(proxy.MakeRequest))
-	http.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
 	http.HandleFunc("/proxy/add_request_to_queue", authenticateWithConnectionPool(proxy.AddRequestToQueue))
+	http.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
+	http.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
+	http.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
+	http.HandleFunc("/proxy/make_request", authenticate(proxy.MakeRequest))
+	http.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
+	http.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
 
 	http.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
 	http.HandleFunc("/inject_operations/run", authenticate(proxy.RunInjection))

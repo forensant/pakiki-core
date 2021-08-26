@@ -15,8 +15,10 @@ const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND respons
 
 // RequestResponse contains the request and response in base64 format
 type RequestResponse struct {
-	Request  string
-	Response string
+	Request          string
+	Response         string
+	ModifiedRequest  string
+	ModifiedResponse string
 }
 
 // GetRequestResponse godoc
@@ -52,19 +54,31 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	var req []byte
-	var resp []byte
+	var origReq []byte
+	var origResp []byte
+	var modReq []byte
+	var modResp []byte
 	for _, dataPacket := range dataPackets {
 		if dataPacket.Direction == "Request" {
-			req = append(req, dataPacket.Data...)
+			if dataPacket.Modified {
+				modReq = append(modReq, dataPacket.Data...)
+			} else {
+				origReq = append(origReq, dataPacket.Data...)
+			}
 		} else {
-			resp = append(resp, dataPacket.Data...)
+			if dataPacket.Modified {
+				modResp = append(modResp, dataPacket.Data...)
+			} else {
+				origResp = append(origResp, dataPacket.Data...)
+			}
 		}
 	}
 
 	var requestResponse RequestResponse
-	requestResponse.Request = base64.StdEncoding.EncodeToString(req)
-	requestResponse.Response = base64.StdEncoding.EncodeToString(resp)
+	requestResponse.Request = base64.StdEncoding.EncodeToString(origReq)
+	requestResponse.Response = base64.StdEncoding.EncodeToString(origResp)
+	requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
+	requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(modResp)
 
 	responseToWrite, err := json.Marshal(requestResponse)
 	if err != nil {

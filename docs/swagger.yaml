@@ -3,6 +3,8 @@ definitions:
     properties:
       archived:
         type: boolean
+      doNotRecord:
+        type: boolean
       error:
         type: string
       fuzzDB:
@@ -93,6 +95,13 @@ definitions:
       scan_id:
         type: string
       ssl:
+        type: boolean
+    type: object
+  proxy.InterceptSettings:
+    properties:
+      browserToServer:
+        type: boolean
+      serverToBrowser:
         type: boolean
     type: object
   proxy.MakeRequestParameters:
@@ -303,6 +312,37 @@ paths:
       summary: Get A Request
       tags:
       - Requests
+    put:
+      description: updates a specific request
+      parameters:
+      - description: The GUID of the request to update
+        in: body
+        name: guid
+        required: true
+        schema:
+          type: string
+      - description: The notes for the request
+        in: body
+        name: notes
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Update A Request
+      tags:
+      - Requests
   /project/request_response:
     get:
       description: gets the full request and response of a given request
@@ -356,40 +396,8 @@ paths:
       summary: Get All Requests
       tags:
       - Requests
-  /project/update_request:
-    post:
-      description: updates a specific request
-      parameters:
-      - description: The GUID of the request to update
-        in: body
-        name: guid
-        required: true
-        schema:
-          type: string
-      - description: The notes for the request
-        in: body
-        name: notes
-        required: true
-        schema:
-          type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      security:
-      - ApiKeyAuth: []
-      summary: Update A Request
-      tags:
-      - Requests
   /proxy/add_request_to_queue:
-    put:
+    post:
       description: add a request to the queue for scanning sites
       parameters:
       - description: Request Details
@@ -427,6 +435,44 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Gets the root CA
+      tags:
+      - Settings
+  /proxy/intercept_settings:
+    get:
+      description: get intercept settings
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/proxy.InterceptSettings'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get Intercept Settings
+      tags:
+      - Settings
+    put:
+      description: set intercept settings
+      parameters:
+      - description: Proxy Intercept Settings Object
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/proxy.InterceptSettings'
+      responses:
+        "200":
+          description: ""
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Set Intercept Settings
       tags:
       - Settings
   /proxy/make_request:
