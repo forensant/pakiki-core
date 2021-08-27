@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -109,12 +110,40 @@ func NewRequestFromHttp(httpRequest *http.Request, rawBytes []byte) *Request {
 	return r
 }
 
+func CorrectLengthHeaders(request []byte) []byte {
+	encoding := "\r\n"
+	endOfHeaders := bytes.Index(request, []byte("\r\n\r\n"))
+	if endOfHeaders == -1 {
+		endOfHeaders = bytes.Index(request, []byte("\n\n"))
+		encoding = "\n"
+		if endOfHeaders == -1 {
+			// nothing more needs to be done
+			return request
+		}
+	}
+
+	contentLength := len(request) - (len(encoding) * 2) - endOfHeaders
+	startOfBody := endOfHeaders + (len(encoding) * 2)
+	headers := request[0:endOfHeaders]
+
+	re := regexp.MustCompile(`\s*(Transfer-Encoding|Content-Length|Content-Encoding): [A-Za-z0-9]*`)
+	newHeaders := re.ReplaceAll(headers, []byte(""))
+	contentLengthHeader := []byte((encoding + "Content-Length: " + strconv.Itoa(contentLength)))
+	newHeaders = append(newHeaders, contentLengthHeader...)
+
+	newRequest := append(newHeaders, []byte(encoding+encoding)...)
+	newRequest = append(newRequest, request[startOfBody:]...)
+
+	return newRequest
+}
+
+// CorrectModifiedRequestResponse removes transfer encoding headers and sets a correct content length
+// it should only be called on requests/responses where we have the entire contents in one data packet
 func (request *Request) CorrectModifiedRequestResponse(direction string) {
-	// remove the headers which can cause problems, and let go recalculate one
-	re := regexp.MustCompile(`\s*(Transfer-Encoding|Content-Length|Content-Encoding): [a-z]*`)
+	// remove the headers which can cause problems, and replace them with correct ones
 	for i, dataPacket := range request.DataPackets {
 		if dataPacket.Direction == direction && dataPacket.Modified {
-			request.DataPackets[i].Data = re.ReplaceAll(dataPacket.Data, []byte(""))
+			request.DataPackets[i].Data = CorrectLengthHeaders(request.DataPackets[i].Data)
 		}
 	}
 }

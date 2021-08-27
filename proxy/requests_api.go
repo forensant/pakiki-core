@@ -141,6 +141,8 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request, httpClient *http.
 }
 
 func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient *http.Client) (*project.Request, error) {
+	requestData = project.CorrectLengthHeaders(requestData)
+
 	b := bytes.NewReader(requestData)
 	httpRequest, err := http.ReadRequest(bufio.NewReader(b))
 
