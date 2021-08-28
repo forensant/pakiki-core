@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // GetInjectOperations godoc
@@ -18,7 +19,7 @@ import (
 // @Router /inject_operations [get]
 func GetInjectOperations(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var operations []InjectOperation
-	result := db.Order("id").Find(&operations)
+	result := db.Preload(clause.Associations).Order("inject_operations.id").Find(&operations)
 
 	for idx := range operations {
 		operations[idx].updatePercentCompleted()
@@ -63,7 +64,7 @@ func PutInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	var operation InjectOperation
-	tx := db.Where("guid = ?", paramOperation.GUID).First(&operation)
+	tx := db.Preload(clause.Associations).Where("guid = ?", paramOperation.GUID).First(&operation)
 	if tx.Error != nil {
 		http.Error(w, "Could not find injection operation: "+tx.Error.Error(), http.StatusInternalServerError)
 		return
@@ -101,7 +102,7 @@ func PutArchiveInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.
 	}
 
 	var operation InjectOperation
-	tx := db.Where("guid = ?", guid).First(&operation)
+	tx := db.Preload(clause.Associations).Where("guid = ?", guid).First(&operation)
 	if tx.Error != nil {
 		http.Error(w, "Could not find injection operation: "+tx.Error.Error(), http.StatusInternalServerError)
 		return

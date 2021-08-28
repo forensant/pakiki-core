@@ -5,6 +5,7 @@ import (
 )
 
 func initDatabase(db *gorm.DB) {
+	db.AutoMigrate(&InjectOperationRequestPart{})
 	db.AutoMigrate(&InjectOperation{})
 	db.AutoMigrate(&Request{})
 	db.AutoMigrate(&DataPacket{})
