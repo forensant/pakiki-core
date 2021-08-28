@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
-	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -33,35 +33,38 @@ func runInjection(inject *project.InjectOperation, port string, apiKey string) {
 }
 
 type scriptTemplateParameters struct {
-	Host      string
-	Payloads  string
-	PointList string
-	Request   string
-	SSL       string
-}
-
-type injectionPoint struct {
-	offset int
-	length int
+	Host     string
+	Payloads string
+	Request  string
+	SSL      string
 }
 
 func generateScriptForInjection(inject *project.InjectOperation) (string, error) {
-	requestWithoutInjectionPoints, injectionPoints := parseInjectionPoints(inject.Request)
+	injectionPointCount := 0
+	for _, requestPart := range inject.Request {
+		if requestPart.Inject {
+			injectionPointCount += 1
+		}
+	}
 
 	payloads := generatePayloads(inject)
-	inject.TotalRequestCount = (len(injectionPoints) * len(payloads)) + 1 // include the initial base request
+	inject.TotalRequestCount = (injectionPointCount * len(payloads)) + 1 // include the initial base request
 	ssl := "True"
 
 	if !inject.SSL {
 		ssl = "False"
 	}
 
+	requestJson, err := json.Marshal(inject.Request)
+	if err != nil {
+		return "", err
+	}
+
 	params := scriptTemplateParameters{
-		Host:      escapeForPython(inject.Host),
-		Payloads:  stringListToPython(payloads),
-		PointList: injectionPointsToPython(injectionPoints),
-		Request:   requestWithoutInjectionPoints,
-		SSL:       ssl,
+		Host:     escapeForPython(inject.Host),
+		Payloads: stringListToPython(payloads),
+		Request:  escapeForPython(string(requestJson)),
+		SSL:      ssl,
 	}
 	temp, err := template.New("script").Parse(scriptTemplate)
 	if err != nil {
@@ -119,49 +122,6 @@ func generatePayloads(inject *project.InjectOperation) []string {
 	}
 
 	return payloads
-}
-
-func injectionPointsToPython(points []injectionPoint) string {
-	output := "["
-	first := true
-	for _, point := range points {
-		if first {
-			first = false
-		} else {
-			output += ","
-		}
-		output += "[" + strconv.Itoa(point.offset) + ", " + strconv.Itoa(point.length) + "]"
-	}
-
-	output += "]"
-	return output
-}
-
-func parseInjectionPoints(requestBase64 string) (string, []injectionPoint) {
-	injectionPoints := make([]injectionPoint, 0)
-
-	requestBytes, err := base64.StdEncoding.DecodeString(requestBase64)
-	if err != nil {
-		fmt.Printf("Error decoding request to parse injection points: %s\n", err.Error())
-		return requestBase64, injectionPoints
-	}
-	request := string(requestBytes)
-
-	for startIdx := strings.Index(request, "#{"); startIdx != -1; startIdx = strings.Index(request, "#{") {
-		request = strings.Replace(request, "#{", "", 1)
-		endIdx := strings.Index(request, "}")
-		if endIdx == -1 {
-			break
-		}
-		length := endIdx - startIdx
-		injectionPoints = append(injectionPoints, injectionPoint{
-			offset: startIdx,
-			length: length,
-		})
-		request = strings.Replace(request, "}", "", 1)
-	}
-
-	return base64.StdEncoding.EncodeToString([]byte(request)), injectionPoints
 }
 
 func stringListToPython(strs []string) string {

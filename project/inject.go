@@ -12,14 +12,23 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+// InjectOperationRequestPart contains the components of a request
+type InjectOperationRequestPart struct {
+	ID                uint `json:"-"`
+	RequestPart       string
+	Inject            bool
+	InjectOperationID uint
+}
 
 // InjectOperation contains the parameters which are passed to the Injection API calls
 type InjectOperation struct {
 	ID          uint `json:"-"`
 	GUID        string
 	Title       string
-	Request     string
+	Request     []InjectOperationRequestPart
 	Host        string
 	SSL         bool
 	FuzzDB      []string `gorm:"-"`
@@ -34,7 +43,7 @@ type InjectOperation struct {
 	ObjectType        string `gorm:"-"`
 	FuzzDBGorm        string `json:"-"`
 	KnownFilesGorm    string `json:"-"`
-	URL               string `gorm:"-"`
+	URL               string
 	InjectDescription string `gorm:"-"`
 	RequestsMadeCount int    `gorm:"-"`
 	TotalRequestCount int
@@ -43,7 +52,7 @@ type InjectOperation struct {
 
 func InjectFromGUID(guid string) *InjectOperation {
 	var operation InjectOperation
-	tx := readableDatabase.Where("guid = ?", guid).First(&operation)
+	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", guid).First(&operation)
 	if tx.Error != nil {
 		return nil
 	}
@@ -114,19 +123,7 @@ func (injectOperation *InjectOperation) UpdateForDisplay() {
 	}
 
 	injectOperation.InjectDescription = strings.Join(payloads, ", ")
-
-	requestData, err := base64.StdEncoding.DecodeString(injectOperation.Request)
-	if err != nil {
-		fmt.Printf("Could not decode base64 encoded inject request, error: %s\n", err.Error())
-	}
-	b := bytes.NewReader(requestData)
-	httpRequest, err := http.ReadRequest(bufio.NewReader(b))
-
-	if err != nil {
-		fmt.Printf("Error occurred: %s\n", err.Error())
-	} else {
-		injectOperation.URL, _ = url.QueryUnescape(httpRequest.URL.String())
-	}
+	injectOperation.URL = injectOperation.parseURL()
 }
 
 func (injectOperation *InjectOperation) updatePercentCompleted() {
@@ -147,7 +144,7 @@ func (injectOperation *InjectOperation) updatePercentCompleted() {
 
 func updateRequestCountForScan(scanId string) {
 	var scan InjectOperation
-	tx := readableDatabase.Where("guid = ?", scanId).Take(&scan)
+	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", scanId).Take(&scan)
 	if tx.Error != nil {
 		return
 	}
@@ -165,4 +162,28 @@ func (injectOperation *InjectOperation) WriteToDatabase(db *gorm.DB) {
 
 func (injectOperation *InjectOperation) ShouldFilter(str string) bool {
 	return false
+}
+
+func (injectOperation *InjectOperation) parseURL() string {
+	var requestData = make([]byte, 0)
+	urlToReturn := ""
+
+	for _, requestPart := range injectOperation.Request {
+		decodedData, err := base64.StdEncoding.DecodeString(requestPart.RequestPart)
+		if err != nil {
+			fmt.Printf("Could not decode base64 encoded inject request, error: %s\n", err.Error())
+		}
+		requestData = append(requestData, decodedData...)
+	}
+
+	b := bytes.NewReader(requestData)
+	httpRequest, err := http.ReadRequest(bufio.NewReader(b))
+
+	if err != nil {
+		fmt.Printf("Error occurred: %s\n", err.Error())
+	} else {
+		urlToReturn, _ = url.QueryUnescape(httpRequest.URL.String())
+	}
+
+	return urlToReturn
 }
