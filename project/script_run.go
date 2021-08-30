@@ -24,6 +24,21 @@ type ScriptRun struct {
 	DoNotRecord       bool `gorm:"-"`
 }
 
+// ScriptOutputUpdate contains the partial output of a script
+type ScriptOutputUpdate struct {
+	GUID       string
+	ObjectType string
+	Output     string
+}
+
+// ScriptProgressUpdate contains the details of script progress
+type ScriptProgressUpdate struct {
+	GUID       string
+	Count      int
+	Total      int
+	ObjectType string
+}
+
 func ScriptRunFromGUID(guid string) *ScriptRun {
 	var operation ScriptRun
 	tx := readableDatabase.Where("guid = ?", guid).First(&operation)
@@ -32,6 +47,18 @@ func ScriptRunFromGUID(guid string) *ScriptRun {
 	}
 
 	return &operation
+}
+
+// Record sends the script output update details to the user interface
+func (scriptOutputUpdate *ScriptOutputUpdate) Record() {
+	scriptOutputUpdate.ObjectType = "Script Output Update"
+	ioHub.broadcast <- scriptOutputUpdate
+}
+
+// Record sends the script update details to the user interface
+func (scriptProgressUpdate *ScriptProgressUpdate) Record() {
+	scriptProgressUpdate.ObjectType = "Script Progress Update"
+	ioHub.broadcast <- scriptProgressUpdate
 }
 
 // Record sends the script run to the user interface and/or records it in the database
@@ -77,10 +104,26 @@ func (scriptRun *ScriptRun) updatePercentCompleted() {
 	}
 }
 
-func (scriptRun *ScriptRun) WriteToDatabase(db *gorm.DB) {
-	db.Save(scriptRun)
+func (scriptOutputUpdate *ScriptOutputUpdate) ShouldFilter(str string) bool {
+	return false
+}
+
+func (scriptProgressUpdate *ScriptProgressUpdate) ShouldFilter(str string) bool {
+	return false
 }
 
 func (scriptRun *ScriptRun) ShouldFilter(str string) bool {
 	return false
+}
+
+func (scriptOutputUpdate *ScriptOutputUpdate) WriteToDatabase(db *gorm.DB) {
+	// do nothing
+}
+
+func (scriptProgressUpdate *ScriptProgressUpdate) WriteToDatabase(db *gorm.DB) {
+	// do nothing
+}
+
+func (scriptRun *ScriptRun) WriteToDatabase(db *gorm.DB) {
+	db.Save(scriptRun)
 }

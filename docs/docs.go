@@ -535,6 +535,40 @@ var doc = `{
                 }
             }
         },
+        "/proxy/intercepted_requests": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a list of all requests which have been intercepted, which are awaiting a response",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Get Intercept Requests",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/project.InterceptedRequest"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/proxy/make_request": {
             "post": {
                 "security": [
@@ -576,6 +610,42 @@ var doc = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/proxy/set_intercepted_response": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "set how an intercepted request will be responded to",
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Modify Intercepted Request",
+                "parameters": [
+                    {
+                        "description": "Proxy Intercept Response Object",
+                        "name": "default",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/proxy.InterceptedRequestResponse"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -729,6 +799,45 @@ var doc = `{
                     }
                 }
             }
+        },
+        "/scripts/update_progress": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates the progress of a currently running script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Updates running script progress",
+                "parameters": [
+                    {
+                        "description": "Update Details",
+                        "name": "default",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.ScriptProgressUpdate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -779,7 +888,10 @@ var doc = `{
                     "type": "integer"
                 },
                 "request": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/project.InjectOperationRequestPart"
+                    }
                 },
                 "requestsMadeCount": {
                     "type": "integer"
@@ -795,6 +907,40 @@ var doc = `{
                 },
                 "url": {
                     "type": "string"
+                }
+            }
+        },
+        "project.InjectOperationRequestPart": {
+            "type": "object",
+            "properties": {
+                "inject": {
+                    "type": "boolean"
+                },
+                "requestPart": {
+                    "type": "string"
+                }
+            }
+        },
+        "project.InterceptedRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "\u003cbase64 encoded body\u003e"
+                },
+                "direction": {
+                    "type": "string",
+                    "example": "Either browser_to_server or server_to_browser"
+                },
+                "objectType": {
+                    "type": "string"
+                },
+                "recordAction": {
+                    "type": "string",
+                    "example": "Either add or delete"
+                },
+                "request": {
+                    "$ref": "#/definitions/project.Request"
                 }
             }
         },
@@ -862,6 +1008,23 @@ var doc = `{
                 }
             }
         },
+        "project.ScriptProgressUpdate": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "guid": {
+                    "type": "string"
+                },
+                "objectType": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "proxy.AddRequestToQueueParameters": {
             "type": "object",
             "properties": {
@@ -888,6 +1051,26 @@ var doc = `{
                 },
                 "serverToBrowser": {
                     "type": "boolean"
+                }
+            }
+        },
+        "proxy.InterceptedRequestResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "\u003cbase64 encoded body\u003e"
+                },
+                "direction": {
+                    "type": "string",
+                    "example": "Either browser_to_server or server_to_browser"
+                },
+                "guid": {
+                    "type": "string"
+                },
+                "requestAction": {
+                    "type": "string",
+                    "example": "One of: forward, forward_and_intercept_response or drop"
                 }
             }
         },

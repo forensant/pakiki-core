@@ -7,15 +7,24 @@ import socket
 import sys
 import urllib.request
 
-return_code = 0
-# return code 1 means a syntax error was encountered
-# return code 2 means requests have been made
-
 def to_bytes(string):
   if sys.version_info.major == 3:
     return bytes(string, 'UTF-8')
   else:
     return bytes(string)
+
+def make_request_to_core(uri, obj):
+  obj['scan_id'] = 'SCRIPT_ID'
+
+  property_data = json.dumps(obj)
+  headers = {
+    'X-API-Key': 'API_KEY'
+  }
+
+  req = urllib.request.Request("http://localhost:PROXY_PORT" + uri, property_data.encode('UTF-8'), headers)
+  with urllib.request.urlopen(req) as call_response:
+    response = call_response.read()
+
 
 class GeneratedRequest:
   def __init__(self, request):
@@ -29,7 +38,6 @@ class GeneratedRequest:
       self.request_body.replace(b'\n', b'\r\n')
 
   def make(self):
-    global return_code
     b64request = base64.b64encode(self.request_body)
     request_data = str(b64request, 'UTF-8')
 
@@ -38,18 +46,8 @@ class GeneratedRequest:
     properties['request'] = request_data
     properties['host']    = self.request.host
     properties['ssl']     = self.request.ssl
-    properties['scan_id'] = 'SCRIPT_ID'
 
-    property_data = json.dumps(properties)
-
-    return_code = 2
-    headers = {
-      'X-API-Key': 'API_KEY'
-    }
-
-    req = urllib.request.Request("http://localhost:PROXY_PORT/proxy/add_request_to_queue", property_data.encode('UTF-8'), headers)
-    with urllib.request.urlopen(req) as call_response:
-      response = call_response.read()
+    make_request_to_core('/proxy/add_request_to_queue', properties)
 
 class Request:
   def __init__(self, host, ssl, request_parts):
@@ -89,3 +87,12 @@ class Request:
 
   def set_properties(self, properties):
     self.properties = properties
+
+def report_progress(count, total):
+  report = {
+    'Count': count,
+    'Total': total,
+    'GUID': 'SCRIPT_ID'
+  }
+
+  make_request_to_core('/scripts/update_progress', report)

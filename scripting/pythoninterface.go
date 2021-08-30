@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -158,20 +157,25 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER\n"))
 
 		go func() {
-			fullOutput := ""
+			readBuf := make([]byte, 1024)
+			fullOutput := make([]byte, 0)
 			for {
-				outputBytes, err := ioutil.ReadAll(pythonOut)
+				bytesRead, err := pythonOut.Read(readBuf)
+				lineRead := readBuf[:bytesRead]
+
+				if bytesRead != 0 {
+					fullOutput = stripOutputTags(append(fullOutput, lineRead...))
+					outputUpdate := project.ScriptOutputUpdate{
+						GUID:   guid,
+						Output: string(stripOutputTags(lineRead)),
+					}
+					outputUpdate.Record()
+				}
 
 				if err != nil {
 					// will indicate that the file has been closed
-					recordInProject(guid, script, fullOutput, "")
+					recordInProject(guid, script, string(fullOutput), "")
 					return
-				}
-
-				outputToRecord := stripOutputTags(outputBytes)
-				fullOutput += string(outputToRecord)
-				if string(outputToRecord) != "" {
-					fmt.Printf("Script output: %s\n", outputToRecord)
 				}
 			}
 		}()

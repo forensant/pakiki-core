@@ -118,8 +118,9 @@ func main() {
 	http.HandleFunc("/inject_operation", authenticateWithGormDB(project.PutInjectOperation))
 	http.HandleFunc("/inject_operation/archive", authenticateWithGormDB(project.PutArchiveInjectOperation))
 
-	http.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
 	http.HandleFunc("/scripts/cancel", authenticate(scripting.CancelScript))
+	http.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
+	http.HandleFunc("/scripts/update_progress", authenticate(scripting.UpdateProgress))
 
 	ioHub := project.NewIOHub()
 	go ioHub.Run(parameters.ProjectPath)
