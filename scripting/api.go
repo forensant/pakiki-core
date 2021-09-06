@@ -11,6 +11,7 @@ import (
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
 type RunScriptParameters struct {
 	Script string
+	Title  string
 }
 
 // CancelScript godoc
@@ -65,7 +66,7 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	port := getPort(r.Host)
-	guid, err := StartScript(port, params.Script, "", r.Header.Get("X-API-Key"), nil)
+	guid, err := StartScript(port, params.Script, params.Title, "", r.Header.Get("X-API-Key"), nil)
 
 	if err != nil {
 		http.Error(w, "Error running Python script: "+err.Error(), http.StatusInternalServerError)

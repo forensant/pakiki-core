@@ -22,6 +22,7 @@ type ScriptRun struct {
 	RequestsMadeCount int    `gorm:"-"`
 	TotalRequestCount int
 	DoNotRecord       bool `gorm:"-"`
+	Status            string
 }
 
 // ScriptOutputUpdate contains the partial output of a script
@@ -39,6 +40,14 @@ type ScriptProgressUpdate struct {
 	ObjectType string
 }
 
+type runningScriptDetails struct {
+	Output string
+	Count  int
+	Total  int
+}
+
+var runningScripts map[string]*runningScriptDetails = make(map[string]*runningScriptDetails)
+
 func ScriptRunFromGUID(guid string) *ScriptRun {
 	var operation ScriptRun
 	tx := readableDatabase.Where("guid = ?", guid).First(&operation)
@@ -53,12 +62,27 @@ func ScriptRunFromGUID(guid string) *ScriptRun {
 func (scriptOutputUpdate *ScriptOutputUpdate) Record() {
 	scriptOutputUpdate.ObjectType = "Script Output Update"
 	ioHub.broadcast <- scriptOutputUpdate
+
+	guid := scriptOutputUpdate.GUID
+	if _, ok := runningScripts[guid]; ok {
+		runningScripts[guid].Output += scriptOutputUpdate.Output
+	} else {
+		fmt.Printf("Script output updated attempted for a script which is not running\n")
+	}
 }
 
 // Record sends the script update details to the user interface
 func (scriptProgressUpdate *ScriptProgressUpdate) Record() {
 	scriptProgressUpdate.ObjectType = "Script Progress Update"
 	ioHub.broadcast <- scriptProgressUpdate
+
+	guid := scriptProgressUpdate.GUID
+	if _, ok := runningScripts[guid]; ok {
+		runningScripts[guid].Count = scriptProgressUpdate.Count
+		runningScripts[guid].Total = scriptProgressUpdate.Total
+	} else {
+		fmt.Printf("Script progress updated attempted for a script which is not running: %s\n", guid)
+	}
 }
 
 // Record sends the script run to the user interface and/or records it in the database
@@ -68,11 +92,44 @@ func (scriptRun *ScriptRun) Record() {
 		scriptRun.GUID = uuid.NewString()
 	}
 
+	if scriptRun.Status == "Running" {
+		runningScripts[scriptRun.GUID] = &runningScriptDetails{}
+	} else {
+		delete(runningScripts, scriptRun.GUID)
+	}
+
 	if !scriptRun.DoNotRecord {
 		ioHub.databaseWriter <- scriptRun
 	}
 
 	ioHub.broadcast <- scriptRun
+}
+
+func (scriptRun *ScriptRun) RecordOrUpdate() {
+	var script ScriptRun
+	result := readableDatabase.First(&script, "guid = ?", scriptRun.GUID)
+
+	if result.Error == nil {
+		scriptRun.ID = script.ID
+	}
+
+	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
+		scriptRun.TotalRequestCount = runningScript.Total
+	}
+
+	scriptRun.Record()
+}
+
+func (scriptRun *ScriptRun) UpdateFromRunningScript() {
+	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
+		scriptRun.RequestsMadeCount = runningScript.Count
+		scriptRun.TotalRequestCount = runningScript.Total
+		scriptRun.Output = runningScript.Output
+	} else if scriptRun.Status == "Running" {
+		scriptRun.Status = "Cancelled"
+	} else if scriptRun.Status == "Completed" {
+		scriptRun.RequestsMadeCount = scriptRun.TotalRequestCount
+	}
 }
 
 // RecordError updates the error field and transmits notification of the error to the GUI

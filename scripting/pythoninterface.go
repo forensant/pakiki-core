@@ -62,17 +62,19 @@ func readString(delimeter byte, r *bufio.Reader) (string, error) {
 	}
 }
 
-func recordInProject(guid string, script string, output string, err string) {
+func recordInProject(guid string, script string, title string, output string, err string, status string) {
 	scriptRun := project.ScriptRun{
 		GUID:   guid,
 		Script: script,
 		Output: output,
+		Title:  title,
 		Error:  err,
+		Status: status,
 	}
-	scriptRun.Record()
+	scriptRun.RecordOrUpdate()
 }
 
-func StartScript(hostPort string, script string, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
+func StartScript(hostPort string, script string, title string, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
 
 	if guid == "" {
 		guid = uuid.NewString()
@@ -130,7 +132,7 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 				fmt.Println(err)
 			}
 
-			recordInProject(guid, script, "", err)
+			recordInProject(guid, script, title, "", err, "Error")
 
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
@@ -146,12 +148,15 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 				fmt.Println(err)
 			}
 
-			recordInProject(guid, script, "", err)
+			recordInProject(guid, script, title, "", err, "Error")
 
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
 			return
 		}
+
+		// do the initial record into the project
+		recordInProject(guid, script, title, "", "", "Running")
 
 		pythonIn.Write([]byte(script))
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER\n"))
@@ -174,7 +179,7 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 
 				if err != nil {
 					// will indicate that the file has been closed
-					recordInProject(guid, script, string(fullOutput), "")
+					recordInProject(guid, script, title, string(fullOutput), "", "Completed")
 					return
 				}
 			}
