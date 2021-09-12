@@ -73,3 +73,46 @@ func GetScripts(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	w.Write(response)
 }
+
+// PutArchiveScript godoc
+// @Summary Archive Script
+// @Description updates the the archived status of a script
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid formData string true "script guid"
+// @Param archive formData bool true "archive status to set"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /project/script/archive [put]
+func PutArchiveScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
+		return
+	}
+
+	guid := r.FormValue("guid")
+	archived := r.FormValue("archive")
+
+	if guid == "" || archived == "" || (archived != "true" && archived != "false") {
+		http.Error(w, "guid and archive parameters must be present, and archive must be either \"true\" or \"false\"", http.StatusInternalServerError)
+		return
+	}
+
+	var script ScriptRun
+	tx := db.Where("guid = ?", guid).First(&script)
+	if tx.Error != nil {
+		http.Error(w, "Could not find script: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var status = "Archived"
+	if archived == "false" {
+		status = "Completed"
+	}
+
+	script.Status = status
+	script.RecordOrUpdate()
+
+	w.Write([]byte("OK"))
+}

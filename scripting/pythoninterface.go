@@ -44,6 +44,8 @@ func CancelScriptInternal(guid string) error {
 		return command.Process.Kill()
 	}
 
+	project.CancelScript(guid)
+
 	return nil
 }
 
@@ -62,19 +64,20 @@ func readString(delimeter byte, r *bufio.Reader) (string, error) {
 	}
 }
 
-func recordInProject(guid string, script string, title string, output string, err string, status string) {
+func recordInProject(guid string, script string, title string, development bool, output string, err string, status string) {
 	scriptRun := project.ScriptRun{
-		GUID:   guid,
-		Script: script,
-		Output: output,
-		Title:  title,
-		Error:  err,
-		Status: status,
+		GUID:        guid,
+		Script:      script,
+		Output:      output,
+		Title:       title,
+		Error:       err,
+		Status:      status,
+		Development: development,
 	}
 	scriptRun.RecordOrUpdate()
 }
 
-func StartScript(hostPort string, script string, title string, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
+func StartScript(hostPort string, script string, title string, development bool, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
 
 	if guid == "" {
 		guid = uuid.NewString()
@@ -132,7 +135,7 @@ func StartScript(hostPort string, script string, title string, guid string, apiK
 				fmt.Println(err)
 			}
 
-			recordInProject(guid, script, title, "", err, "Error")
+			recordInProject(guid, script, title, development, "", err, "Error")
 
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
@@ -148,7 +151,7 @@ func StartScript(hostPort string, script string, title string, guid string, apiK
 				fmt.Println(err)
 			}
 
-			recordInProject(guid, script, title, "", err, "Error")
+			recordInProject(guid, script, title, development, "", err, "Error")
 
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
@@ -156,7 +159,7 @@ func StartScript(hostPort string, script string, title string, guid string, apiK
 		}
 
 		// do the initial record into the project
-		recordInProject(guid, script, title, "", "", "Running")
+		recordInProject(guid, script, title, development, "", "", "Running")
 
 		pythonIn.Write([]byte(script))
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER\n"))
@@ -179,7 +182,7 @@ func StartScript(hostPort string, script string, title string, guid string, apiK
 
 				if err != nil {
 					// will indicate that the file has been closed
-					recordInProject(guid, script, title, string(fullOutput), "", "Completed")
+					recordInProject(guid, script, title, development, string(fullOutput), "", "Completed")
 					return
 				}
 			}

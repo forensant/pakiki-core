@@ -9,10 +9,11 @@ import (
 
 // ScriptRun contains the details of a script which has been run for the project
 type ScriptRun struct {
-	ID     uint `json:"-"`
-	GUID   string
-	Script string
-	Title  string
+	ID          uint `json:"-"`
+	GUID        string
+	Script      string
+	Title       string
+	Development bool
 
 	Output string
 	Error  string
@@ -56,6 +57,27 @@ func ScriptRunFromGUID(guid string) *ScriptRun {
 	}
 
 	return &operation
+}
+
+func CancelScript(guid string) {
+	var script ScriptRun
+	result := readableDatabase.First(&script, "guid = ?", guid)
+
+	if result.Error != nil {
+		fmt.Printf("Error retrieving script to cancel from the database: %s\n", result.Error.Error())
+		return
+	}
+
+	script.Error = "Cancelled"
+	script.Status = "Completed"
+
+	if _, ok := runningScripts[guid]; ok {
+		script.TotalRequestCount = runningScripts[guid].Count
+	} else {
+		fmt.Printf("Script progress updated attempted for a script which is not running: %s\n", guid)
+	}
+
+	script.Record()
 }
 
 // Record sends the script output update details to the user interface
@@ -127,7 +149,7 @@ func (scriptRun *ScriptRun) UpdateFromRunningScript() {
 		scriptRun.Output = runningScript.Output
 	} else if scriptRun.Status == "Running" {
 		scriptRun.Status = "Cancelled"
-	} else if scriptRun.Status == "Completed" {
+	} else if scriptRun.Status == "Completed" || scriptRun.Status == "Archived" || scriptRun.Status == "Unarchived" {
 		scriptRun.RequestsMadeCount = scriptRun.TotalRequestCount
 	}
 }
