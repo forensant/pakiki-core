@@ -19,6 +19,7 @@ type MakeRequestParameters struct {
 	RequestBase64 string `json:"request" example:"<base64 encoded request>"`
 	Host          string `json:"host"`
 	SSL           bool   `json:"ssl"`
+	ScanID        string `json:"scan_id"`
 }
 
 // Request returns the base64 decoded request
@@ -73,6 +74,7 @@ func MakeRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	request.ScanID = params.ScanID
 	request.Record()
 
 	js, err := json.Marshal(request)

@@ -1,10 +1,12 @@
 # This is a common script library from an earlier version of the proxy.
 
 import base64
-import copy
+import html
 import json
 import socket
 import sys
+from urllib.error import HTTPError
+from urllib.parse import urlparse
 import urllib.request
 
 def to_bytes(string):
@@ -13,18 +15,27 @@ def to_bytes(string):
   else:
     return bytes(string)
 
-def make_request_to_core(uri, obj):
-  obj['scan_id'] = 'SCRIPT_ID'
+def make_request_to_core(uri, obj = {}):
+  property_data = None
+  
+  if obj != {}:
+    obj['scan_id'] = 'SCRIPT_ID'
+    property_data = json.dumps(obj).encode('UTF-8')
 
-  property_data = json.dumps(obj)
   headers = {
     'X-API-Key': 'API_KEY'
   }
 
-  req = urllib.request.Request("http://localhost:PROXY_PORT" + uri, property_data.encode('UTF-8'), headers)
-  with urllib.request.urlopen(req) as call_response:
-    response = call_response.read()
-
+  req = urllib.request.Request("http://localhost:PROXY_PORT" + uri, property_data, headers)
+  
+  try:
+    with urllib.request.urlopen(req) as call_response:
+      response = call_response.read()
+      return response
+  except HTTPError as e:
+    content = e.read()
+    print("Server returned error: " + content.decode('UTF-8'))
+    return None
 
 class GeneratedRequest:
   def __init__(self, request):
@@ -87,6 +98,38 @@ class Request:
 
   def set_properties(self, properties):
     self.properties = properties
+
+def get_response_for_request(guid):
+  # retrieve and interpret the result
+  request_response = make_request_to_core("/project/requestresponse?guid=" + guid)
+  request_response = json.loads(request_response)
+  request_response['Request']  = base64.b64decode(request_response['Request'])
+  request_response['Response'] = base64.b64decode(request_response['Response'])
+  return request_response
+
+def make_request_to_url(url):
+  url = urlparse(url)
+  request = "GET " + url.path + " HTTP/1.1\nHost: " + url.netloc + "\n\n"
+
+  # make the initial request to the URL
+  obj = {
+    'host': url.netloc,
+    'ssl': url.scheme == 'https',
+    'request': base64.b64encode(to_bytes(request)).decode("utf-8") 
+  }
+  make_req_response = make_request_to_core("/proxy/make_request", obj)
+  json_response = json.loads(make_req_response)
+  guid = json_response['GUID']
+  
+  return get_response_for_request(guid)
+
+def print_html(html):
+  output_obj = {
+    'GUID':       'SCRIPT_ID',
+    'OutputHTML': html
+  }
+
+  make_request_to_core('/project/script/append_html_output', output_obj)
 
 def report_progress(count, total):
   report = {

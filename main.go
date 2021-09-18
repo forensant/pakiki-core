@@ -105,6 +105,7 @@ func main() {
 	http.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
 	http.HandleFunc("/project/scripts", authenticateWithGormDB(project.GetScripts))
 	http.HandleFunc("/project/script", authenticateWithGormDB(project.GetScript))
+	http.HandleFunc("/project/script/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
 	http.HandleFunc("/project/script/archive", authenticateWithGormDB(project.PutArchiveScript))
 
 	http.HandleFunc("/proxy/add_request_to_queue", authenticateWithConnectionPool(proxy.AddRequestToQueue))

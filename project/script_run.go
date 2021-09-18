@@ -15,14 +15,16 @@ type ScriptRun struct {
 	Title       string
 	Development bool
 
-	Output string
-	Error  string
+	TextOutput string
+	HtmlOutput string
+	Error      string
 
 	ObjectType        string `gorm:"-"`
 	PercentCompleted  int    `gorm:"-"`
 	RequestsMadeCount int    `gorm:"-"`
 	TotalRequestCount int
 	DoNotRecord       bool `gorm:"-"`
+	DoNotBroadcast    bool `gorm:"-" json:"-"`
 	Status            string
 }
 
@@ -30,7 +32,8 @@ type ScriptRun struct {
 type ScriptOutputUpdate struct {
 	GUID       string
 	ObjectType string
-	Output     string
+	TextOutput string
+	HTMLOutput string
 }
 
 // ScriptProgressUpdate contains the details of script progress
@@ -42,9 +45,9 @@ type ScriptProgressUpdate struct {
 }
 
 type runningScriptDetails struct {
-	Output string
-	Count  int
-	Total  int
+	TextOutput string
+	Count      int
+	Total      int
 }
 
 var runningScripts map[string]*runningScriptDetails = make(map[string]*runningScriptDetails)
@@ -87,7 +90,7 @@ func (scriptOutputUpdate *ScriptOutputUpdate) Record() {
 
 	guid := scriptOutputUpdate.GUID
 	if _, ok := runningScripts[guid]; ok {
-		runningScripts[guid].Output += scriptOutputUpdate.Output
+		runningScripts[guid].TextOutput += scriptOutputUpdate.TextOutput
 	} else {
 		fmt.Printf("Script output updated attempted for a script which is not running\n")
 	}
@@ -114,17 +117,20 @@ func (scriptRun *ScriptRun) Record() {
 		scriptRun.GUID = uuid.NewString()
 	}
 
-	if scriptRun.Status == "Running" {
-		runningScripts[scriptRun.GUID] = &runningScriptDetails{}
-	} else {
-		delete(runningScripts, scriptRun.GUID)
+	if !scriptRun.DoNotBroadcast {
+		// it's running but we don't want running broadcasts (used for HTML updates)
+		if scriptRun.Status == "Running" {
+			runningScripts[scriptRun.GUID] = &runningScriptDetails{}
+		} else {
+			delete(runningScripts, scriptRun.GUID)
+		}
+
+		ioHub.broadcast <- scriptRun
 	}
 
 	if !scriptRun.DoNotRecord {
 		ioHub.databaseWriter <- scriptRun
 	}
-
-	ioHub.broadcast <- scriptRun
 }
 
 func (scriptRun *ScriptRun) RecordOrUpdate() {
@@ -133,6 +139,7 @@ func (scriptRun *ScriptRun) RecordOrUpdate() {
 
 	if result.Error == nil {
 		scriptRun.ID = script.ID
+		scriptRun.HtmlOutput = script.HtmlOutput
 	}
 
 	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
@@ -146,7 +153,7 @@ func (scriptRun *ScriptRun) UpdateFromRunningScript() {
 	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
 		scriptRun.RequestsMadeCount = runningScript.Count
 		scriptRun.TotalRequestCount = runningScript.Total
-		scriptRun.Output = runningScript.Output
+		scriptRun.TextOutput = runningScript.TextOutput
 	} else if scriptRun.Status == "Running" {
 		scriptRun.Status = "Cancelled"
 	} else if scriptRun.Status == "Completed" || scriptRun.Status == "Archived" || scriptRun.Status == "Unarchived" {

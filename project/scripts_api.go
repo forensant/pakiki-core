@@ -7,6 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// AppendHTMLScriptParameters contains the parameters which are parsed to append HTML to the script output
+type AppendHTMLScriptParameters struct {
+	GUID       string
+	OutputHTML string
+}
+
 // GetScript godoc
 // @Summary Get A Script
 // @Description gets a single script
@@ -72,6 +78,53 @@ func GetScripts(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.Write(response)
+}
+
+// PostAppendHTMLOutputScript godoc
+// @Summary Append HTML Output for a Script
+// @Description appends the given HTML to the HTML output of the script
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param default body project.AppendHTMLScriptParameters true "HTML Output"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /project/script/append_html_output [post]
+func PostAppendHTMLOutputScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
+		return
+	}
+
+	var params AppendHTMLScriptParameters
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, "Error decoding JSON:"+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if params.GUID == "" {
+		http.Error(w, "the guid parameter must be present", http.StatusInternalServerError)
+		return
+	}
+
+	var script ScriptRun
+	tx := db.Where("guid = ?", params.GUID).First(&script)
+	if tx.Error != nil {
+		http.Error(w, "Could not find script: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	script.HtmlOutput += params.OutputHTML
+	script.Record()
+
+	runningUpdate := ScriptOutputUpdate{
+		GUID:       params.GUID,
+		HTMLOutput: params.OutputHTML,
+	}
+	runningUpdate.Record()
+
+	w.Write([]byte("OK"))
 }
 
 // PutArchiveScript godoc

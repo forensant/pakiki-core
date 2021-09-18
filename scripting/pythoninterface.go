@@ -68,7 +68,7 @@ func recordInProject(guid string, script string, title string, development bool,
 	scriptRun := project.ScriptRun{
 		GUID:        guid,
 		Script:      script,
-		Output:      output,
+		TextOutput:  output,
 		Title:       title,
 		Error:       err,
 		Status:      status,
@@ -174,8 +174,8 @@ func StartScript(hostPort string, script string, title string, development bool,
 				if bytesRead != 0 {
 					fullOutput = stripOutputTags(append(fullOutput, lineRead...))
 					outputUpdate := project.ScriptOutputUpdate{
-						GUID:   guid,
-						Output: string(stripOutputTags(lineRead)),
+						GUID:       guid,
+						TextOutput: string(stripOutputTags(lineRead)),
 					}
 					outputUpdate.Record()
 				}
