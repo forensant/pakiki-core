@@ -105,6 +105,13 @@ def get_response_for_request(guid):
   request_response = json.loads(request_response)
   request_response['Request']  = base64.b64decode(request_response['Request'])
   request_response['Response'] = base64.b64decode(request_response['Response'])
+
+  response_body_split = request_response['Response'].split(b'\r\n\r\n')
+  body = ''
+  if len(response_body_split) == 2:
+    body = response_body_split[1]
+
+  request_response['ResponseBody'] = body
   return request_response
 
 def make_request_to_url(url):
