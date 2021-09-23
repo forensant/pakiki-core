@@ -98,8 +98,13 @@ func NewRequestFromHttp(httpRequest *http.Request, rawBytes []byte) *Request {
 	headers, _ := httputil.DumpRequest(httpRequest, false)
 	responseBytes := append(headers, body...)
 
+	url := httpRequest.URL.String()
+	if strings.Index(url, "https://") == 0 {
+		url = strings.Replace(url, ":443/", "/", 1)
+	}
+
 	r := &Request{
-		URL:         httpRequest.URL.String(),
+		URL:         url,
 		Protocol:    httpRequest.Proto,
 		Verb:        httpRequest.Method,
 		DataPackets: []DataPacket{{Data: responseBytes, Direction: "Request"}},
@@ -200,6 +205,8 @@ func (request *Request) Record() {
 	}
 
 	ioHub.databaseWriter <- request
+
+	addToSitemap(request.URL)
 
 	request.ObjectType = "HTTP Request"
 	ioHub.broadcast <- request
