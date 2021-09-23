@@ -10,7 +10,9 @@ import (
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
 type RunScriptParameters struct {
-	Script string
+	Script      string
+	Title       string
+	Development bool
 }
 
 // CancelScript godoc
@@ -65,7 +67,7 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	port := getPort(r.Host)
-	guid, err := StartScript(port, params.Script, "", r.Header.Get("X-API-Key"), nil)
+	guid, err := StartScript(port, params.Script, params.Title, params.Development, "", r.Header.Get("X-API-Key"), nil)
 
 	if err != nil {
 		http.Error(w, "Error running Python script: "+err.Error(), http.StatusInternalServerError)
@@ -74,6 +76,30 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/text")
 	w.Write([]byte(guid))
+}
+
+// UpdateProgress godoc
+// @Summary Updates running script progress
+// @Description updates the progress of a currently running script
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param default body project.ScriptProgressUpdate true "Update Details"
+// @Success 200
+// @Failure 500 {string} string Error
+// @Router /scripts/update_progress [post]
+func UpdateProgress(w http.ResponseWriter, r *http.Request) {
+	var params project.ScriptProgressUpdate
+
+	// Try to decode the request body into the struct. If there is an error,
+	// respond to the client with the error message and a 400 status code.
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	params.Record()
 }
 
 func getPort(host string) string {

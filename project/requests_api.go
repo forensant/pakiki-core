@@ -29,7 +29,7 @@ type RequestResponse struct {
 // @Security ApiKeyAuth
 // @Success 200 {string} string Request Data
 // @Failure 500 {string} string Error
-// @Router /project/request_response [get]
+// @Router /project/requestresponse [get]
 func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	guid := r.FormValue("guid")
 

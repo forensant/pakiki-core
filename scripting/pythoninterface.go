@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -25,6 +24,8 @@ import (
 	_ "embed"
 
 	"github.com/google/uuid"
+
+	"dev.forensant.com/pipeline/razor/proximitycore/project"
 )
 
 //go:embed common.py
@@ -42,6 +43,8 @@ func CancelScriptInternal(guid string) error {
 	if ok {
 		return command.Process.Kill()
 	}
+
+	project.CancelScript(guid)
 
 	return nil
 }
@@ -61,7 +64,20 @@ func readString(delimeter byte, r *bufio.Reader) (string, error) {
 	}
 }
 
-func StartScript(hostPort string, script string, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
+func recordInProject(guid string, script string, title string, development bool, output string, err string, status string) {
+	scriptRun := project.ScriptRun{
+		GUID:        guid,
+		Script:      script,
+		TextOutput:  output,
+		Title:       title,
+		Error:       err,
+		Status:      status,
+		Development: development,
+	}
+	scriptRun.RecordOrUpdate()
+}
+
+func StartScript(hostPort string, script string, title string, development bool, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
 
 	if guid == "" {
 		guid = uuid.NewString()
@@ -119,6 +135,8 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 				fmt.Println(err)
 			}
 
+			recordInProject(guid, script, title, development, "", err, "Error")
+
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
 
@@ -132,26 +150,40 @@ func StartScript(hostPort string, script string, guid string, apiKey string, scr
 			} else {
 				fmt.Println(err)
 			}
+
+			recordInProject(guid, script, title, development, "", err, "Error")
+
 			pythonCmd.Process.Kill()
 			delete(runningScripts, guid)
 			return
 		}
 
+		// do the initial record into the project
+		recordInProject(guid, script, title, development, "", "", "Running")
+
 		pythonIn.Write([]byte(script))
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER\n"))
 
 		go func() {
+			readBuf := make([]byte, 1024)
+			fullOutput := make([]byte, 0)
 			for {
-				outputBytes, err := ioutil.ReadAll(pythonOut)
+				bytesRead, err := pythonOut.Read(readBuf)
+				lineRead := readBuf[:bytesRead]
+
+				if bytesRead != 0 {
+					fullOutput = stripOutputTags(append(fullOutput, lineRead...))
+					outputUpdate := project.ScriptOutputUpdate{
+						GUID:       guid,
+						TextOutput: string(stripOutputTags(lineRead)),
+					}
+					outputUpdate.Record()
+				}
 
 				if err != nil {
 					// will indicate that the file has been closed
+					recordInProject(guid, script, title, development, string(fullOutput), "", "Completed")
 					return
-				}
-
-				outputToRecord := stripOutputTags(outputBytes)
-				if string(outputToRecord) != "" {
-					fmt.Printf("Script output: %s\n", outputToRecord)
 				}
 			}
 		}()

@@ -103,6 +103,10 @@ func main() {
 	http.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
 	http.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
 	http.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
+	http.HandleFunc("/project/scripts", authenticateWithGormDB(project.GetScripts))
+	http.HandleFunc("/project/script", authenticateWithGormDB(project.GetScript))
+	http.HandleFunc("/project/script/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
+	http.HandleFunc("/project/script/archive", authenticateWithGormDB(project.PutArchiveScript))
 
 	http.HandleFunc("/proxy/add_request_to_queue", authenticateWithConnectionPool(proxy.AddRequestToQueue))
 	http.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
@@ -118,8 +122,9 @@ func main() {
 	http.HandleFunc("/inject_operation", authenticateWithGormDB(project.PutInjectOperation))
 	http.HandleFunc("/inject_operation/archive", authenticateWithGormDB(project.PutArchiveInjectOperation))
 
-	http.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
 	http.HandleFunc("/scripts/cancel", authenticate(scripting.CancelScript))
+	http.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
+	http.HandleFunc("/scripts/update_progress", authenticate(scripting.UpdateProgress))
 
 	ioHub := project.NewIOHub()
 	go ioHub.Run(parameters.ProjectPath)

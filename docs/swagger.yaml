@@ -31,7 +31,9 @@ definitions:
         description: Parts of the object which cannot be set by JSON
         type: integer
       request:
-        type: string
+        items:
+          $ref: '#/definitions/project.InjectOperationRequestPart'
+        type: array
       requestsMadeCount:
         type: integer
       ssl:
@@ -42,6 +44,29 @@ definitions:
         type: integer
       url:
         type: string
+    type: object
+  project.InjectOperationRequestPart:
+    properties:
+      inject:
+        type: boolean
+      requestPart:
+        type: string
+    type: object
+  project.InterceptedRequest:
+    properties:
+      body:
+        example: <base64 encoded body>
+        type: string
+      direction:
+        example: Either browser_to_server or server_to_browser
+        type: string
+      objectType:
+        type: string
+      recordAction:
+        example: Either add or delete
+        type: string
+      request:
+        $ref: '#/definitions/project.Request'
     type: object
   project.Request:
     properties:
@@ -85,6 +110,17 @@ definitions:
       requestData:
         type: string
     type: object
+  project.ScriptProgressUpdate:
+    properties:
+      count:
+        type: integer
+      guid:
+        type: string
+      objectType:
+        type: string
+      total:
+        type: integer
+    type: object
   proxy.AddRequestToQueueParameters:
     properties:
       host:
@@ -103,6 +139,20 @@ definitions:
         type: boolean
       serverToBrowser:
         type: boolean
+    type: object
+  proxy.InterceptedRequestResponse:
+    properties:
+      body:
+        example: <base64 encoded body>
+        type: string
+      direction:
+        example: Either browser_to_server or server_to_browser
+        type: string
+      guid:
+        type: string
+      requestAction:
+        example: 'One of: forward, forward_and_intercept_response or drop'
+        type: string
     type: object
   proxy.MakeRequestParameters:
     properties:
@@ -475,6 +525,28 @@ paths:
       summary: Set Intercept Settings
       tags:
       - Settings
+  /proxy/intercepted_requests:
+    get:
+      description: gets a list of all requests which have been intercepted, which
+        are awaiting a response
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/project.InterceptedRequest'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get Intercept Requests
+      tags:
+      - Requests
   /proxy/make_request:
     post:
       consumes:
@@ -507,6 +579,28 @@ paths:
       summary: Make a single request
       tags:
       - Requests
+  /proxy/set_intercepted_response:
+    put:
+      description: set how an intercepted request will be responded to
+      parameters:
+      - description: Proxy Intercept Response Object
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/proxy.InterceptedRequestResponse'
+      responses:
+        "200":
+          description: ""
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Modify Intercepted Request
+      tags:
+      - Settings
   /proxy/settings:
     get:
       description: get proxy settings
@@ -594,6 +688,30 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Run provided script
+      tags:
+      - Scripting
+  /scripts/update_progress:
+    post:
+      description: updates the progress of a currently running script
+      parameters:
+      - description: Update Details
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/project.ScriptProgressUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Updates running script progress
       tags:
       - Scripting
 securityDefinitions:

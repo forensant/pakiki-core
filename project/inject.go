@@ -20,7 +20,7 @@ type InjectOperationRequestPart struct {
 	ID                uint `json:"-"`
 	RequestPart       string
 	Inject            bool
-	InjectOperationID uint
+	InjectOperationID uint `json:"-"`
 }
 
 // InjectOperation contains the parameters which are passed to the Injection API calls
