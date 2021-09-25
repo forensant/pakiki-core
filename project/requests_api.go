@@ -106,6 +106,8 @@ func isInSlice(slice []string, val string) bool {
 // @Tags Requests
 // @Produce  json
 // @Param scanid query string false "Scan ID"
+// @Param filter query string false "Only show requests which contain the filter string in the url, request, response, etc"
+// @Param url_filter query string false "Only show requests which contain the given string in the URL"
 // @Param sort_col query string false "Column to sort by (default time)"
 // @Param sort_dir query string false "Column direction to sort by (default asc)"
 // @Security ApiKeyAuth
@@ -129,6 +131,11 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	filter := r.FormValue("filter")
 	if filter != "" {
 		tx = tx.Where(RequestFilterSQL, "%"+filter+"%", "%"+filter+"%")
+	}
+
+	urlFilter := r.FormValue("url_filter")
+	if urlFilter != "" {
+		tx = tx.Where("url LIKE ?", "%"+urlFilter+"%")
 	}
 
 	if excludeResources == "true" {

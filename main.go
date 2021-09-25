@@ -107,6 +107,7 @@ func main() {
 	http.HandleFunc("/project/script", authenticateWithGormDB(project.GetScript))
 	http.HandleFunc("/project/script/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
 	http.HandleFunc("/project/script/archive", authenticateWithGormDB(project.PutArchiveScript))
+	http.HandleFunc("/project/sitemap", authenticate(project.GetSitemap))
 
 	http.HandleFunc("/proxy/add_request_to_queue", authenticateWithConnectionPool(proxy.AddRequestToQueue))
 	http.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
