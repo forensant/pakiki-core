@@ -1,3 +1,5 @@
+import copy
+
 payloads = {{.Payloads}}
 
 request = Request('{{.Host}}', {{.SSL}}, '{{.Request}}')
