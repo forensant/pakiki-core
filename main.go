@@ -69,7 +69,11 @@ func main() {
 		monitorParentProcess(parameters.ParentPID)
 	}
 
-	httpClient = http.DefaultClient
+	httpClient = &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 
 	apiToken = parameters.APIKey
 	var err error

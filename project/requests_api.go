@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"gorm.io/gorm"
@@ -135,7 +136,15 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	urlFilter := r.FormValue("url_filter")
 	if urlFilter != "" {
-		tx = tx.Where("url LIKE ?", "%"+urlFilter+"%")
+		tx = tx.Where("url LIKE ? OR url LIKE ?", "http"+urlFilter+"%", "https"+urlFilter+"%")
+	}
+
+	last := r.FormValue("last")
+	if last != "" {
+		lastInt, err := strconv.Atoi(last)
+		if err == nil {
+			tx = tx.Order("time DESC").Limit(lastInt)
+		}
 	}
 
 	if excludeResources == "true" {

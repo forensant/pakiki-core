@@ -107,21 +107,18 @@ def get_response_for_request(guid):
   request_response['Response'] = base64.b64decode(request_response['Response'])
 
   response_body_split = request_response['Response'].split(b'\r\n\r\n')
-  body = ''
+  body = b''
   if len(response_body_split) == 2:
     body = response_body_split[1]
 
   request_response['ResponseBody'] = body
   return request_response
 
-def make_request_to_url(url):
-  url = urlparse(url)
-  request = "GET " + url.path + " HTTP/1.1\nHost: " + url.netloc + "\n\n"
-
+def make_request_get_response(host, ssl, request):
   # make the initial request to the URL
   obj = {
-    'host': url.netloc,
-    'ssl': url.scheme == 'https',
+    'host': host,
+    'ssl': ssl,
     'request': base64.b64encode(to_bytes(request)).decode("utf-8") 
   }
   make_req_response = make_request_to_core("/proxy/make_request", obj)
@@ -129,6 +126,12 @@ def make_request_to_url(url):
   guid = json_response['GUID']
   
   return get_response_for_request(guid)
+
+def make_request_to_url(url):
+  url = urlparse(url)
+  request = "GET " + url.path + " HTTP/1.1\nHost: " + url.netloc + "\n\n"
+
+  return make_request_get_response(url.netloc, url.scheme == 'https', request)
 
 def print_html(html):
   output_obj = {
