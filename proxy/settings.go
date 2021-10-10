@@ -11,6 +11,7 @@ import (
 type ProxySettings struct {
 	Http11ProxyAddr         string
 	Http11UpstreamProxyAddr string
+	MaxConnectionsPerHost   int
 }
 
 func GetSettings() (*ProxySettings, error) {
@@ -20,7 +21,8 @@ func GetSettings() (*ProxySettings, error) {
 	}
 
 	settings := &ProxySettings{
-		Http11ProxyAddr: ":8888",
+		Http11ProxyAddr:       ":8888",
+		MaxConnectionsPerHost: 2,
 	}
 
 	if _, err = os.Stat(configFile); os.IsNotExist(err) {

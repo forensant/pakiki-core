@@ -211,7 +211,7 @@ func (request *Request) Record() {
 	request.ObjectType = "HTTP Request"
 	ioHub.broadcast <- request
 
-	if request.ScanID != "" && request.ResponseStatusCode != 0 {
+	if request.ScanID != "" && (request.ResponseStatusCode != 0 || request.Error != "") {
 		updateRequestCountForScan(request.ScanID)
 	}
 }

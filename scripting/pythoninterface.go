@@ -26,6 +26,7 @@ import (
 	"github.com/google/uuid"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
+	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
 )
 
 //go:embed common.py
@@ -183,6 +184,7 @@ func StartScript(hostPort string, script string, title string, development bool,
 				if err != nil {
 					// will indicate that the file has been closed
 					recordInProject(guid, script, title, development, string(fullOutput), "", "Completed")
+					request_queue.CloseQueueIfEmpty(guid)
 					return
 				}
 			}

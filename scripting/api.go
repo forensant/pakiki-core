@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
+	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
 )
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
@@ -40,6 +41,8 @@ func CancelScript(w http.ResponseWriter, r *http.Request) {
 		injectOp.TotalRequestCount = 0
 		injectOp.UpdateAndRecord()
 	}
+
+	request_queue.CancelRequests(guid)
 
 	w.Header().Set("Content-Type", "text/text")
 	w.Write([]byte("Script cancelled successfully"))

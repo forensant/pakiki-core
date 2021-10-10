@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"sync"
+
+	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
 )
 
 var listenerWaitGroup sync.WaitGroup
@@ -22,6 +24,8 @@ func RestartListeners(settings *ProxySettings) error {
 		listenerWaitGroup.Wait()
 	}
 
+	request_queue.Close()
+
 	log.Println("About to restart server")
 	return startListenersWithConfig(settings)
 }
@@ -33,6 +37,8 @@ func StartListeners() error {
 		return err
 	}
 
+	initConnectionPool()
+
 	return startListenersWithConfig(configuration)
 }
 
@@ -40,6 +46,7 @@ func startListenersWithConfig(settings *ProxySettings) error {
 	listenerWaitGroup.Add(1)
 	var err error
 	http11ProxyServer, err = startHttp11BrowserProxy(&listenerWaitGroup, settings)
+	request_queue.Init()
 	if err != nil {
 		listenerWaitGroup.Done()
 		return err

@@ -87,6 +87,8 @@ func setProxySettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error changing settings: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	updateConnectionPool(defaultConnectionPool)
 }
 
 func HandleSettingsRequest(w http.ResponseWriter, r *http.Request) {

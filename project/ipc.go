@@ -221,8 +221,6 @@ func IsValidOrigin(req *http.Request, apiToken string) bool {
 }
 
 func Notifications(hub *IOHub, apiToken string, w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL)
-
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return IsValidOrigin(r, apiToken)
 	}

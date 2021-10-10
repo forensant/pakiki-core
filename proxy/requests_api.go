@@ -3,16 +3,22 @@ package proxy
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strings"
+	"time"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
+	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
 )
+
+var defaultConnectionPool *http.Client
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
 type MakeRequestParameters struct {
@@ -68,7 +74,10 @@ func MakeRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, err := makeRequestToSite(params.SSL, params.hostWithPort(), params.Request(), http.DefaultClient)
+	httpClient := &http.Client{}
+	updateConnectionPool(httpClient)
+
+	request, err := makeRequestToSite(params.SSL, params.hostWithPort(), params.Request(), httpClient, nil)
 	if err != nil {
 		http.Error(w, "Cannot make request to site: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -87,6 +96,7 @@ func MakeRequest(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
+// TODO: These are the same as the parameters above
 type AddRequestToQueueParameters struct {
 	Request string `json:"request" example:"<base64 encoded request>"`
 	Host    string `json:"host"`
@@ -103,7 +113,7 @@ type AddRequestToQueueParameters struct {
 // @Success 200
 // @Failure 500 {string} string Error
 // @Router /proxy/add_request_to_queue [post]
-func AddRequestToQueue(w http.ResponseWriter, r *http.Request, httpClient *http.Client) {
+func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 	var params AddRequestToQueueParameters
 	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
@@ -119,30 +129,70 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request, httpClient *http.
 		return
 	}
 
-	request, err := makeRequestToSite(params.SSL, params.Host, requestData, httpClient)
-	if err != nil {
-		errorStr := "Error making request to the site: " + err.Error()
-		if request == nil {
-			injectOp := project.InjectFromGUID(params.ScanID)
-			if injectOp != nil {
-				injectOp.TotalRequestCount -= 1
-				injectOp.UpdateAndRecord()
+	httpContext, cancel := context.WithCancel(context.Background())
+
+	request_queue.Increment(params.ScanID)
+	requestFinishedChannel := make(chan bool)
+
+	go func() {
+		request, err := makeRequestToSite(params.SSL, params.Host, requestData, defaultConnectionPool, httpContext)
+		request.ScanID = params.ScanID
+
+		if err != nil {
+			errorStr := "Error making request to the site: " + err.Error()
+			contextCanceled := strings.Contains(errorStr, "context canceled")
+			if request == nil || contextCanceled {
+				injectOp := project.InjectFromGUID(params.ScanID)
+				if injectOp != nil {
+					injectOp.TotalRequestCount -= 1
+					injectOp.UpdateAndRecord()
+				}
+
+				fmt.Println(errorStr)
+				close(requestFinishedChannel)
+				return
 			}
+			request.Error = errorStr
 
-			fmt.Println(errorStr)
-			return
+			if contextCanceled {
+				close(requestFinishedChannel)
+				return
+			}
 		}
-		request.Error = errorStr
-	}
 
-	request.ScanID = params.ScanID
-	request.Record()
+		request.Record()
+		close(requestFinishedChannel)
+	}()
+
+	go func() {
+		select {
+		case <-requestFinishedChannel:
+			request_queue.Decrement(params.ScanID)
+			return
+		case _, ok := <-request_queue.Channel(params.ScanID):
+
+			if !ok {
+				cancel()
+			}
+		}
+	}()
 
 	w.Header().Set("Content-Type", "text/text")
 	w.Write([]byte("OK"))
 }
 
-func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient *http.Client) (*project.Request, error) {
+func initConnectionPool() {
+	defaultConnectionPool = &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	updateConnectionPool(defaultConnectionPool)
+}
+
+func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient *http.Client, httpContext context.Context) (*project.Request, error) {
 	requestData = project.CorrectLengthHeaders(requestData)
 
 	b := bytes.NewReader(requestData)
@@ -171,32 +221,53 @@ func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient
 		return request, err
 	}
 
-	// set the proxy, if necessary
-	settings, err := GetSettings()
-	if err != nil {
-		return request, err
+	if httpContext != nil {
+		httpRequest = httpRequest.WithContext(httpContext)
 	}
 
-	if settings.Http11UpstreamProxyAddr == "" {
-		httpClient.Transport = http.DefaultTransport
-	} else {
-		proxyUrl, err := url.Parse(settings.Http11UpstreamProxyAddr)
-		if err != nil {
-			return request, err
-		}
-
-		httpClient.Transport = &http.Transport{
-			Proxy:           http.ProxyURL(proxyUrl),
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+	trace := &httptrace.ClientTrace{
+		GotConn: func(connInfo httptrace.GotConnInfo) {
+			request.Time = time.Now().Unix()
+		},
 	}
+
+	httpRequest = httpRequest.WithContext(httptrace.WithClientTrace(httpRequest.Context(), trace))
 
 	response, err := httpClient.Do(httpRequest)
 	if err != nil {
 		request.Error = "Error making request to site: " + err.Error()
+		return request, err
 	} else {
 		request.HandleResponse(response)
 	}
 
 	return request, nil
+}
+
+func updateConnectionPool(connectionPool *http.Client) {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConns = 100
+	transport.MaxConnsPerHost = 2
+	transport.MaxIdleConnsPerHost = 2
+	connectionPool.Transport = transport
+
+	settings, err := GetSettings()
+	if err != nil {
+		return
+	}
+
+	if settings.Http11UpstreamProxyAddr != "" {
+		proxyUrl, err := url.Parse(settings.Http11UpstreamProxyAddr)
+		if err != nil {
+			return
+		}
+
+		transport.Proxy = http.ProxyURL(proxyUrl)
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	if settings.MaxConnectionsPerHost == 0 {
+		settings.MaxConnectionsPerHost = 2
+	}
+	transport.MaxConnsPerHost = settings.MaxConnectionsPerHost
 }

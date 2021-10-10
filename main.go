@@ -31,7 +31,6 @@ import (
 var apiToken, port string
 var db *sql.DB
 var gormDB *gorm.DB
-var httpClient *http.Client
 
 //go:embed html_frontend/dist/*
 var frontendDir embed.FS
@@ -67,12 +66,6 @@ func main() {
 
 	if parameters.ParentPID != 0 {
 		monitorParentProcess(parameters.ParentPID)
-	}
-
-	httpClient = &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
 	}
 
 	apiToken = parameters.APIKey
@@ -113,7 +106,7 @@ func main() {
 	http.HandleFunc("/project/script/archive", authenticateWithGormDB(project.PutArchiveScript))
 	http.HandleFunc("/project/sitemap", authenticate(project.GetSitemap))
 
-	http.HandleFunc("/proxy/add_request_to_queue", authenticateWithConnectionPool(proxy.AddRequestToQueue))
+	http.HandleFunc("/proxy/add_request_to_queue", authenticate(proxy.AddRequestToQueue))
 	http.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
 	http.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
 	http.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
@@ -181,14 +174,6 @@ func authenticate(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if authenticateAndProcessRequest(w, r) {
 			fn(w, r)
-		}
-	}
-}
-
-func authenticateWithConnectionPool(fn func(http.ResponseWriter, *http.Request, *http.Client)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if authenticateAndProcessRequest(w, r) {
-			fn(w, r, httpClient)
 		}
 	}
 }
