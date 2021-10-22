@@ -96,7 +96,7 @@ func generatePayloads(inject *project.InjectOperation) []string {
 	}
 
 	for _, filename := range inject.FuzzDB {
-		file, err := fuzzdb.Open("resources/fuzzdb/attacks/" + filename)
+		file, err := fuzzdb.Open(filename)
 		if err != nil {
 			continue
 		}
@@ -108,17 +108,8 @@ func generatePayloads(inject *project.InjectOperation) []string {
 		}
 	}
 
-	for _, filename := range inject.KnownFiles {
-		file, err := fuzzdb.Open("resources/fuzzdb/file_lists/" + filename)
-		if err != nil {
-			continue
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			payloads = append(payloads, escapeForPython(scanner.Text()))
-		}
+	for _, payload := range inject.CustomPayloads {
+		payloads = append(payloads, payload)
 	}
 
 	return payloads
@@ -131,7 +122,7 @@ func stringListToPython(strs []string) string {
 		if first {
 			first = false
 		} else {
-			output += ","
+			output += ",\n"
 		}
 		output += "'" + escapeForPython(str) + "'"
 	}

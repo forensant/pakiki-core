@@ -12,6 +12,7 @@ import (
 	"net/http/httptrace"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
@@ -19,6 +20,7 @@ import (
 )
 
 var defaultConnectionPool *http.Client
+var updateInjectOperationMutex sync.Mutex
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
 type MakeRequestParameters struct {
@@ -136,31 +138,28 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		request, err := makeRequestToSite(params.SSL, params.Host, requestData, defaultConnectionPool, httpContext)
-		request.ScanID = params.ScanID
 
 		if err != nil {
 			errorStr := "Error making request to the site: " + err.Error()
-			contextCanceled := strings.Contains(errorStr, "context canceled")
-			if request == nil || contextCanceled {
-				injectOp := project.InjectFromGUID(params.ScanID)
-				if injectOp != nil {
-					injectOp.TotalRequestCount -= 1
-					injectOp.UpdateAndRecord()
-				}
 
-				fmt.Println(errorStr)
-				close(requestFinishedChannel)
-				return
+			updateInjectOperationMutex.Lock()
+			injectOp := project.InjectFromGUID(params.ScanID)
+
+			if injectOp != nil {
+				injectOp.TotalRequestCount -= 1
+				injectOp.UpdateAndRecord()
 			}
-			request.Error = errorStr
+			updateInjectOperationMutex.Unlock()
 
-			if contextCanceled {
-				close(requestFinishedChannel)
-				return
+			if request != nil {
+				request.Error = errorStr
 			}
 		}
 
-		request.Record()
+		if request != nil {
+			request.ScanID = params.ScanID
+			request.Record()
+		}
 		close(requestFinishedChannel)
 	}()
 
@@ -186,7 +185,6 @@ func initConnectionPool() {
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Timeout: 10 * time.Second,
 	}
 
 	updateConnectionPool(defaultConnectionPool)
@@ -218,7 +216,7 @@ func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient
 
 	request, err := project.NewRequestFromHttpWithoutBytes(httpRequest)
 	if err != nil {
-		return request, err
+		return nil, err
 	}
 
 	if httpContext != nil {

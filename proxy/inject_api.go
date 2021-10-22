@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"net/http"
-	"sort"
 	"strings"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
@@ -13,6 +12,16 @@ import (
 
 //go:embed resources/fuzzdb
 var fuzzdb embed.FS
+
+// PayloadEntry contains a single entry within the payloads list
+type PayloadEntry struct {
+	Filename       string
+	IsDirectory    bool
+	ResourcePath   string
+	SamplePayloads []string
+	SubEntries     []PayloadEntry
+	Title          string
+}
 
 type PayloadFile struct {
 	Title          string
@@ -68,31 +77,21 @@ func RunInjection(w http.ResponseWriter, r *http.Request) {
 // @Tags Injection Operations
 // @Produce json
 // @Security ApiKeyAuth
-// @Success 200 {object} proxy.PayloadOptions
+// @Success 200 {object} proxy.PayloadEntry
 // @Failure 500 {string} string Error
 // @Router /inject_operations/payloads [get]
 func GetInjectPayloads(w http.ResponseWriter, r *http.Request) {
-	attackFilenames, err := payloadsWithTitles("attacks")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	rootEntry := PayloadEntry{
+		Title:        "root",
+		Filename:     "",
+		ResourcePath: "/",
+		IsDirectory:  true,
+		SubEntries:   make([]PayloadEntry, 0),
 	}
 
-	knownFileFilenames, err := payloadsWithTitles("file_lists")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	readPayloadDirectory("resources/fuzzdb", &rootEntry)
 
-	sort.Sort(attackFilenames)
-	sort.Sort(knownFileFilenames)
-
-	payloadOptions := PayloadOptions{
-		Attack:     attackFilenames,
-		KnownFiles: knownFileFilenames,
-	}
-
-	js, err := json.Marshal(payloadOptions)
+	js, err := json.Marshal(rootEntry)
 	if err != nil {
 		http.Error(w, "Cannot convert request to JSON: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -112,25 +111,39 @@ func getPort(host string) string {
 	return host[portIdx+1:]
 }
 
-func payloadsWithTitles(directory string) (PayloadFileArray, error) {
-	payloads := make([]PayloadFile, 0)
-	dir := "resources/fuzzdb/" + directory
-
-	files, err := fuzzdb.ReadDir(dir)
+func readPayloadDirectory(path string, entry *PayloadEntry) {
+	files, err := fuzzdb.ReadDir(path)
 	if err != nil {
-		return nil, err
+		return
+	}
+
+	if len(files) == 0 {
+		return
 	}
 
 	for _, fileEntry := range files {
 		filename := fileEntry.Name()
-		payloads = append(payloads, PayloadFile{
+		fileEntryPath := path + "/" + filename
+
+		if strings.HasSuffix(filename, ".md") {
+			continue
+		}
+
+		newEntry := PayloadEntry{
 			Filename:       filename,
 			Title:          project.TitlizeName(filename),
-			SamplePayloads: samplePayloads(dir + "/" + filename),
-		})
-	}
+			ResourcePath:   fileEntryPath,
+			SamplePayloads: samplePayloads(fileEntryPath),
+			IsDirectory:    fileEntry.Type().IsDir(),
+			SubEntries:     make([]PayloadEntry, 0),
+		}
 
-	return payloads, nil
+		if fileEntry.IsDir() {
+			readPayloadDirectory(fileEntryPath, &newEntry)
+		}
+
+		entry.SubEntries = append(entry.SubEntries, newEntry)
+	}
 }
 
 func samplePayloads(filename string) []string {
@@ -152,17 +165,4 @@ func samplePayloads(filename string) []string {
 	}
 
 	return payloads
-}
-
-// sorting functions for the payload files
-func (p PayloadFileArray) Len() int {
-	return len(p)
-}
-
-func (p PayloadFileArray) Swap(i, j int) {
-	p[i], p[j] = p[j], p[i]
-}
-
-func (p PayloadFileArray) Less(i, j int) bool {
-	return p[i].Title < p[j].Title
 }

@@ -25,29 +25,31 @@ type InjectOperationRequestPart struct {
 
 // InjectOperation contains the parameters which are passed to the Injection API calls
 type InjectOperation struct {
-	ID          uint `json:"-"`
-	GUID        string
-	Title       string
-	Request     []InjectOperationRequestPart
-	Host        string
-	SSL         bool
-	FuzzDB      []string `gorm:"-"`
-	KnownFiles  []string `gorm:"-"`
-	IterateFrom int
-	IterateTo   int
-	Archived    bool `gorm:"default:false"`
-	Error       string
+	ID              uint `json:"-"`
+	GUID            string
+	Title           string
+	Request         []InjectOperationRequestPart
+	Host            string
+	SSL             bool
+	FuzzDB          []string `gorm:"-"`
+	CustomPayloads  []string `gorm:"-"`
+	CustomFilenames []string `gorm:"-"`
+	IterateFrom     int
+	IterateTo       int
+	Archived        bool `gorm:"default:false"`
+	Error           string
 
 	// Parts of the object which cannot be set by JSON
-	PercentCompleted  int    `gorm:"-"`
-	ObjectType        string `gorm:"-"`
-	FuzzDBGorm        string `json:"-"`
-	KnownFilesGorm    string `json:"-"`
-	URL               string
-	InjectDescription string `gorm:"-"`
-	RequestsMadeCount int    `gorm:"-"`
-	TotalRequestCount int
-	DoNotRecord       bool `gorm:"-"`
+	PercentCompleted   int    `gorm:"-"`
+	ObjectType         string `gorm:"-"`
+	FuzzDBGorm         string `json:"-"`
+	CustomFilesGorm    string `json:"-"`
+	CustomPayloadsGorm string `json:"-"`
+	URL                string
+	InjectDescription  string `gorm:"-"`
+	RequestsMadeCount  int    `gorm:"-"`
+	TotalRequestCount  int
+	DoNotRecord        bool `gorm:"-"`
 }
 
 func InjectFromGUID(guid string) *InjectOperation {
@@ -64,7 +66,8 @@ func InjectFromGUID(guid string) *InjectOperation {
 func (injectOperation *InjectOperation) Record() {
 	injectOperation.ObjectType = "Inject Operation"
 	injectOperation.FuzzDBGorm = strings.Join(injectOperation.FuzzDB[:], ";")
-	injectOperation.KnownFilesGorm = strings.Join(injectOperation.KnownFiles[:], ";")
+	injectOperation.CustomFilesGorm = strings.Join(injectOperation.CustomFilenames[:], ";")
+	injectOperation.CustomPayloadsGorm = strings.Join(injectOperation.CustomPayloads[:], "\n")
 	if injectOperation.GUID == "" {
 		injectOperation.GUID = uuid.NewString()
 	}
@@ -101,7 +104,7 @@ func (injectOperation *InjectOperation) UpdateAndRecord() {
 
 func (injectOperation *InjectOperation) UpdateForDisplay() {
 	injectOperation.FuzzDB = strings.Split(injectOperation.FuzzDBGorm, ";")
-	injectOperation.KnownFiles = strings.Split(injectOperation.KnownFilesGorm, ";")
+	injectOperation.CustomFilenames = strings.Split(injectOperation.CustomFilesGorm, ";")
 
 	payloads := make([]string, 0)
 	if injectOperation.IterateFrom != 0 || injectOperation.IterateTo != 0 {
@@ -112,14 +115,15 @@ func (injectOperation *InjectOperation) UpdateForDisplay() {
 		if filename == "" {
 			continue
 		}
+		filename = strings.Replace(filename, "resources/fuzzdb/", "", 1)
 		payloads = append(payloads, "FuzzDB: "+TitlizeName(filename))
 	}
 
-	for _, filename := range injectOperation.KnownFiles {
+	for _, filename := range injectOperation.CustomFilenames {
 		if filename == "" {
 			continue
 		}
-		payloads = append(payloads, "Known files: "+TitlizeName(filename))
+		payloads = append(payloads, "Custom files: "+filename)
 	}
 
 	injectOperation.InjectDescription = strings.Join(payloads, ", ")
@@ -180,7 +184,7 @@ func (injectOperation *InjectOperation) parseURL() string {
 	httpRequest, err := http.ReadRequest(bufio.NewReader(b))
 
 	if err != nil {
-		fmt.Printf("Error occurred: %s\n", err.Error())
+		fmt.Printf("Error occurred parsing inject operation URL: %s\n", err.Error())
 	} else {
 		urlToReturn, _ = url.QueryUnescape(httpRequest.URL.String())
 	}

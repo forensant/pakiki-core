@@ -1,6 +1,8 @@
 package request_queue
 
-import "sync"
+import (
+	"sync"
+)
 
 var requestQueueMutex sync.Mutex
 var requestQueueCount map[string]int
