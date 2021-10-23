@@ -220,7 +220,7 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/proxy.PayloadOptions"
+                            "$ref": "#/definitions/proxy.PayloadEntry"
                         }
                     },
                     "500": {
@@ -321,7 +321,7 @@ var doc = `{
                 }
             }
         },
-        "/project/request_response": {
+        "/project/requestresponse": {
             "get": {
                 "security": [
                     {
@@ -376,6 +376,18 @@ var doc = `{
                     },
                     {
                         "type": "string",
+                        "description": "Only show requests which contain the filter string in the url, request, response, etc",
+                        "name": "filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Only show requests which contain the given string in the URL",
+                        "name": "url_filter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Column to sort by (default time)",
                         "name": "sort_col",
                         "in": "query"
@@ -394,6 +406,194 @@ var doc = `{
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/project.Request"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/project/script": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a single script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Get A Script",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/project/script/append_html_output": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "appends the given HTML to the HTML output of the script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Append HTML Output for a Script",
+                "parameters": [
+                    {
+                        "description": "HTML Output",
+                        "name": "default",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.AppendHTMLScriptParameters"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/project/script/archive": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates the the archived status of a script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Archive Script",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "script guid",
+                        "name": "guid",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "archive status to set",
+                        "name": "archive",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/project/scripts": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a list of all scripts",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Get All Scripts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/project.ScriptRun"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/project/sitemap": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a list of all paths observed by the proxy",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Gets the sitemap",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
                             }
                         }
                     },
@@ -841,11 +1041,34 @@ var doc = `{
         }
     },
     "definitions": {
+        "project.AppendHTMLScriptParameters": {
+            "type": "object",
+            "properties": {
+                "guid": {
+                    "type": "string"
+                },
+                "outputHTML": {
+                    "type": "string"
+                }
+            }
+        },
         "project.InjectOperation": {
             "type": "object",
             "properties": {
                 "archived": {
                     "type": "boolean"
+                },
+                "customFilenames": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "customPayloads": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "doNotRecord": {
                     "type": "boolean"
@@ -873,12 +1096,6 @@ var doc = `{
                 },
                 "iterateTo": {
                     "type": "integer"
-                },
-                "knownFiles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 },
                 "objectType": {
                     "type": "string"
@@ -1025,6 +1242,50 @@ var doc = `{
                 }
             }
         },
+        "project.ScriptRun": {
+            "type": "object",
+            "properties": {
+                "development": {
+                    "type": "boolean"
+                },
+                "doNotRecord": {
+                    "type": "boolean"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "guid": {
+                    "type": "string"
+                },
+                "htmlOutput": {
+                    "type": "string"
+                },
+                "objectType": {
+                    "type": "string"
+                },
+                "percentCompleted": {
+                    "type": "integer"
+                },
+                "requestsMadeCount": {
+                    "type": "integer"
+                },
+                "script": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "textOutput": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "totalRequestCount": {
+                    "type": "integer"
+                }
+            }
+        },
         "proxy.AddRequestToQueueParameters": {
             "type": "object",
             "properties": {
@@ -1084,15 +1345,24 @@ var doc = `{
                     "type": "string",
                     "example": "\u003cbase64 encoded request\u003e"
                 },
+                "scan_id": {
+                    "type": "string"
+                },
                 "ssl": {
                     "type": "boolean"
                 }
             }
         },
-        "proxy.PayloadFile": {
+        "proxy.PayloadEntry": {
             "type": "object",
             "properties": {
                 "filename": {
+                    "type": "string"
+                },
+                "isDirectory": {
+                    "type": "boolean"
+                },
+                "resourcePath": {
                     "type": "string"
                 },
                 "samplePayloads": {
@@ -1101,25 +1371,14 @@ var doc = `{
                         "type": "string"
                     }
                 },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
-        "proxy.PayloadOptions": {
-            "type": "object",
-            "properties": {
-                "attack": {
+                "subEntries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/proxy.PayloadFile"
+                        "$ref": "#/definitions/proxy.PayloadEntry"
                     }
                 },
-                "knownFiles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/proxy.PayloadFile"
-                    }
+                "title": {
+                    "type": "string"
                 }
             }
         },
@@ -1131,14 +1390,40 @@ var doc = `{
                 },
                 "http11UpstreamProxyAddr": {
                     "type": "string"
+                },
+                "maxConnectionsPerHost": {
+                    "type": "integer"
                 }
             }
         },
         "scripting.RunScriptParameters": {
             "type": "object",
             "properties": {
-                "script": {
+                "code": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/scripting.ScriptCode"
+                    }
+                },
+                "development": {
+                    "type": "boolean"
+                },
+                "title": {
                     "type": "string"
+                }
+            }
+        },
+        "scripting.ScriptCode": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "mainScript": {
+                    "type": "boolean"
                 }
             }
         }

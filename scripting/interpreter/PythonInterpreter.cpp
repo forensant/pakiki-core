@@ -68,18 +68,6 @@ bool errorOccurred() {
   }
 }
 
-void incrementFilename(char* filename) {
-  if(strcmp(filename, "") == 0) {
-    strcpy(filename, "proximity_common.py");
-  }
-  else if(strcmp(filename, "proximity_common.py") == 0) {
-    strcpy(filename, "script.py");
-  }
-  else {
-    strcpy(filename, "function_call.py");
-  }
-}
-
 char* concatenateDir(const char* path) {
   char* currDir = (char*)malloc(102400);
   currDir = getcwd(currDir, 102400);
@@ -129,7 +117,7 @@ char* getDir() {
   return dir;
 }
 
-bool runDiscreteCode(string code, char* filename, PyObject* py_dict) {
+bool runDiscreteCode(string code, const char* filename, PyObject* py_dict) {
   PyObject* compiledObject = Py_CompileString(code.c_str(), filename, Py_file_input);
 
   if(errorOccurred()) {
@@ -153,9 +141,6 @@ bool runPythonScript() {
 
   PyThreadState_Swap(threadState);
 
-  //cout << "Created thread and swapped to it" << endl;
-  //cout << "RAZOR_PYTHON_INTERPRETER_READY" << endl;
-
   string pythonCode;
   string line;
   std::getline(std::cin, line, '\n');
@@ -165,23 +150,22 @@ bool runPythonScript() {
 
   bool errorThrown = false;
 
-  char filename[256];
-  filename[0] = 0;
-  incrementFilename(filename);
+  string filename;
   bool endInterpreter = false;
 
-  //cout << "Starting main interpreter loop" << endl;
-
   while(line != "PROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT" && line != "PROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER") {
-    if(line == "PROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK") {
+    if(filename == "") {
+      filename = line;
+    }
+    else if(line == "PROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK") {
       if(pythonCode != "") {
-        if(runDiscreteCode(pythonCode, filename, py_dict) == false) {
+        if(runDiscreteCode(pythonCode, filename.c_str(), py_dict) == false) {
           errorThrown = true;
           break;
         }
       }
       pythonCode = "";
-      incrementFilename(filename);
+      filename = "";
       cout << "PROXIMITY_PYTHON_INTERPRETER_READY" << endl;
     }
     else {
@@ -195,7 +179,7 @@ bool runPythonScript() {
   }
 
   if(!errorThrown) {
-    runDiscreteCode(pythonCode, filename, py_dict);
+    runDiscreteCode(pythonCode, filename.c_str(), py_dict);
   }
 
   cout << endl << "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED" << endl;
@@ -221,7 +205,6 @@ int main(int /*argc*/, char *argv[]) {
 
   Py_Initialize();
 
-  //while(!runPythonScript());
   runPythonScript();
 
   Py_Finalize();

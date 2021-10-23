@@ -19,14 +19,14 @@ def make_request_to_core(uri, obj = {}):
   property_data = None
   
   if obj != {}:
-    obj['scan_id'] = 'SCRIPT_ID'
+    obj['scan_id'] = 'PROXIMITY_SCRIPT_ID'
     property_data = json.dumps(obj).encode('UTF-8')
 
   headers = {
-    'X-API-Key': 'API_KEY'
+    'X-API-Key': 'PROXIMITY_API_KEY'
   }
 
-  req = urllib.request.Request("http://localhost:PROXY_PORT" + uri, property_data, headers)
+  req = urllib.request.Request("http://localhost:PROXIMITY_PROXY_PORT" + uri, property_data, headers)
   
   try:
     with urllib.request.urlopen(req) as call_response:
@@ -98,54 +98,3 @@ class Request:
 
   def set_properties(self, properties):
     self.properties = properties
-
-def get_response_for_request(guid):
-  # retrieve and interpret the result
-  request_response = make_request_to_core("/project/requestresponse?guid=" + guid)
-  request_response = json.loads(request_response)
-  request_response['Request']  = base64.b64decode(request_response['Request'])
-  request_response['Response'] = base64.b64decode(request_response['Response'])
-
-  response_body_split = request_response['Response'].split(b'\r\n\r\n')
-  body = b''
-  if len(response_body_split) == 2:
-    body = response_body_split[1]
-
-  request_response['ResponseBody'] = body
-  return request_response
-
-def make_request_get_response(host, ssl, request):
-  # make the initial request to the URL
-  obj = {
-    'host': host,
-    'ssl': ssl,
-    'request': base64.b64encode(to_bytes(request)).decode("utf-8") 
-  }
-  make_req_response = make_request_to_core("/proxy/make_request", obj)
-  json_response = json.loads(make_req_response)
-  guid = json_response['GUID']
-  
-  return get_response_for_request(guid)
-
-def make_request_to_url(url):
-  url = urlparse(url)
-  request = "GET " + url.path + " HTTP/1.1\nHost: " + url.netloc + "\n\n"
-
-  return make_request_get_response(url.netloc, url.scheme == 'https', request)
-
-def print_html(html):
-  output_obj = {
-    'GUID':       'SCRIPT_ID',
-    'OutputHTML': html
-  }
-
-  make_request_to_core('/project/script/append_html_output', output_obj)
-
-def report_progress(count, total):
-  report = {
-    'Count': count,
-    'Total': total,
-    'GUID': 'SCRIPT_ID'
-  }
-
-  make_request_to_core('/scripts/update_progress', report)

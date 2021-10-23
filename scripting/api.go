@@ -11,7 +11,7 @@ import (
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
 type RunScriptParameters struct {
-	Script      string
+	Code        []ScriptCode
 	Title       string
 	Development bool
 }
@@ -70,7 +70,7 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	port := getPort(r.Host)
-	guid, err := StartScript(port, params.Script, params.Title, params.Development, "", r.Header.Get("X-API-Key"), nil)
+	guid, err := StartScript(port, params.Code, params.Title, params.Development, "", r.Header.Get("X-API-Key"), nil)
 
 	if err != nil {
 		http.Error(w, "Error running Python script: "+err.Error(), http.StatusInternalServerError)

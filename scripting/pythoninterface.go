@@ -34,6 +34,13 @@ var commonCode string
 
 var runningScripts = make(map[string]*exec.Cmd)
 
+// ScriptCode contains an individual file to be run as part of a script
+type ScriptCode struct {
+	Code       string
+	Filename   string
+	MainScript bool
+}
+
 type ScriptCaller interface {
 	RecordError(string)
 }
@@ -78,7 +85,7 @@ func recordInProject(guid string, script string, title string, development bool,
 	scriptRun.RecordOrUpdate()
 }
 
-func StartScript(hostPort string, script string, title string, development bool, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
+func StartScript(hostPort string, scriptCode []ScriptCode, title string, development bool, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
 
 	if guid == "" {
 		guid = uuid.NewString()
@@ -121,49 +128,44 @@ func StartScript(hostPort string, script string, title string, development bool,
 	runningScripts[guid] = pythonCmd
 
 	go func() {
-		_, err = pythonIn.Write([]byte(getCommonCode(guid, hostPort, apiKey)))
-		if err != nil {
-			fmt.Println("Error writing bytes to process: " + err.Error())
-		}
-		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
-
-		output, err := readString('\n', bufferedOutput)
-		if err != nil {
-			err := "Error running script: " + err.Error()
-			if scriptCaller != nil {
-				scriptCaller.RecordError(err)
-			} else {
-				fmt.Println(err)
-			}
-
-			recordInProject(guid, script, title, development, "", err, "Error")
-
-			pythonCmd.Process.Kill()
-			delete(runningScripts, guid)
-
-			return
+		commonScriptCode := ScriptCode{
+			Code:     commonCode,
+			Filename: "common.py",
 		}
 
-		if strings.TrimSpace(output) != "PROXIMITY_PYTHON_INTERPRETER_READY" {
-			err := "Unexpected output running script: " + output
-			if scriptCaller != nil {
-				scriptCaller.RecordError(err)
-			} else {
-				fmt.Println(err)
+		scriptCode = append([]ScriptCode{commonScriptCode}, scriptCode...)
+
+		mainScript := ""
+		for _, scriptPart := range scriptCode {
+			if scriptPart.MainScript {
+				mainScript = scriptPart.Code
 			}
+		}
 
-			recordInProject(guid, script, title, development, "", err, "Error")
+		for idx, scriptPart := range scriptCode {
+			code := replaceCodeVariables(scriptPart.Code, guid, hostPort, apiKey)
+			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, bufferedOutput, idx == len(scriptCode)-1)
 
-			pythonCmd.Process.Kill()
-			delete(runningScripts, guid)
-			return
+			if err != nil {
+				err := "Error running script: " + err.Error()
+				if scriptCaller != nil {
+					scriptCaller.RecordError(err)
+				} else {
+					fmt.Println(err)
+				}
+
+				recordInProject(guid, mainScript, title, development, "", err, "Error")
+
+				pythonCmd.Process.Kill()
+				delete(runningScripts, guid)
+				return
+			}
 		}
 
 		// do the initial record into the project
-		recordInProject(guid, script, title, development, "", "", "Running")
+		recordInProject(guid, mainScript, title, development, "", "", "Running")
 
-		pythonIn.Write([]byte(script))
-		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER\n"))
+		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
 
 		go func() {
 			readBuf := make([]byte, 1024)
@@ -183,7 +185,7 @@ func StartScript(hostPort string, script string, title string, development bool,
 
 				if err != nil {
 					// will indicate that the file has been closed
-					recordInProject(guid, script, title, development, string(fullOutput), "", "Completed")
+					recordInProject(guid, mainScript, title, development, string(fullOutput), "", "Completed")
 					request_queue.CloseQueueIfEmpty(guid)
 					return
 				}
@@ -198,14 +200,48 @@ func StartScript(hostPort string, script string, title string, development bool,
 	return guid, nil
 }
 
-func getCommonCode(guid string, port string, apiKey string) string {
-	newCommonCode := strings.Replace(commonCode, "PROXY_PORT", port, -1)
-	newCommonCode = strings.Replace(newCommonCode, "SCRIPT_ID", guid, -1)
-	newCommonCode = strings.Replace(newCommonCode, "API_KEY", apiKey, -1)
+func replaceCodeVariables(code string, guid string, port string, apiKey string) string {
+	code = strings.ReplaceAll(code, "PROXIMITY_PROXY_PORT", port)
+	code = strings.ReplaceAll(code, "PROXIMITY_SCRIPT_ID", guid)
+	code = strings.ReplaceAll(code, "PROXIMITY_API_KEY", apiKey)
 
-	return newCommonCode
+	return code
 }
 
 func stripOutputTags(output []byte) []byte {
-	return bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED\n"), []byte(""))
+	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED\n"), []byte(""))
+	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_ERROR\n"), []byte(""))
+	return output
+}
+
+func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, stdout *bufio.Reader, lastBlock bool) error {
+	_, err := stdin.Write([]byte(filename + "\n"))
+	if err != nil {
+		fmt.Println("Error writing bytes to process: " + err.Error())
+		return err
+	}
+
+	stdin.Write([]byte(code))
+	if lastBlock {
+		return nil
+	}
+
+	stdin.Write([]byte("\n\nPROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
+
+	output, err := readString('\n', stdout)
+	if err != nil {
+		return err
+	}
+
+	if strings.TrimSpace(output) != "PROXIMITY_PYTHON_INTERPRETER_READY" {
+		// this should be the stack trace
+		allOutput := make([]byte, 4096)
+		stdout.Read(allOutput)
+		outputStr := strings.ReplaceAll(string(allOutput), "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED", "")
+		outputStr = strings.TrimSpace(outputStr)
+
+		return errors.New("unexpected output running script: " + outputStr)
+	}
+
+	return nil
 }

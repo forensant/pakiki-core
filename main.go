@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"embed"
 	"flag"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -34,6 +32,9 @@ var gormDB *gorm.DB
 
 //go:embed html_frontend/dist/*
 var frontendDir embed.FS
+
+//go:embed docs/swagger.json
+var swaggerJson string
 
 type commandLineParameters struct {
 	APIKey      string
@@ -205,20 +206,15 @@ func ensureProcessExists(parentPID int32) {
 		return
 	}
 
-	if exists == false {
+	if !exists {
 		log.Fatal("Parent process ended, killing proxy")
 	}
 }
 
 func handleSwaggerJSON(w http.ResponseWriter, r *http.Request) {
-	dat, err := ioutil.ReadFile("docs/swagger.json")
-	if err != nil {
-		http.Error(w, "Could not open swagger json: "+err.Error(), http.StatusInternalServerError)
-	}
+	data := strings.ReplaceAll(swaggerJson, "\"host\": \"localhost\",", "\"host\": \"localhost:"+port+"\",")
 
-	dat = bytes.ReplaceAll(dat, []byte("\"host\": \"localhost\","), []byte("\"host\": \"localhost:"+port+"\","))
-
-	w.Write(dat)
+	w.Write([]byte(data))
 }
 
 func isLocalhost(remoteAddr string) bool {

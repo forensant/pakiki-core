@@ -1,8 +1,23 @@
 definitions:
+  project.AppendHTMLScriptParameters:
+    properties:
+      guid:
+        type: string
+      outputHTML:
+        type: string
+    type: object
   project.InjectOperation:
     properties:
       archived:
         type: boolean
+      customFilenames:
+        items:
+          type: string
+        type: array
+      customPayloads:
+        items:
+          type: string
+        type: array
       doNotRecord:
         type: boolean
       error:
@@ -21,10 +36,6 @@ definitions:
         type: integer
       iterateTo:
         type: integer
-      knownFiles:
-        items:
-          type: string
-        type: array
       objectType:
         type: string
       percentCompleted:
@@ -121,6 +132,35 @@ definitions:
       total:
         type: integer
     type: object
+  project.ScriptRun:
+    properties:
+      development:
+        type: boolean
+      doNotRecord:
+        type: boolean
+      error:
+        type: string
+      guid:
+        type: string
+      htmlOutput:
+        type: string
+      objectType:
+        type: string
+      percentCompleted:
+        type: integer
+      requestsMadeCount:
+        type: integer
+      script:
+        type: string
+      status:
+        type: string
+      textOutput:
+        type: string
+      title:
+        type: string
+      totalRequestCount:
+        type: integer
+    type: object
   proxy.AddRequestToQueueParameters:
     properties:
       host:
@@ -161,30 +201,29 @@ definitions:
       request:
         example: <base64 encoded request>
         type: string
+      scan_id:
+        type: string
       ssl:
         type: boolean
     type: object
-  proxy.PayloadFile:
+  proxy.PayloadEntry:
     properties:
       filename:
+        type: string
+      isDirectory:
+        type: boolean
+      resourcePath:
         type: string
       samplePayloads:
         items:
           type: string
         type: array
+      subEntries:
+        items:
+          $ref: '#/definitions/proxy.PayloadEntry'
+        type: array
       title:
         type: string
-    type: object
-  proxy.PayloadOptions:
-    properties:
-      attack:
-        items:
-          $ref: '#/definitions/proxy.PayloadFile'
-        type: array
-      knownFiles:
-        items:
-          $ref: '#/definitions/proxy.PayloadFile'
-        type: array
     type: object
   proxy.ProxySettings:
     properties:
@@ -192,11 +231,28 @@ definitions:
         type: string
       http11UpstreamProxyAddr:
         type: string
+      maxConnectionsPerHost:
+        type: integer
     type: object
   scripting.RunScriptParameters:
     properties:
-      script:
+      code:
+        items:
+          $ref: '#/definitions/scripting.ScriptCode'
+        type: array
+      development:
+        type: boolean
+      title:
         type: string
+    type: object
+  scripting.ScriptCode:
+    properties:
+      code:
+        type: string
+      filename:
+        type: string
+      mainScript:
+        type: boolean
     type: object
 host: localhost
 info:
@@ -327,7 +383,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/proxy.PayloadOptions'
+            $ref: '#/definitions/proxy.PayloadEntry'
         "500":
           description: Internal Server Error
           schema:
@@ -393,7 +449,7 @@ paths:
       summary: Update A Request
       tags:
       - Requests
-  /project/request_response:
+  /project/requestresponse:
     get:
       description: gets the full request and response of a given request
       produces:
@@ -420,6 +476,15 @@ paths:
         in: query
         name: scanid
         type: string
+      - description: Only show requests which contain the filter string in the url,
+          request, response, etc
+        in: query
+        name: filter
+        type: string
+      - description: Only show requests which contain the given string in the URL
+        in: query
+        name: url_filter
+        type: string
       - description: Column to sort by (default time)
         in: query
         name: sort_col
@@ -444,6 +509,123 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get All Requests
+      tags:
+      - Requests
+  /project/script:
+    get:
+      description: gets a single script
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get A Script
+      tags:
+      - Scripting
+  /project/script/append_html_output:
+    post:
+      description: appends the given HTML to the HTML output of the script
+      parameters:
+      - description: HTML Output
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/project.AppendHTMLScriptParameters'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Append HTML Output for a Script
+      tags:
+      - Scripting
+  /project/script/archive:
+    put:
+      description: updates the the archived status of a script
+      parameters:
+      - description: script guid
+        in: formData
+        name: guid
+        required: true
+        type: string
+      - description: archive status to set
+        in: formData
+        name: archive
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Archive Script
+      tags:
+      - Scripting
+  /project/scripts:
+    get:
+      description: gets a list of all scripts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/project.ScriptRun'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get All Scripts
+      tags:
+      - Scripting
+  /project/sitemap:
+    get:
+      description: gets a list of all paths observed by the proxy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Gets the sitemap
       tags:
       - Requests
   /proxy/add_request_to_queue:
