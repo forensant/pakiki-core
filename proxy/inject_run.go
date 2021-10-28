@@ -32,7 +32,7 @@ func runInjection(inject *project.InjectOperation, port string, apiKey string) {
 		MainScript: true,
 	}
 
-	_, err = scripting.StartScript(port, []scripting.ScriptCode{scriptCode}, "", true, inject.GUID, apiKey, inject)
+	_, err = scripting.StartScript(port, []scripting.ScriptCode{scriptCode}, "", true, inject.GUID, "", apiKey, inject)
 	if err != nil {
 		inject.RecordError("Error running script: " + err.Error())
 	}

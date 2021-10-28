@@ -72,7 +72,7 @@ func readString(delimeter byte, r *bufio.Reader) (string, error) {
 	}
 }
 
-func recordInProject(guid string, script string, title string, development bool, output string, err string, status string) {
+func recordInProject(guid string, scriptGroup, script string, title string, development bool, output string, err string, status string) {
 	scriptRun := project.ScriptRun{
 		GUID:        guid,
 		Script:      script,
@@ -81,11 +81,12 @@ func recordInProject(guid string, script string, title string, development bool,
 		Error:       err,
 		Status:      status,
 		Development: development,
+		ScriptGroup: scriptGroup,
 	}
 	scriptRun.RecordOrUpdate()
 }
 
-func StartScript(hostPort string, scriptCode []ScriptCode, title string, development bool, guid string, apiKey string, scriptCaller ScriptCaller) (string, error) {
+func StartScript(hostPort string, scriptCode []ScriptCode, title string, development bool, guid string, scriptGroup string, apiKey string, scriptCaller ScriptCaller) (string, error) {
 
 	if guid == "" {
 		guid = uuid.NewString()
@@ -154,7 +155,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 					fmt.Println(err)
 				}
 
-				recordInProject(guid, mainScript, title, development, "", err, "Error")
+				recordInProject(guid, scriptGroup, mainScript, title, development, "", err, "Error")
 
 				pythonCmd.Process.Kill()
 				delete(runningScripts, guid)
@@ -163,7 +164,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 		}
 
 		// do the initial record into the project
-		recordInProject(guid, mainScript, title, development, "", "", "Running")
+		recordInProject(guid, scriptGroup, mainScript, title, development, "", "", "Running")
 
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
 
@@ -185,7 +186,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 
 				if err != nil {
 					// will indicate that the file has been closed
-					recordInProject(guid, mainScript, title, development, string(fullOutput), "", "Completed")
+					recordInProject(guid, scriptGroup, mainScript, title, development, string(fullOutput), "", "Completed")
 					request_queue.CloseQueueIfEmpty(guid)
 					return
 				}

@@ -28,6 +28,7 @@ type RequestResponse struct {
 // @Tags Requests
 // @Produce  text/text
 // @Security ApiKeyAuth
+// @Param guid query string true "Request guid"
 // @Success 200 {string} string Request Data
 // @Failure 500 {string} string Error
 // @Router /project/requestresponse [get]
@@ -189,8 +190,8 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Description gets a specific request
 // @Tags Requests
 // @Produce  json
-// @Param guid query string true "The GUID of the request to fetch"
 // @Security ApiKeyAuth
+// @Param guid query string true "The GUID of the request to fetch"
 // @Success 200 {object} project.RequestSummary
 // @Failure 500 {string} string Error
 // @Router /project/request [get]
@@ -259,9 +260,9 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Description updates a specific request
 // @Tags Requests
 // @Produce  json
+// @Security ApiKeyAuth
 // @Param guid body string true "The GUID of the request to update"
 // @Param notes body string true "The notes for the request"
-// @Security ApiKeyAuth
 // @Success 200 {string} string message
 // @Failure 500 {string} string Error
 // @Router /project/request [put]

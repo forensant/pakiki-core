@@ -14,6 +14,7 @@ type ScriptRun struct {
 	Script      string
 	Title       string
 	Development bool
+	ScriptGroup string
 
 	TextOutput string
 	HtmlOutput string
@@ -46,6 +47,7 @@ type ScriptProgressUpdate struct {
 
 type runningScriptDetails struct {
 	TextOutput string
+	HTMLOutput string
 	Count      int
 	Total      int
 }
@@ -91,6 +93,7 @@ func (scriptOutputUpdate *ScriptOutputUpdate) Record() {
 	guid := scriptOutputUpdate.GUID
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].TextOutput += scriptOutputUpdate.TextOutput
+		runningScripts[guid].HTMLOutput += scriptOutputUpdate.HTMLOutput
 	} else {
 		fmt.Printf("Script output updated attempted for a script which is not running\n")
 	}
@@ -154,6 +157,7 @@ func (scriptRun *ScriptRun) UpdateFromRunningScript() {
 		scriptRun.RequestsMadeCount = runningScript.Count
 		scriptRun.TotalRequestCount = runningScript.Total
 		scriptRun.TextOutput = runningScript.TextOutput
+		scriptRun.HtmlOutput = runningScript.HTMLOutput
 	} else if scriptRun.Status == "Running" {
 		scriptRun.Status = "Cancelled"
 	} else if scriptRun.Status == "Completed" || scriptRun.Status == "Archived" || scriptRun.Status == "Unarchived" {

@@ -14,6 +14,7 @@ type RunScriptParameters struct {
 	Code        []ScriptCode
 	Title       string
 	Development bool
+	ScriptGroup string
 }
 
 // CancelScript godoc
@@ -70,7 +71,7 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	port := getPort(r.Host)
-	guid, err := StartScript(port, params.Code, params.Title, params.Development, "", r.Header.Get("X-API-Key"), nil)
+	guid, err := StartScript(port, params.Code, params.Title, params.Development, "", params.ScriptGroup, r.Header.Get("X-API-Key"), nil)
 
 	if err != nil {
 		http.Error(w, "Error running Python script: "+err.Error(), http.StatusInternalServerError)

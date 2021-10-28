@@ -19,6 +19,7 @@ type AppendHTMLScriptParameters struct {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
+// @Param guid query string true "The GUID of the script to fetch"
 // @Success 200 {string} string ScriptRun Data
 // @Failure 500 {string} string Error
 // @Router /project/script [get]
