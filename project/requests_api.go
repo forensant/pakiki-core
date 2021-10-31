@@ -107,7 +107,7 @@ func isInSlice(slice []string, val string) bool {
 // @Description gets a list of all requests
 // @Tags Requests
 // @Produce  json
-// @Param scanid query string false "Scan ID"
+// @Param scanid query string false "Scan ID, can be multiple separated by semi-colons"
 // @Param filter query string false "Only show requests which contain the filter string in the url, request, response, etc"
 // @Param url_filter query string false "Only show requests which contain the given string in the URL"
 // @Param sort_col query string false "Column to sort by (default time)"
@@ -127,7 +127,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if scanId == "" {
 		tx = db.Where("scan_id = ''")
 	} else {
-		tx = db.Where("scan_id = ?", scanId)
+		tx = db.Where("scan_id IN ?", strings.Split(scanId, ":"))
 	}
 
 	filter := r.FormValue("filter")
