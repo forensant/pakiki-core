@@ -54,6 +54,30 @@ type runningScriptDetails struct {
 
 var runningScripts map[string]*runningScriptDetails = make(map[string]*runningScriptDetails)
 
+func ScriptIncrementTotalRequests(guid string) {
+	if _, ok := runningScripts[guid]; ok {
+		runningScripts[guid].Total += 1
+	}
+}
+
+func ScriptDecrementTotalRequests(guid string) {
+	if _, ok := runningScripts[guid]; ok {
+		runningScripts[guid].Total -= 1
+	}
+}
+
+func ScriptIncrementRequestCount(guid string) {
+	if _, ok := runningScripts[guid]; ok {
+		runningScripts[guid].Count += 1
+	}
+}
+
+func ScriptDecrementRequestCount(guid string) {
+	if _, ok := runningScripts[guid]; ok {
+		runningScripts[guid].Count -= 1
+	}
+}
+
 func ScriptRunFromGUID(guid string) *ScriptRun {
 	var operation ScriptRun
 	tx := readableDatabase.Where("guid = ?", guid).First(&operation)
@@ -129,6 +153,10 @@ func (scriptRun *ScriptRun) Record() {
 		}
 
 		ioHub.broadcast <- scriptRun
+	}
+
+	if scriptRun.ScriptGroup != "" && scriptRun.Status != "Running" {
+		endScriptGroupIfRequired(scriptRun.ScriptGroup)
 	}
 
 	if !scriptRun.DoNotRecord {
@@ -216,4 +244,20 @@ func (scriptProgressUpdate *ScriptProgressUpdate) WriteToDatabase(db *gorm.DB) {
 
 func (scriptRun *ScriptRun) WriteToDatabase(db *gorm.DB) {
 	db.Save(scriptRun)
+}
+
+func scriptGroupRunning(scriptGroup string) bool {
+	var scripts []ScriptRun
+	tx := readableDatabase.Where("script_group = ?", scriptGroup).Find(&scripts)
+	if tx.Error != nil {
+		return false
+	}
+
+	for _, script := range scripts {
+		if _, ok := runningScripts[script.GUID]; ok {
+			return true
+		}
+	}
+
+	return false
 }

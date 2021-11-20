@@ -35,6 +35,8 @@ func getScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	scriptGroup.ensureRunning()
+
 	response, err := json.Marshal(scriptGroup)
 	if err != nil {
 		http.Error(w, "Could not marshal scripts: "+err.Error(), http.StatusInternalServerError)
@@ -60,6 +62,10 @@ func GetScriptGroups(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for _, scriptGroup := range scriptGroups {
+		scriptGroup.ensureRunning()
 	}
 
 	response, err := json.Marshal(scriptGroups)

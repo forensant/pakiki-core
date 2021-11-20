@@ -135,6 +135,7 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 
 	request_queue.Increment(params.ScanID)
 	requestFinishedChannel := make(chan bool)
+	project.ScriptIncrementTotalRequests(params.ScanID)
 
 	go func() {
 		request, err := makeRequestToSite(params.SSL, params.Host, requestData, defaultConnectionPool, httpContext)
@@ -149,6 +150,8 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 				injectOp.TotalRequestCount -= 1
 				injectOp.UpdateAndRecord()
 			}
+			project.ScriptDecrementTotalRequests(params.ScanID)
+
 			updateInjectOperationMutex.Unlock()
 
 			if request != nil {
@@ -167,10 +170,12 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-requestFinishedChannel:
 			request_queue.Decrement(params.ScanID)
+			project.ScriptIncrementRequestCount(params.ScanID)
 			return
 		case _, ok := <-request_queue.Channel(params.ScanID):
 
 			if !ok {
+				project.ScriptDecrementRequestCount(params.ScanID)
 				cancel()
 			}
 		}

@@ -43,7 +43,9 @@ func CancelRequests(guid string) {
 	requestQueueMutex.Lock()
 
 	delete(requestQueueCount, guid)
-	close(requestQueueChannels[guid])
+	if _, exists := requestQueueChannels[guid]; exists {
+		close(requestQueueChannels[guid])
+	}
 	delete(requestQueueChannels, guid)
 
 	requestQueueMutex.Unlock()

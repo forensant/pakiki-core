@@ -14,6 +14,24 @@ type ScriptGroup struct {
 	ObjectType string `gorm:"-"`
 }
 
+func endScriptGroupIfRequired(guid string) {
+	var scriptGroup ScriptGroup
+	result := readableDatabase.First(&scriptGroup, "guid = ?", guid)
+
+	if result.Error != nil {
+		return
+	}
+
+	scriptGroup.ensureRunning()
+}
+
+func (scriptGroup *ScriptGroup) ensureRunning() {
+	if scriptGroup.Status == "Running" && !scriptGroupRunning(scriptGroup.GUID) {
+		scriptGroup.Status = "Completed"
+		scriptGroup.Record()
+	}
+}
+
 func (scriptGroup *ScriptGroup) Record() {
 	if scriptGroup.GUID == "" {
 		scriptGroup.GUID = uuid.NewString()

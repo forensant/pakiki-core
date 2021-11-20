@@ -49,7 +49,10 @@ func CancelScriptInternal(guid string) error {
 	command, ok := runningScripts[guid]
 
 	if ok {
-		return command.Process.Kill()
+		err := command.Process.Kill()
+		if err != nil {
+			return err
+		}
 	}
 
 	project.CancelScript(guid)
@@ -83,6 +86,12 @@ func recordInProject(guid string, scriptGroup, script string, title string, deve
 		Development: development,
 		ScriptGroup: scriptGroup,
 	}
+
+	databaseScriptRun := project.ScriptRunFromGUID(guid)
+	if databaseScriptRun != nil {
+		scriptRun.TotalRequestCount = databaseScriptRun.TotalRequestCount
+	}
+
 	scriptRun.RecordOrUpdate()
 }
 
@@ -126,23 +135,27 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 	if err != nil {
 		return "", err
 	}
+
 	runningScripts[guid] = pythonCmd
 
+	commonScriptCode := ScriptCode{
+		Code:     commonCode,
+		Filename: "common.py",
+	}
+
+	scriptCode = append([]ScriptCode{commonScriptCode}, scriptCode...)
+
+	mainScript := ""
+	for _, scriptPart := range scriptCode {
+		if scriptPart.MainScript {
+			mainScript = scriptPart.Code
+		}
+	}
+
+	// create the initial record within the project
+	recordInProject(guid, scriptGroup, mainScript, title, development, "", "", "Running")
+
 	go func() {
-		commonScriptCode := ScriptCode{
-			Code:     commonCode,
-			Filename: "common.py",
-		}
-
-		scriptCode = append([]ScriptCode{commonScriptCode}, scriptCode...)
-
-		mainScript := ""
-		for _, scriptPart := range scriptCode {
-			if scriptPart.MainScript {
-				mainScript = scriptPart.Code
-			}
-		}
-
 		for idx, scriptPart := range scriptCode {
 			code := replaceCodeVariables(scriptPart.Code, guid, hostPort, apiKey)
 			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, bufferedOutput, idx == len(scriptCode)-1)
@@ -162,9 +175,6 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 				return
 			}
 		}
-
-		// do the initial record into the project
-		recordInProject(guid, scriptGroup, mainScript, title, development, "", "", "Running")
 
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
 
