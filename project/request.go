@@ -42,6 +42,9 @@ type Request struct {
 	Error               string
 	DataPackets         []DataPacket `json:"-"`
 	InterceptResponse   bool         `gorm:"-" json:"-"`
+
+	SiteMapPathID int         `json:"-"`
+	SiteMapPath   SiteMapPath `json:"-"`
 }
 
 // RequestSummary represents all of the fields required by the GUI
@@ -51,6 +54,8 @@ type RequestSummary struct {
 	GUID        string
 	Protocol    string
 	RequestData string
+	URL         string
+	SiteMapPath string
 }
 
 // DataPacket holds further details of either the request or the response to an HTTP request
@@ -204,9 +209,10 @@ func (request *Request) Record() {
 		return
 	}
 
+	if request.SiteMapPath.Path == "" {
+		request.SiteMapPath = getSiteMapPath(request.URL)
+	}
 	ioHub.databaseWriter <- request
-
-	addToSitemap(request.URL)
 
 	request.ObjectType = "HTTP Request"
 	ioHub.broadcast <- request

@@ -211,6 +211,9 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	var siteMapPath SiteMapPath
+	db.First(&siteMapPath, "id = ?", httpRequest.SiteMapPathID)
+
 	var dataPackets []DataPacket
 	result = db.Order("direction, id").Where("request_id = ? AND direction = 'Request'", httpRequest.ID).Find(&dataPackets)
 
@@ -235,6 +238,8 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	requestSummary.Hostname = url.Host
 	requestSummary.Protocol = url.Scheme + "://"
 	requestSummary.RequestData = base64.StdEncoding.EncodeToString(requestData)
+	requestSummary.URL = httpRequest.URL
+	requestSummary.SiteMapPath = siteMapPath.Path
 
 	response, err := json.Marshal(requestSummary)
 	if err != nil {

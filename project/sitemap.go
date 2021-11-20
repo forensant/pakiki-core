@@ -2,6 +2,7 @@ package project
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -15,40 +16,39 @@ type SiteMapPath struct {
 	Path       string
 }
 
-var siteMapPaths []string
+var siteMapPaths []SiteMapPath
 
-func addToSitemap(url string) {
+func getSiteMapPath(url string) SiteMapPath {
 	path := sitemapPathFromUrl(url)
 
-	idx := sort.SearchStrings(siteMapPaths, path)
-	if idx < len(siteMapPaths) && siteMapPaths[idx] == path {
+	idx := sort.Search(len(siteMapPaths), func(i int) bool { return siteMapPaths[i].Path >= path })
+	if idx < len(siteMapPaths) && siteMapPaths[idx].Path == path {
 		// if it's already in the slice, then don't bother adding it
-		return
-	}
-
-	// add it
-	if idx == len(siteMapPaths) {
-		siteMapPaths = append(siteMapPaths, path)
-	} else {
-		siteMapPaths = append(siteMapPaths[:idx+1], siteMapPaths[idx:]...)
-		siteMapPaths[idx] = path
+		return siteMapPaths[idx]
 	}
 
 	// record it in the database and UI
 	item := &SiteMapPath{
 		Path: path,
 	}
-
 	item.Record()
+
+	// add it
+	if idx == len(siteMapPaths) {
+		siteMapPaths = append(siteMapPaths, *item)
+	} else {
+		siteMapPaths = append(siteMapPaths[:idx+1], siteMapPaths[idx:]...)
+		siteMapPaths[idx] = *item
+	}
+
+	return *item
 }
 
 func loadSitemap(db *gorm.DB) {
 	var paths []SiteMapPath
 	result := db.Order("path").Find(&paths)
 
-	for _, path := range paths {
-		siteMapPaths = append(siteMapPaths, path.Path)
-	}
+	siteMapPaths = append(siteMapPaths, paths...)
 
 	if result.Error != nil {
 		fmt.Printf("Error loading sitemap from the database: %s\n", result.Error.Error())
@@ -66,26 +66,18 @@ func (siteMapPath *SiteMapPath) ShouldFilter(str string) bool {
 	return false
 }
 
-func sitemapPathFromUrl(url string) string {
-	// strip the protocol
-	endOfProtocol := strings.Index(url, "://")
-	if endOfProtocol != -1 {
-		url = url[endOfProtocol+3:]
-	}
-
-	// strip any queries
-	questionMarkIdx := strings.Index(url, "?")
-	if questionMarkIdx != -1 {
-		url = url[0 : questionMarkIdx-1]
-	}
-
-	// now strip back from the last /
-	lastSlashIdx := strings.LastIndex(url, "/")
-	if lastSlashIdx == -1 {
+func sitemapPathFromUrl(url_str string) string {
+	parsed_url, err := url.Parse(url_str)
+	if err != nil {
+		fmt.Printf("Could not parse URL: %s\n", err.Error())
 		return ""
 	}
 
-	return url[0:lastSlashIdx]
+	u := parsed_url.Host + parsed_url.Path
+
+	// now strip back from the last /
+	lastSlashIdx := strings.LastIndex(u, "/")
+	return u[0:lastSlashIdx]
 }
 
 func (siteMapPath *SiteMapPath) WriteToDatabase(db *gorm.DB) {

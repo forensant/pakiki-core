@@ -3,6 +3,7 @@ package project
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 // GetSitemap godoc
@@ -11,11 +12,32 @@ import (
 // @Tags Requests
 // @Produce  json
 // @Security ApiKeyAuth
+// @Param parent query string true "An optional filter on the query to restrict to specific paths"
+// @Param scanid query string true "An optional filter on the query to restrict to the paths to those seen for a particular scan"
 // @Success 200 {array} string
 // @Failure 500 {string} string Error
 // @Router /project/sitemap [get]
 func GetSitemap(w http.ResponseWriter, r *http.Request) {
-	response, err := json.Marshal(siteMapPaths)
+	parent := r.FormValue("parent")
+	scanId := r.FormValue("scanid")
+
+	var siteMaps []SiteMapPath
+	readableDatabase.Distinct("site_map_paths.*").Joins("left join requests on site_map_path_id = site_map_paths.id").Where("requests.scan_id = ?", scanId).Find(&siteMaps)
+
+	var siteMap = make([]string, 0)
+	if parent == "" {
+		for _, s := range siteMaps {
+			siteMap = append(siteMap, s.Path)
+		}
+	} else {
+		for _, s := range siteMaps {
+			if strings.Index(s.Path, parent) == 0 {
+				siteMap = append(siteMap, s.Path)
+			}
+		}
+	}
+
+	response, err := json.Marshal(siteMap)
 	if err != nil {
 		http.Error(w, "Could not marshal requests: "+err.Error(), http.StatusInternalServerError)
 		return
