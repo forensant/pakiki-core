@@ -54,8 +54,8 @@ type InjectOperation struct {
 
 func InjectFromGUID(guid string) *InjectOperation {
 	var operation InjectOperation
-	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", guid).First(&operation)
-	if tx.Error != nil {
+	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", guid).Limit(1).Find(&operation)
+	if tx.Error != nil || tx.RowsAffected < 1 {
 		return nil
 	}
 
@@ -148,8 +148,10 @@ func (injectOperation *InjectOperation) updatePercentCompleted() {
 
 func updateRequestCountForScan(scanId string) {
 	var scan InjectOperation
-	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", scanId).Take(&scan)
-	if tx.Error != nil {
+	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", scanId).Limit(1).Find(&scan)
+	if tx.Error != nil || tx.RowsAffected < 1 {
+		// it might be a script instead
+		sendScriptProgressUpdate(scanId)
 		return
 	}
 

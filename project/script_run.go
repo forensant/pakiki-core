@@ -39,10 +39,11 @@ type ScriptOutputUpdate struct {
 
 // ScriptProgressUpdate contains the details of script progress
 type ScriptProgressUpdate struct {
-	GUID       string
-	Count      int
-	Total      int
-	ObjectType string
+	GUID         string
+	Count        int
+	Total        int
+	ObjectType   string
+	ShouldUpdate bool `json:"-"`
 }
 
 type runningScriptDetails struct {
@@ -128,6 +129,10 @@ func (scriptProgressUpdate *ScriptProgressUpdate) Record() {
 	scriptProgressUpdate.ObjectType = "Script Progress Update"
 	ioHub.broadcast <- scriptProgressUpdate
 
+	if !scriptProgressUpdate.ShouldUpdate {
+		return
+	}
+
 	guid := scriptProgressUpdate.GUID
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Count = scriptProgressUpdate.Count
@@ -178,6 +183,19 @@ func (scriptRun *ScriptRun) RecordOrUpdate() {
 	}
 
 	scriptRun.Record()
+}
+
+func sendScriptProgressUpdate(guid string) {
+	if _, ok := runningScripts[guid]; ok {
+		scriptProgressUpdate := ScriptProgressUpdate{
+			GUID:         guid,
+			Count:        runningScripts[guid].Count,
+			Total:        runningScripts[guid].Total,
+			ShouldUpdate: false,
+		}
+
+		scriptProgressUpdate.Record()
+	}
 }
 
 func (scriptRun *ScriptRun) UpdateFromRunningScript() {

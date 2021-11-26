@@ -136,6 +136,7 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 	request_queue.Increment(params.ScanID)
 	requestFinishedChannel := make(chan bool)
 	project.ScriptIncrementTotalRequests(params.ScanID)
+	errorThrown := false
 
 	go func() {
 		request, err := makeRequestToSite(params.SSL, params.Host, requestData, defaultConnectionPool, httpContext)
@@ -157,6 +158,7 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 			if request != nil {
 				request.Error = errorStr
 			}
+			errorThrown = true
 		}
 
 		if request != nil {
@@ -170,7 +172,9 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-requestFinishedChannel:
 			request_queue.Decrement(params.ScanID)
-			project.ScriptIncrementRequestCount(params.ScanID)
+			if !errorThrown {
+				project.ScriptIncrementRequestCount(params.ScanID)
+			}
 			return
 		case _, ok := <-request_queue.Channel(params.ScanID):
 

@@ -103,6 +103,8 @@ func UpdateProgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	params.ShouldUpdate = true
+
 	params.Record()
 }
 
