@@ -31,7 +31,14 @@ func GetSitemap(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		for _, s := range siteMaps {
-			if strings.Index(s.Path, parent) == 0 {
+
+			var prefixStart = 0
+			var schemeIdx = strings.Index(s.Path, "://")
+			if schemeIdx != -1 {
+				prefixStart = schemeIdx + 3
+			}
+
+			if strings.HasPrefix(s.Path[prefixStart:], parent) {
 				siteMap = append(siteMap, s.Path)
 			}
 		}

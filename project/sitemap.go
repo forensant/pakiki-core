@@ -73,7 +73,7 @@ func sitemapPathFromUrl(url_str string) string {
 		return ""
 	}
 
-	u := parsed_url.Host + parsed_url.Path
+	u := parsed_url.Scheme + "://" + parsed_url.Host + parsed_url.Path
 
 	// now strip back from the last /
 	lastSlashIdx := strings.LastIndex(u, "/")

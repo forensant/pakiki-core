@@ -89,7 +89,12 @@ func (injectOperation *InjectOperation) RecordError(err string) {
 }
 
 func TitlizeName(filename string) string {
-	filename = strings.Split(filename, ".")[0]
+	filename_parts := strings.Split(filename, ".")
+	end_length := len(filename_parts) - 1
+	if end_length < 1 {
+		end_length = 1
+	}
+	filename = strings.Join(filename_parts[0:end_length], " ")
 	filename = strings.ReplaceAll(filename, "-", " ")
 	filename = strings.ReplaceAll(filename, "_", " ")
 	filename = strings.Title(filename)

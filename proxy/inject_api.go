@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
@@ -62,6 +63,48 @@ func RunInjection(w http.ResponseWriter, r *http.Request) {
 	runInjection(&operation, port, r.Header.Get("X-API-Key"))
 
 	js, err := json.Marshal(operation)
+	if err != nil {
+		http.Error(w, "Cannot convert request to JSON: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+// GetFuzzDB Payload godoc
+// @Summary Get a fuzzdb file
+// @Description gets a specific fuzzdb file
+// @Tags Injection Operations
+// @Produce json
+// @Security ApiKeyAuth
+// @Param file query string true "The file path of the fuzzdb file to fetch the payload for"
+// @Success 200 {[]string} []string
+// @Failure 500 {string} string Error
+// @Router /inject_operations/fuzzdb_payload [get]
+func GetFuzzdbPayload(w http.ResponseWriter, r *http.Request) {
+	payloads := make([]string, 0)
+	filename := r.FormValue("file")
+
+	if filename == "" {
+		http.Error(w, "No filename specified", http.StatusBadRequest)
+		return
+	}
+
+	file, err := fuzzdb.Open(filename)
+	if err != nil {
+		http.Error(w, "Could not open file: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		text := scanner.Text()
+		payloads = append(payloads, text)
+	}
+
+	js, err := json.Marshal(payloads)
 	if err != nil {
 		http.Error(w, "Cannot convert request to JSON: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -129,11 +172,16 @@ func readPayloadDirectory(path string, entry *PayloadEntry) {
 			continue
 		}
 
+		fileSamplePayloads := make([]string, 0)
+		if !fileEntry.IsDir() {
+			fileSamplePayloads = samplePayloads(fileEntryPath)
+		}
+
 		newEntry := PayloadEntry{
 			Filename:       filename,
 			Title:          project.TitlizeName(filename),
 			ResourcePath:   fileEntryPath,
-			SamplePayloads: samplePayloads(fileEntryPath),
+			SamplePayloads: fileSamplePayloads,
 			IsDirectory:    fileEntry.Type().IsDir(),
 			SubEntries:     make([]PayloadEntry, 0),
 		}
@@ -163,6 +211,18 @@ func samplePayloads(filename string) []string {
 		}
 		payloads = append(payloads, text)
 	}
+
+	lineCounterFile, _ := fuzzdb.Open(filename)
+	defer lineCounterFile.Close()
+
+	scanner = bufio.NewScanner(lineCounterFile)
+	line_count := 0
+	for scanner.Scan() {
+		line_count += 1
+	}
+
+	payloads = append(payloads, "")
+	payloads = append(payloads, "Total entries: "+strconv.Itoa(line_count))
 
 	return payloads
 }

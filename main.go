@@ -118,6 +118,7 @@ func main() {
 	http.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
 	http.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
 
+	http.HandleFunc("/inject_operations/fuzzdb_payload", authenticate(proxy.GetFuzzdbPayload))
 	http.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
 	http.HandleFunc("/inject_operations/run", authenticate(proxy.RunInjection))
 	http.HandleFunc("/inject_operations", authenticateWithGormDB(project.GetInjectOperations))
