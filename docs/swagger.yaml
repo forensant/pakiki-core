@@ -120,6 +120,21 @@ definitions:
         type: string
       requestData:
         type: string
+      siteMapPath:
+        type: string
+      url:
+        type: string
+    type: object
+  project.ScriptGroup:
+    properties:
+      guid:
+        type: string
+      objectType:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
     type: object
   project.ScriptProgressUpdate:
     properties:
@@ -151,6 +166,8 @@ definitions:
       requestsMadeCount:
         type: integer
       script:
+        type: string
+      scriptGroup:
         type: string
       status:
         type: string
@@ -242,6 +259,8 @@ definitions:
         type: array
       development:
         type: boolean
+      scriptGroup:
+        type: string
       title:
         type: string
     type: object
@@ -374,6 +393,33 @@ paths:
       summary: Get All Inject Operations
       tags:
       - Injection Operations
+  /inject_operations/fuzzdb_payload:
+    get:
+      description: gets a specific fuzzdb file
+      parameters:
+      - description: The file path of the fuzzdb file to fetch the payload for
+        in: query
+        name: file
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get a fuzzdb file
+      tags:
+      - Injection Operations
   /inject_operations/payloads:
     get:
       description: gets all available payloads available for injection
@@ -452,6 +498,12 @@ paths:
   /project/requestresponse:
     get:
       description: gets the full request and response of a given request
+      parameters:
+      - description: Request guid
+        in: query
+        name: guid
+        required: true
+        type: string
       produces:
       - text/text
       responses:
@@ -472,7 +524,7 @@ paths:
     get:
       description: gets a list of all requests
       parameters:
-      - description: Scan ID
+      - description: Scan ID, can be multiple separated by semi-colons
         in: query
         name: scanid
         type: string
@@ -514,6 +566,12 @@ paths:
   /project/script:
     get:
       description: gets a single script
+      parameters:
+      - description: The GUID of the script to fetch
+        in: query
+        name: guid
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -586,6 +644,107 @@ paths:
       summary: Archive Script
       tags:
       - Scripting
+  /project/script_group:
+    get:
+      description: gets a specific script group
+      parameters:
+      - description: Script group guid
+        in: query
+        name: guid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/project.ScriptGroup'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get Script Group
+      tags:
+      - Scripting
+    put:
+      description: adds or updates a script group
+      parameters:
+      - description: Script Group details in JSON format
+        in: body
+        name: default
+        required: true
+        schema:
+          $ref: '#/definitions/project.ScriptGroup'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Add/Update Script Group
+      tags:
+      - Scripting
+  /project/script_group/archive:
+    put:
+      description: updates the the archived status of a script group
+      parameters:
+      - description: script group guid
+        in: formData
+        name: guid
+        required: true
+        type: string
+      - description: archive status to set
+        in: formData
+        name: archive
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Archive Script Group
+      tags:
+      - Scripting
+  /project/script_groups:
+    get:
+      description: gets a list of all script groups
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/project.ScriptGroup'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get All Script Groups
+      tags:
+      - Scripting
   /project/scripts:
     get:
       description: gets a list of all scripts
@@ -610,6 +769,18 @@ paths:
   /project/sitemap:
     get:
       description: gets a list of all paths observed by the proxy
+      parameters:
+      - description: An optional filter on the query to restrict to specific paths
+        in: query
+        name: parent
+        required: true
+        type: string
+      - description: An optional filter on the query to restrict to the paths to those
+          seen for a particular scan
+        in: query
+        name: scanid
+        required: true
+        type: string
       produces:
       - application/json
       responses:

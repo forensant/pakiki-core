@@ -201,6 +201,49 @@ var doc = `{
                 }
             }
         },
+        "/inject_operations/fuzzdb_payload": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a specific fuzzdb file",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Injection Operations"
+                ],
+                "summary": "Get a fuzzdb file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The file path of the fuzzdb file to fetch the payload for",
+                        "name": "file",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/inject_operations/payloads": {
             "get": {
                 "security": [
@@ -336,6 +379,15 @@ var doc = `{
                     "Requests"
                 ],
                 "summary": "Get Request and Response",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request guid",
+                        "name": "guid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -370,7 +422,7 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Scan ID",
+                        "description": "Scan ID, can be multiple separated by semi-colons",
                         "name": "scanid",
                         "in": "query"
                     },
@@ -433,6 +485,15 @@ var doc = `{
                     "Scripting"
                 ],
                 "summary": "Get A Script",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The GUID of the script to fetch",
+                        "name": "guid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -538,6 +599,167 @@ var doc = `{
                 }
             }
         },
+        "/project/script_group": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a specific script group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Get Script Group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Script group guid",
+                        "name": "guid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project.ScriptGroup"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "adds or updates a script group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Add/Update Script Group",
+                "parameters": [
+                    {
+                        "description": "Script Group details in JSON format",
+                        "name": "default",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.ScriptGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/project/script_group/archive": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates the the archived status of a script group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Archive Script Group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "script group guid",
+                        "name": "guid",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "archive status to set",
+                        "name": "archive",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/project/script_groups": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a list of all script groups",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Get All Script Groups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/project.ScriptGroup"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/project/scripts": {
             "get": {
                 "security": [
@@ -587,6 +809,22 @@ var doc = `{
                     "Requests"
                 ],
                 "summary": "Gets the sitemap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "An optional filter on the query to restrict to specific paths",
+                        "name": "parent",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "An optional filter on the query to restrict to the paths to those seen for a particular scan",
+                        "name": "scanid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1222,6 +1460,29 @@ var doc = `{
                 },
                 "requestData": {
                     "type": "string"
+                },
+                "siteMapPath": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "project.ScriptGroup": {
+            "type": "object",
+            "properties": {
+                "guid": {
+                    "type": "string"
+                },
+                "objectType": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },
@@ -1270,6 +1531,9 @@ var doc = `{
                     "type": "integer"
                 },
                 "script": {
+                    "type": "string"
+                },
+                "scriptGroup": {
                     "type": "string"
                 },
                 "status": {
@@ -1407,6 +1671,9 @@ var doc = `{
                 },
                 "development": {
                     "type": "boolean"
+                },
+                "scriptGroup": {
+                    "type": "string"
                 },
                 "title": {
                     "type": "string"

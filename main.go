@@ -95,7 +95,7 @@ func main() {
 
 	err = proxy.StartListeners()
 	if err != nil {
-		log.Printf("Warning: Could not start the proxy listeners: %v\n", err.Error())
+		log.Printf("Warning: The proxy could not be started, %v\n", err.Error())
 	}
 
 	http.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
@@ -115,6 +115,7 @@ func main() {
 	http.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
 	http.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
 	http.HandleFunc("/proxy/make_request", authenticate(proxy.MakeRequest))
+	http.HandleFunc("/proxy/ping", ping)
 	http.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
 	http.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
 
@@ -194,7 +195,12 @@ func authenticateWithGormDB(fn func(http.ResponseWriter, *http.Request, *gorm.DB
 func createListener(portParameter int) net.Listener {
 	listener, err := net.Listen("tcp", ":"+strconv.Itoa(portParameter))
 	if err != nil {
+		if strings.Contains(err.Error(), "address already in use") {
+			fmt.Printf("Error: Port %d is already in use, could not use it for the UI. Using a random one.\n", portParameter)
+			return createListener(0)
+		} else {
 		panic(err)
+		}
 	}
 
 	port = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
@@ -266,4 +272,8 @@ func parseCommandLineFlags() commandLineParameters {
 		parentPID,
 		*uiPortPtr,
 	}
+}
+
+func ping(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("pong"))
 }

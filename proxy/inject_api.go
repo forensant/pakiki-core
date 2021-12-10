@@ -79,7 +79,7 @@ func RunInjection(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Security ApiKeyAuth
 // @Param file query string true "The file path of the fuzzdb file to fetch the payload for"
-// @Success 200 {[]string} []string
+// @Success 200 {array} string
 // @Failure 500 {string} string Error
 // @Router /inject_operations/fuzzdb_payload [get]
 func GetFuzzdbPayload(w http.ResponseWriter, r *http.Request) {

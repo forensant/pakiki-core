@@ -15,7 +15,7 @@ import (
 // @Produce  json
 // @Security ApiKeyAuth
 // @Param guid query string true "Script group guid"
-// @Success 200 project.ScriptGroup
+// @Success 200 {object} project.ScriptGroup
 // @Failure 500 {string} string Error
 // @Router /project/script_group [get]
 func getScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {

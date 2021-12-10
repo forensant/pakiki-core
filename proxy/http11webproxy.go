@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -194,7 +195,12 @@ func startHttp11BrowserProxy(wg *sync.WaitGroup, settings *ProxySettings) (*http
 	log.Printf("Starting proxy listener: %s\n", settings.Http11ProxyAddr)
 	listener, err := net.Listen("tcp4", settings.Http11ProxyAddr)
 	if err != nil {
-		return nil, err
+		error_str := err.Error()
+		if strings.Contains(error_str, "address already in use") {
+			error_str = "port already in use"
+		}
+
+		return nil, errors.New(error_str + " (" + settings.Http11ProxyAddr + ")")
 	}
 
 	go func() {
