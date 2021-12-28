@@ -100,10 +100,11 @@ func MakeRequest(w http.ResponseWriter, r *http.Request) {
 
 // TODO: These are the same as the parameters above
 type AddRequestToQueueParameters struct {
-	Request string `json:"request" example:"<base64 encoded request>"`
-	Host    string `json:"host"`
-	SSL     bool   `json:"ssl"`
-	ScanID  string `json:"scan_id"`
+	Request  string `json:"request" example:"<base64 encoded request>"`
+	Host     string `json:"host"`
+	SSL      bool   `json:"ssl"`
+	ScanID   string `json:"scan_id"`
+	Payloads string `json:"payloads"`
 }
 
 // AddRequestToQueue godoc
@@ -163,6 +164,7 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 
 		if request != nil {
 			request.ScanID = params.ScanID
+			request.Payloads = params.Payloads
 			request.Record()
 		}
 		close(requestFinishedChannel)

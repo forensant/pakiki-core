@@ -1,6 +1,8 @@
 package project
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -222,11 +224,27 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	// assemble the raw request
 	requestData := make([]byte, 0)
 	for _, dataPacket := range dataPackets {
 		requestData = append(requestData, dataPacket.Data...)
 	}
 
+	// get the headers
+	b := bytes.NewReader(requestData)
+	rawHttpRequest, err := http.ReadRequest(bufio.NewReader(b))
+
+	if err != nil {
+		http.Error(w, "Error reading request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var headers = make(map[string]string)
+	for k, v := range rawHttpRequest.Header {
+		headers[k] = v[0] // if a request has two headers which are the same, only return the first one
+	}
+
+	// compile the request summary
 	var requestSummary RequestSummary
 	url, err := url.Parse(httpRequest.URL)
 	if err != nil {
@@ -240,6 +258,7 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	requestSummary.RequestData = base64.StdEncoding.EncodeToString(requestData)
 	requestSummary.URL = httpRequest.URL
 	requestSummary.SiteMapPath = siteMapPath.Path
+	requestSummary.Headers = headers
 
 	response, err := json.Marshal(requestSummary)
 	if err != nil {
@@ -253,11 +272,53 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 func HandleRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if r.Method == "GET" {
 		GetRequest(w, r, db)
-	} else if r.Method == "PUT" {
+	} else if r.Method == "PUT" || r.Method == "POST" {
 		UpdateRequest(w, r, db)
 	} else {
 		http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 	}
+}
+
+// PutRequestPayloads godoc
+// @Summary Set Request Payloads
+// @Description sets the payloads associated with a specific request
+// @Tags Requests
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid body string true "The GUID of the request to update"
+// @Param payloads body string true "A JSON Object containing the payloads in {'key':'value'} format"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /project/request/payloads [put]
+func PutRequestPayloads(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	guid := r.FormValue("guid")
+	payloads := r.FormValue("payloads")
+
+	if guid == "" {
+		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
+		return
+	}
+
+	// primarily this is a sanity check at this point, to ensure the payloads are valid JSON
+	var payloadJson map[string]string
+	err := json.Unmarshal([]byte(payloads), &payloadJson)
+	if err != nil {
+		http.Error(w, "Could not parse payloads", http.StatusInternalServerError)
+		return
+	}
+
+	var httpRequest Request
+	result := db.First(&httpRequest, "guid = ?", guid)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	httpRequest.Payloads = payloads
+	httpRequest.Record()
+
+	w.Write([]byte("OK"))
 }
 
 // UpdateRequest godoc

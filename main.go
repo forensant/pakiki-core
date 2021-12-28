@@ -101,6 +101,7 @@ func main() {
 	http.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
 	http.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
 	http.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
+	http.HandleFunc("/project/request/payloads", authenticateWithGormDB(project.PutRequestPayloads))
 	http.HandleFunc("/project/scripts", authenticateWithGormDB(project.GetScripts))
 	http.HandleFunc("/project/script", authenticateWithGormDB(project.GetScript))
 	http.HandleFunc("/project/script/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))

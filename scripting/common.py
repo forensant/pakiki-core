@@ -58,7 +58,7 @@ class GeneratedRequest:
     properties['host']    = self.request.host
     properties['ssl']     = self.request.ssl
 
-    make_request_to_core('/proxy/add_request_to_queue', properties)
+    return make_request_to_core('/proxy/add_request_to_queue', properties)
 
 class Request:
   def __init__(self, host, ssl, request_parts):
@@ -66,7 +66,6 @@ class Request:
     self.ssl              = ssl
     self.request_parts    = json.loads(request_parts)
     self.properties       = {}
-    self.inject_payloads  = []
 
   def generate_request(self):
     return GeneratedRequest(self)
@@ -80,21 +79,20 @@ class Request:
     return count
 
   def make(self):
-    GeneratedRequest(self).make()
+    return GeneratedRequest(self).make()
 
   def replace_injection_point(self, index, replacement):
     i = 0
+    orig_request_part = ''
     for part in self.request_parts:
       if part['Inject'] == True:
         if i == index:
+          orig_request_part = base64.standard_b64decode(part['RequestPart'])
           part['RequestPart'] = base64.standard_b64encode(to_bytes(replacement))
         else:
           i += 1
-
-    new_properties = self.properties
-    new_inject_payloads = self.inject_payloads
-    new_inject_payloads.append([index, replacement])
-    new_properties['inject_payloads'] = json.dumps(new_inject_payloads)
+    
+    self.properties['payloads'] = json.dumps({orig_request_part.decode(): replacement})
 
   def set_properties(self, properties):
     self.properties = properties

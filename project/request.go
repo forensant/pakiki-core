@@ -41,7 +41,8 @@ type Request struct {
 	Notes               string
 	Error               string
 	DataPackets         []DataPacket `json:"-"`
-	InterceptResponse   bool         `gorm:"-" json:"-"`
+	Payloads            string
+	InterceptResponse   bool `gorm:"-" json:"-"`
 
 	SiteMapPathID int         `json:"-"`
 	SiteMapPath   SiteMapPath `json:"-"`
@@ -56,6 +57,7 @@ type RequestSummary struct {
 	RequestData string
 	URL         string
 	SiteMapPath string
+	Headers     map[string]string
 }
 
 // DataPacket holds further details of either the request or the response to an HTTP request
