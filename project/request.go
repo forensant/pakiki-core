@@ -160,6 +160,34 @@ func (request *Request) CorrectModifiedRequestResponse(direction string) {
 	}
 }
 
+func GetLastResponseOfURL(url string) ([]byte, error) {
+	var request Request
+	// If the resource is protected by auth, get the last successful response
+	result := readableDatabase.Where("url = ? AND (response_status_code < 400 OR response_status_code > 499)", url).Last(&request)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	var dataPackets []DataPacket
+	result = readableDatabase.Order("direction, id").Where("request_id = ?", request.ID).Find(&dataPackets)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	var origResp []byte
+	for _, dataPacket := range dataPackets {
+		if dataPacket.Direction == "Response" && !dataPacket.Modified {
+			origResp = append(origResp, dataPacket.Data...)
+		}
+	}
+
+	origResp = CorrectLengthHeaders(origResp)
+
+	return origResp, nil
+}
+
 func (request *Request) GetRequestResponseData(direction string, modified bool) []byte {
 	req := make([]byte, 0)
 	for _, dataPacket := range request.DataPackets {

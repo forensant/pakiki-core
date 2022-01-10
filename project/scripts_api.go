@@ -117,6 +117,7 @@ func PostAppendHTMLOutputScript(w http.ResponseWriter, r *http.Request, db *gorm
 	}
 
 	script.HtmlOutput += params.OutputHTML
+	script.DoNotBroadcast = true
 	script.Record()
 
 	runningUpdate := ScriptOutputUpdate{

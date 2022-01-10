@@ -1,5 +1,3 @@
-# This is a common script library from an earlier version of the proxy.
-
 import base64
 import html
 import json

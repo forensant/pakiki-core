@@ -91,6 +91,8 @@ definitions:
         type: string
       objectType:
         type: string
+      payloads:
+        type: string
       protocol:
         type: string
       responseContentType:
@@ -114,6 +116,10 @@ definitions:
     properties:
       guid:
         type: string
+      headers:
+        additionalProperties:
+          type: string
+        type: object
       hostname:
         type: string
       protocol:
@@ -181,6 +187,8 @@ definitions:
   proxy.AddRequestToQueueParameters:
     properties:
       host:
+        type: string
+      payloads:
         type: string
       request:
         example: <base64 encoded request>
@@ -493,6 +501,38 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Update A Request
+      tags:
+      - Requests
+  /project/request/payloads:
+    put:
+      description: sets the payloads associated with a specific request
+      parameters:
+      - description: The GUID of the request to update
+        in: body
+        name: guid
+        required: true
+        schema:
+          type: string
+      - description: A JSON Object containing the payloads in {'key':'value'} format
+        in: body
+        name: payloads
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Set Request Payloads
       tags:
       - Requests
   /project/requestresponse:

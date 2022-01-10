@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	_ "embed"
-
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -37,10 +35,11 @@ var frontendDir embed.FS
 var swaggerJson string
 
 type commandLineParameters struct {
-	APIKey      string
-	ProjectPath string
-	ParentPID   int32
-	UIPort      int
+	APIKey           string
+	ProjectPath      string
+	ParentPID        int32
+	APIPort          int
+	PreviewProxyPort int
 }
 
 // @title Proximity Core
@@ -63,7 +62,8 @@ type commandLineParameters struct {
 // @BasePath
 func main() {
 	parameters := parseCommandLineFlags()
-	listener := createListener(parameters.UIPort)
+	listener := createListener(parameters.APIPort, "")
+	port = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 
 	if parameters.ParentPID != 0 {
 		monitorParentProcess(parameters.ParentPID)
@@ -96,6 +96,14 @@ func main() {
 	err = proxy.StartListeners()
 	if err != nil {
 		log.Printf("Warning: The proxy could not be started, %v\n", err.Error())
+	}
+
+	previewProxyListener := createListener(parameters.PreviewProxyPort, "localhost")
+	err = proxy.StartHttpPreviewProxy(previewProxyListener)
+	if err != nil {
+		log.Printf("Warning: The preview proxy could not be started, rendering of pages will likely not work: %v\n", err.Error())
+	} else {
+		fmt.Printf("Preview proxy is available at: http://localhost:%d/\n", previewProxyListener.Addr().(*net.TCPAddr).Port)
 	}
 
 	http.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
@@ -193,19 +201,16 @@ func authenticateWithGormDB(fn func(http.ResponseWriter, *http.Request, *gorm.DB
 	}
 }
 
-func createListener(portParameter int) net.Listener {
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(portParameter))
+func createListener(portParameter int, hostname string) net.Listener {
+	listener, err := net.Listen("tcp", hostname+":"+strconv.Itoa(portParameter))
 	if err != nil {
 		if strings.Contains(err.Error(), "address already in use") {
 			fmt.Printf("Error: Port %d is already in use, could not use it for the UI. Using a random one.\n", portParameter)
-			return createListener(0)
+			return createListener(0, hostname)
 		} else {
 		panic(err)
 		}
 	}
-
-	port = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
-	fmt.Println("Listening on port:", port)
 
 	return listener
 }
@@ -257,7 +262,8 @@ func parseCommandLineFlags() commandLineParameters {
 	apiKeyPtr := flag.String("api-key", "", "A key required to be passed to the X-API-Key header for every request")
 	parentPIDInt := flag.Int("parentpid", 0, "The process id (PID) of the proxy parent process")
 	projectPathPtr := flag.String("project", "", "The path to the project to open")
-	uiPortPtr := flag.Int("port", 10101, "The port for the API and UI to listen on (set to 0 for a random available port)")
+	apiPortPtr := flag.Int("api-port", 10101, "The port for the API and UI to listen on (set to 0 for a random available port)")
+	previewProxyPortPtr := flag.Int("preview-proxy-port", 10111, "The port for the preview proxy to listen on (set to 0 for a random available port)")
 
 	flag.Parse()
 
@@ -271,7 +277,8 @@ func parseCommandLineFlags() commandLineParameters {
 		*apiKeyPtr,
 		*projectPathPtr,
 		parentPID,
-		*uiPortPtr,
+		*apiPortPtr,
+		*previewProxyPortPtr,
 	}
 }
 

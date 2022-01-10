@@ -22,6 +22,8 @@ type RequestResponse struct {
 	Response         string
 	ModifiedRequest  string
 	ModifiedResponse string
+	URL              string
+	MimeType         string
 }
 
 // GetRequestResponse godoc
@@ -83,6 +85,13 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	requestResponse.Response = base64.StdEncoding.EncodeToString(origResp)
 	requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
 	requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(modResp)
+	requestResponse.URL = httpRequest.URL
+	requestResponse.MimeType = httpRequest.ResponseContentType
+
+	semicolonPos := strings.Index(requestResponse.MimeType, ";")
+	if semicolonPos != -1 {
+		requestResponse.MimeType = requestResponse.MimeType[:semicolonPos]
+	}
 
 	responseToWrite, err := json.Marshal(requestResponse)
 	if err != nil {

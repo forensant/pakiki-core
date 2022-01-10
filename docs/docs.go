@@ -364,6 +364,57 @@ var doc = `{
                 }
             }
         },
+        "/project/request/payloads": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "sets the payloads associated with a specific request",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Set Request Payloads",
+                "parameters": [
+                    {
+                        "description": "The GUID of the request to update",
+                        "name": "guid",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "A JSON Object containing the payloads in {'key':'value'} format",
+                        "name": "payloads",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/project/requestresponse": {
             "get": {
                 "security": [
@@ -1417,6 +1468,9 @@ var doc = `{
                 "objectType": {
                     "type": "string"
                 },
+                "payloads": {
+                    "type": "string"
+                },
                 "protocol": {
                     "type": "string"
                 },
@@ -1451,6 +1505,12 @@ var doc = `{
             "properties": {
                 "guid": {
                     "type": "string"
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "hostname": {
                     "type": "string"
@@ -1554,6 +1614,9 @@ var doc = `{
             "type": "object",
             "properties": {
                 "host": {
+                    "type": "string"
+                },
+                "payloads": {
                     "type": "string"
                 },
                 "request": {

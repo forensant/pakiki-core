@@ -2,6 +2,7 @@ package project
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -53,30 +54,39 @@ type runningScriptDetails struct {
 	Total      int
 }
 
+var runningScriptsMutex sync.Mutex
 var runningScripts map[string]*runningScriptDetails = make(map[string]*runningScriptDetails)
 
 func ScriptIncrementTotalRequests(guid string) {
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Total += 1
 	}
+	runningScriptsMutex.Unlock()
 }
 
 func ScriptDecrementTotalRequests(guid string) {
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Total -= 1
 	}
+	runningScriptsMutex.Unlock()
 }
 
 func ScriptIncrementRequestCount(guid string) {
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Count += 1
 	}
+	runningScriptsMutex.Unlock()
 }
 
 func ScriptDecrementRequestCount(guid string) {
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Count -= 1
 	}
+	runningScriptsMutex.Unlock()
 }
 
 func ScriptRunFromGUID(guid string) *ScriptRun {
@@ -101,11 +111,13 @@ func CancelScript(guid string) {
 	script.Error = "Cancelled"
 	script.Status = "Completed"
 
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		script.TotalRequestCount = runningScripts[guid].Count
 	} else {
 		fmt.Printf("Script progress updated attempted for a script which is not running: %s\n", guid)
 	}
+	runningScriptsMutex.Unlock()
 
 	script.Record()
 }
@@ -116,12 +128,14 @@ func (scriptOutputUpdate *ScriptOutputUpdate) Record() {
 	ioHub.broadcast <- scriptOutputUpdate
 
 	guid := scriptOutputUpdate.GUID
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].TextOutput += scriptOutputUpdate.TextOutput
 		runningScripts[guid].HTMLOutput += scriptOutputUpdate.HTMLOutput
 	} else {
 		fmt.Printf("Script output updated attempted for a script which is not running\n")
 	}
+	runningScriptsMutex.Unlock()
 }
 
 // Record sends the script update details to the user interface
@@ -134,12 +148,14 @@ func (scriptProgressUpdate *ScriptProgressUpdate) Record() {
 	}
 
 	guid := scriptProgressUpdate.GUID
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Count = scriptProgressUpdate.Count
 		runningScripts[guid].Total = scriptProgressUpdate.Total
 	} else {
 		fmt.Printf("Script progress updated attempted for a script which is not running: %s\n", guid)
 	}
+	runningScriptsMutex.Unlock()
 }
 
 // Record sends the script run to the user interface and/or records it in the database
@@ -150,13 +166,6 @@ func (scriptRun *ScriptRun) Record() {
 	}
 
 	if !scriptRun.DoNotBroadcast {
-		// it's running but we don't want running broadcasts (used for HTML updates)
-		if scriptRun.Status == "Running" {
-			runningScripts[scriptRun.GUID] = &runningScriptDetails{}
-		} else {
-			delete(runningScripts, scriptRun.GUID)
-		}
-
 		ioHub.broadcast <- scriptRun
 	}
 
@@ -178,14 +187,17 @@ func (scriptRun *ScriptRun) RecordOrUpdate() {
 		scriptRun.HtmlOutput = script.HtmlOutput
 	}
 
+	runningScriptsMutex.Lock()
 	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
 		scriptRun.TotalRequestCount = runningScript.Total
 	}
+	runningScriptsMutex.Unlock()
 
 	scriptRun.Record()
 }
 
 func sendScriptProgressUpdate(guid string) {
+	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		scriptProgressUpdate := ScriptProgressUpdate{
 			GUID:         guid,
@@ -196,9 +208,11 @@ func sendScriptProgressUpdate(guid string) {
 
 		scriptProgressUpdate.Record()
 	}
+	runningScriptsMutex.Unlock()
 }
 
 func (scriptRun *ScriptRun) UpdateFromRunningScript() {
+	runningScriptsMutex.Lock()
 	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
 		scriptRun.RequestsMadeCount = runningScript.Count
 		scriptRun.TotalRequestCount = runningScript.Total
@@ -209,6 +223,7 @@ func (scriptRun *ScriptRun) UpdateFromRunningScript() {
 	} else if scriptRun.Status == "Completed" || scriptRun.Status == "Archived" || scriptRun.Status == "Unarchived" {
 		scriptRun.RequestsMadeCount = scriptRun.TotalRequestCount
 	}
+	runningScriptsMutex.Unlock()
 }
 
 // RecordError updates the error field and transmits notification of the error to the GUI
@@ -271,11 +286,13 @@ func scriptGroupRunning(scriptGroup string) bool {
 		return false
 	}
 
+	runningScriptsMutex.Lock()
 	for _, script := range scripts {
 		if _, ok := runningScripts[script.GUID]; ok {
 			return true
 		}
 	}
+	runningScriptsMutex.Unlock()
 
 	return false
 }
