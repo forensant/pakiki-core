@@ -63,11 +63,13 @@ type RequestSummary struct {
 // DataPacket holds further details of either the request or the response to an HTTP request
 // this is done so that we can support WebSockets, HTTP/2, etc.
 type DataPacket struct {
-	ID        uint
-	Data      []byte
-	RequestID uint
-	Direction string
-	Modified  bool
+	ID          uint
+	Time        int64
+	Data        []byte
+	RequestID   uint
+	Direction   string
+	Modified    bool
+	DisplayData string
 }
 
 // NewRequest creates a new request from a byte stream

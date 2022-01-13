@@ -25,10 +25,11 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"github.com/elazarl/goproxy"
+	"github.com/pipeline/goproxy"
 )
 
 func setCA(caCert, caKey []byte) error {
@@ -47,7 +48,7 @@ func setCA(caCert, caKey []byte) error {
 	return nil
 }
 
-func onRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 	requestBytes, err := httputil.DumpRequest(req, true)
 
 	if err != nil {
@@ -104,7 +105,7 @@ func onRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request,
 	return req, response
 }
 
-func onResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
+func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
 	if resp == nil || resp.Body == nil {
 		return resp
 	}
@@ -160,6 +161,54 @@ func onResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Respon
 	return resp
 }
 
+func onWebsocketPacketReceived(data []byte, direction goproxy.WebsocketDirection, opcode string, ctx *goproxy.ProxyCtx) []byte {
+	request, typecastOK := ctx.UserData.(*project.Request)
+	if !typecastOK {
+		fmt.Printf("Could not convert the response's user context to a request\n")
+		return data
+	}
+
+	if request == nil {
+		fmt.Printf("Cannot find original request corresponding to websocket packet\n")
+		return data
+	}
+
+	if request.Protocol != "Websocket" {
+		// this is the initial packet on the websocket, create the new request object
+		newRequest := &project.Request{
+			Protocol:            "Websocket",
+			URL:                 request.URL,
+			Verb:                request.Verb,
+			ResponseStatusCode:  request.ResponseStatusCode,
+			ResponseContentType: request.ResponseContentType,
+			ScanID:              request.ScanID,
+			SiteMapPathID:       request.SiteMapPathID,
+			SiteMapPath:         request.SiteMapPath,
+		}
+
+		request = newRequest
+		ctx.UserData = request
+	}
+
+	directionString := "Request"
+	if direction == goproxy.ServerToClient {
+		directionString = "Response"
+	}
+
+	dataPacket := project.DataPacket{
+		Time:        time.Now().Unix(),
+		Data:        data,
+		Direction:   directionString,
+		Modified:    false,
+		DisplayData: "{\"opcode\": \"" + opcode + "\"}",
+	}
+
+	request.DataPackets = append(request.DataPackets, dataPacket)
+	request.Record()
+
+	return data
+}
+
 func startHttp11BrowserProxy(wg *sync.WaitGroup, settings *ProxySettings) (*http.Server, error) {
 	certificateRecord, err := ca.CertificateForDomain("CA Root")
 
@@ -183,8 +232,9 @@ func startHttp11BrowserProxy(wg *sync.WaitGroup, settings *ProxySettings) (*http
 
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
 
-	proxy.OnRequest().DoFunc(onRequestReceived)
-	proxy.OnResponse().DoFunc(onResponseReceived)
+	proxy.OnRequest().DoFunc(onHttp11RequestReceived)
+	proxy.OnResponse().DoFunc(onHttp11ResponseReceived)
+	proxy.AddWebsocketHandler(onWebsocketPacketReceived)
 
 	proxy.Verbose = false
 

@@ -18,12 +18,14 @@ const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND respons
 
 // RequestResponse contains the request and response in base64 format
 type RequestResponse struct {
+	Protocol         string
 	Request          string
 	Response         string
 	ModifiedRequest  string
 	ModifiedResponse string
 	URL              string
 	MimeType         string
+	DataPackets      []DataPacket
 }
 
 // GetRequestResponse godoc
@@ -53,38 +55,49 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	var dataPackets []DataPacket
-	result = db.Order("direction, id").Where("request_id = ?", httpRequest.ID).Find(&dataPackets)
+	dataPacketOrder := "direction, id"
+	if httpRequest.Protocol == "Websocket" {
+		dataPacketOrder = "id"
+	}
+	result = db.Order(dataPacketOrder).Where("request_id = ?", httpRequest.ID).Find(&dataPackets)
 
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var origReq []byte
-	var origResp []byte
-	var modReq []byte
-	var modResp []byte
-	for _, dataPacket := range dataPackets {
-		if dataPacket.Direction == "Request" {
-			if dataPacket.Modified {
-				modReq = append(modReq, dataPacket.Data...)
+	var requestResponse RequestResponse
+	requestResponse.Protocol = httpRequest.Protocol
+
+	if httpRequest.Protocol == "Websocket" {
+		requestResponse.DataPackets = dataPackets
+	} else {
+		var origReq []byte
+		var origResp []byte
+		var modReq []byte
+		var modResp []byte
+		for _, dataPacket := range dataPackets {
+			if dataPacket.Direction == "Request" {
+				if dataPacket.Modified {
+					modReq = append(modReq, dataPacket.Data...)
+				} else {
+					origReq = append(origReq, dataPacket.Data...)
+				}
 			} else {
-				origReq = append(origReq, dataPacket.Data...)
-			}
-		} else {
-			if dataPacket.Modified {
-				modResp = append(modResp, dataPacket.Data...)
-			} else {
-				origResp = append(origResp, dataPacket.Data...)
+				if dataPacket.Modified {
+					modResp = append(modResp, dataPacket.Data...)
+				} else {
+					origResp = append(origResp, dataPacket.Data...)
+				}
 			}
 		}
+
+		requestResponse.Request = base64.StdEncoding.EncodeToString(origReq)
+		requestResponse.Response = base64.StdEncoding.EncodeToString(origResp)
+		requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
+		requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(modResp)
 	}
 
-	var requestResponse RequestResponse
-	requestResponse.Request = base64.StdEncoding.EncodeToString(origReq)
-	requestResponse.Response = base64.StdEncoding.EncodeToString(origResp)
-	requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
-	requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(modResp)
 	requestResponse.URL = httpRequest.URL
 	requestResponse.MimeType = httpRequest.ResponseContentType
 
@@ -149,6 +162,11 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	urlFilter := r.FormValue("url_filter")
 	if urlFilter != "" {
 		tx = tx.Where("url LIKE ? OR url LIKE ?", "http"+urlFilter+"%", "https"+urlFilter+"%")
+	}
+
+	protocol := r.FormValue("protocol")
+	if protocol != "" {
+		tx = tx.Where("protocol = ?", protocol)
 	}
 
 	last := r.FormValue("last")

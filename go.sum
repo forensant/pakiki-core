@@ -74,6 +74,10 @@ github.com/mattn/go-sqlite3 v1.14.5/go.mod h1:WVKg1VTActs4Qso6iwGbiFih2UIHo0ENGw
 github.com/mattn/go-sqlite3 v1.14.6 h1:dNPt6NO46WmLVt2DLNpwczCmdV5boIZ6g/tlDrlRUbg=
 github.com/mattn/go-sqlite3 v1.14.6/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
+github.com/pipeline/goproxy v0.0.0-20220113024719-c9e89e742d09 h1:ND4Rr0AtCxeFCYXMpEpMqSX4ST54OqXx0Nxn7H4QnOM=
+github.com/pipeline/goproxy v0.0.0-20220113024719-c9e89e742d09/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
+github.com/pipeline/goproxy v0.0.0-20220113202213-fbe18ce19093 h1:lwzlwJFrVe6sIhwY+sawvK+N3TsO/pNELTI5eNzkp0c=
+github.com/pipeline/goproxy v0.0.0-20220113202213-fbe18ce19093/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-charset v0.0.0-20180617210344-2471d30d28b4/go.mod h1:qgYeAmZ5ZIpBWTGllZSQnw97Dj+woV0toclVaRGI8pc=

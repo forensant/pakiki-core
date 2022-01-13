@@ -12,7 +12,7 @@ import (
 
 	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"github.com/elazarl/goproxy"
+	"github.com/pipeline/goproxy"
 )
 
 func onPreviewProxyRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
