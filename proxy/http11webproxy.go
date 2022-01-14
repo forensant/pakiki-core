@@ -29,6 +29,7 @@ import (
 
 	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
+	"github.com/google/uuid"
 	"github.com/pipeline/goproxy"
 )
 
@@ -60,10 +61,15 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 	var response *http.Response
 
 	if interceptSettings.BrowserToServer {
-		interceptedRequest := interceptRequest(request, "browser_to_server", requestBytes)
+		interceptedRequest := interceptRequest(request, "", "browser_to_server", requestBytes)
 		<-interceptedRequest.ResponseReady
 
-		modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(request.GetRequestResponseData("Request", true))))
+		modifiedRequestData := request.GetRequestResponseData("Request", true)
+		if len(modifiedRequestData) == 0 {
+			modifiedRequestData = request.GetRequestResponseData("Request", false)
+		}
+
+		modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(modifiedRequestData)))
 
 		switch interceptedRequest.RequestAction {
 		case "forward":
@@ -135,10 +141,15 @@ func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.
 		request.HandleResponse(resp)
 
 		if interceptSettings.ServerToBrowser || request.InterceptResponse {
-			interceptedResponse := interceptRequest(request, "server_to_browser", request.GetRequestResponseData("Response", false))
+			interceptedResponse := interceptRequest(request, "", "server_to_browser", request.GetRequestResponseData("Response", false))
 			<-interceptedResponse.ResponseReady
 
-			modifiedResponse := bufio.NewReader(io.NopCloser(bytes.NewBuffer(request.GetRequestResponseData("Response", true))))
+			responseBytes := request.GetRequestResponseData("Response", true)
+			if len(responseBytes) == 0 {
+				responseBytes = request.GetRequestResponseData("Response", false)
+			}
+
+			modifiedResponse := bufio.NewReader(io.NopCloser(bytes.NewBuffer(responseBytes)))
 
 			newResponse, err := http.ReadResponse(modifiedResponse, resp.Request)
 
@@ -195,7 +206,10 @@ func onWebsocketPacketReceived(data []byte, direction goproxy.WebsocketDirection
 		directionString = "Response"
 	}
 
+	dataPacketGuid := uuid.New().String()
+
 	dataPacket := project.DataPacket{
+		GUID:        dataPacketGuid,
 		Time:        time.Now().Unix(),
 		Data:        data,
 		Direction:   directionString,
@@ -205,6 +219,27 @@ func onWebsocketPacketReceived(data []byte, direction goproxy.WebsocketDirection
 
 	request.DataPackets = append(request.DataPackets, dataPacket)
 	request.Record()
+
+	if (interceptSettings.BrowserToServer && direction == goproxy.ClientToServer) ||
+		(interceptSettings.ServerToBrowser && direction == goproxy.ServerToClient) {
+
+		interceptDirection := "browser_to_server"
+		if direction == goproxy.ServerToClient {
+			interceptDirection = "server_to_browser"
+		}
+
+		interceptedRequest := interceptRequest(request, dataPacketGuid, interceptDirection, data)
+		<-interceptedRequest.ResponseReady
+
+		for _, dataPacket := range request.DataPackets {
+			if dataPacket.GUID == dataPacketGuid && dataPacket.Modified {
+				data = dataPacket.Data
+				request.Record()
+			}
+		}
+
+		removeInterceptedRequest(interceptedRequest)
+	}
 
 	return data
 }

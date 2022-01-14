@@ -64,6 +64,7 @@ type RequestSummary struct {
 // this is done so that we can support WebSockets, HTTP/2, etc.
 type DataPacket struct {
 	ID          uint
+	GUID        string
 	Time        int64
 	Data        []byte
 	RequestID   uint

@@ -1,10 +1,12 @@
 package proxy
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"sync"
+	"time"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
 )
@@ -15,18 +17,21 @@ type InterceptSettings struct {
 }
 
 type InterceptedRequestResponse struct {
-	GUID          string
-	Body          string `example:"<base64 encoded body>"`
-	Direction     string `example:"Either browser_to_server or server_to_browser"`
-	RequestAction string `example:"One of: forward, forward_and_intercept_response or drop"`
+	RequestGUID    string
+	DataPacketGUID string
+	ID             uint
+	Body           string `example:"<base64 encoded body>"`
+	Direction      string `example:"Either browser_to_server or server_to_browser"`
+	RequestAction  string `example:"One of: forward, forward_and_intercept_response or drop"`
 }
 
 var interceptedRequests []*project.InterceptedRequest
 var interceptedRequestsLock sync.Mutex
 
-func interceptRequest(request *project.Request, direction string, requestData []byte) *project.InterceptedRequest {
+func interceptRequest(request *project.Request, guid string, direction string, requestData []byte) *project.InterceptedRequest {
 	interceptedRequest := &project.InterceptedRequest{
 		Request:       request,
+		GUID:          guid,
 		Body:          base64.StdEncoding.EncodeToString(requestData),
 		Direction:     direction,
 		ResponseReady: make(chan bool),
@@ -156,15 +161,30 @@ func SetInterceptedResponse(w http.ResponseWriter, r *http.Request) {
 
 	interceptedRequestsLock.Lock()
 	for _, req := range interceptedRequests {
-		if req.Direction == response.Direction && req.Request.GUID == response.GUID {
+		if req.Direction == response.Direction && req.Request.GUID == response.RequestGUID && response.DataPacketGUID == req.GUID {
 			requestBytes, _ := base64.StdEncoding.DecodeString(response.Body)
 			direction := "Request"
 			if response.Direction == "server_to_browser" {
 				direction = "Response"
 			}
 			req.RequestAction = response.RequestAction
-			req.Request.DataPackets = append(req.Request.DataPackets, project.DataPacket{Data: requestBytes, Direction: direction, Modified: true})
-			req.Request.CorrectModifiedRequestResponse(direction)
+
+			origRequestBytes, _ := base64.StdEncoding.DecodeString(req.Body)
+			if !bytes.Equal(origRequestBytes, requestBytes) {
+				dataPacket := project.DataPacket{
+					Data:      requestBytes,
+					Direction: direction,
+					Modified:  true,
+					GUID:      response.DataPacketGUID,
+					Time:      time.Now().Unix(),
+				}
+
+				req.Request.DataPackets = append(req.Request.DataPackets, dataPacket)
+				if req.Request.Protocol != "Websocket" {
+					req.Request.CorrectModifiedRequestResponse(direction)
+				}
+			}
+
 			req.ResponseReady <- true
 			req.Record(project.RecordActionDelete)
 		}

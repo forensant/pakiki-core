@@ -5,6 +5,7 @@ package project
 // InterceptedRequest contains the parameters which hold the details of intercepted requests
 type InterceptedRequest struct {
 	Request       *Request
+	GUID          string
 	Body          string    `example:"<base64 encoded body>"`
 	Direction     string    `example:"Either browser_to_server or server_to_browser"`
 	ResponseReady chan bool `json:"-"`
