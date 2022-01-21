@@ -12,6 +12,7 @@ func initDatabase(db *gorm.DB) {
 	db.AutoMigrate(&ScriptRun{})
 	db.AutoMigrate(&ScriptGroup{})
 	db.AutoMigrate(&SiteMapPath{})
+	db.AutoMigrate(&Setting{})
 
 	loadSitemap(db)
 }

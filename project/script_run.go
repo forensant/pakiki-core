@@ -12,7 +12,7 @@ import (
 type ScriptRun struct {
 	ID          uint `json:"-"`
 	GUID        string
-	Script      string
+	Script      string `json:"-"`
 	Title       string
 	Development bool
 	ScriptGroup string
@@ -180,7 +180,7 @@ func (scriptRun *ScriptRun) Record() {
 
 func (scriptRun *ScriptRun) RecordOrUpdate() {
 	var script ScriptRun
-	result := readableDatabase.First(&script, "guid = ?", scriptRun.GUID)
+	result := readableDatabase.Limit(1).Where("guid = ?", scriptRun.GUID).Find(&script)
 
 	if result.Error == nil {
 		scriptRun.ID = script.ID
@@ -276,7 +276,10 @@ func (scriptProgressUpdate *ScriptProgressUpdate) WriteToDatabase(db *gorm.DB) {
 }
 
 func (scriptRun *ScriptRun) WriteToDatabase(db *gorm.DB) {
-	db.Save(scriptRun)
+	tx := db.Save(scriptRun)
+	if tx.Error != nil {
+		fmt.Printf("Error writing script run to database: %s\n", tx.Error)
+	}
 }
 
 func scriptGroupRunning(scriptGroup string) bool {

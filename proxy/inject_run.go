@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
 	"dev.forensant.com/pipeline/razor/proximitycore/scripting"
@@ -110,12 +111,17 @@ func generatePayloads(inject *project.InjectOperation) []string {
 
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
-			payloads = append(payloads, escapeForPython(scanner.Text()))
+			text := scanner.Text()
+			if utf8.ValidString(text) {
+				payloads = append(payloads, escapeForPython(text))
+			}
 		}
 	}
 
 	for _, payload := range inject.CustomPayloads {
-		payloads = append(payloads, payload)
+		if utf8.ValidString(payload) {
+			payloads = append(payloads, payload)
+		}
 	}
 
 	return payloads

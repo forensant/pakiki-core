@@ -27,7 +27,7 @@ import (
 type Request struct {
 	ID                  uint   `json:"-"`
 	URL                 string `gorm:"index:,collate:nocase"`
-	GUID                string
+	GUID                string `gorm:"index:,collate:nocase"`
 	Time                int64
 	Protocol            string
 	Verb                string
@@ -37,7 +37,7 @@ type Request struct {
 	ResponseTime        int
 	ResponseStatusCode  int
 	ResponseContentType string `gorm:"index:,collate:nocase"`
-	ScanID              string
+	ScanID              string `gorm:"index:,collate:nocase"`
 	Notes               string
 	Error               string
 	DataPackets         []DataPacket `json:"-"`
@@ -105,7 +105,7 @@ func NewRequestFromHttp(httpRequest *http.Request, rawBytes []byte) *Request {
 		}
 	}
 
-	headers, _ := httputil.DumpRequest(httpRequest, false)
+	headers, _ := httputil.DumpRequestOut(httpRequest, false)
 	responseBytes := append(headers, body...)
 
 	url := httpRequest.URL.String()
@@ -242,7 +242,7 @@ func (request *Request) Record() {
 		return
 	}
 
-	if request.SiteMapPath.Path == "" {
+	if request.SiteMapPath.Path == "" && request.Protocol != "Out of Band" {
 		request.SiteMapPath = getSiteMapPath(request.URL)
 	}
 	ioHub.databaseWriter <- request

@@ -62,6 +62,15 @@ func InjectFromGUID(guid string) *InjectOperation {
 	return &operation
 }
 
+func CancelInjectOperation(guid string, err string) {
+	injectOperation := InjectFromGUID(guid)
+	if injectOperation == nil {
+		return
+	}
+
+	injectOperation.RecordError(err)
+}
+
 // Record sends the inject operation to the user interface and/or records it in the database
 func (injectOperation *InjectOperation) Record() {
 	injectOperation.ObjectType = "Inject Operation"
@@ -168,7 +177,10 @@ func updateRequestCountForScan(scanId string) {
 }
 
 func (injectOperation *InjectOperation) WriteToDatabase(db *gorm.DB) {
-	db.Save(injectOperation)
+	tx := db.Save(injectOperation)
+	if tx.Error != nil {
+		fmt.Printf("Error saving inject operation: %s\n", tx.Error)
+	}
 }
 
 func (injectOperation *InjectOperation) ShouldFilter(str string) bool {

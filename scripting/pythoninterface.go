@@ -87,6 +87,10 @@ func recordInProject(guid string, scriptGroup, script string, title string, deve
 		ScriptGroup: scriptGroup,
 	}
 
+	if status == "Error" || err != "" {
+		project.CancelInjectOperation(guid, err)
+	}
+
 	databaseScriptRun := project.ScriptRunFromGUID(guid)
 	if databaseScriptRun != nil {
 		scriptRun.TotalRequestCount = databaseScriptRun.TotalRequestCount
@@ -129,6 +133,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 	if err != nil {
 		return "", err
 	}
+
 	bufferedOutput := bufio.NewReader(pythonOut)
 
 	err = pythonCmd.Start()
@@ -156,9 +161,12 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 	recordInProject(guid, scriptGroup, mainScript, title, development, "", "", "Running")
 
 	go func() {
+		fullScriptCode := ""
 		for idx, scriptPart := range scriptCode {
 			code := replaceCodeVariables(scriptPart.Code, guid, hostPort, apiKey)
 			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, bufferedOutput, idx == len(scriptCode)-1)
+
+			fullScriptCode += code + "\n"
 
 			if err != nil {
 				err := "Error running script: " + err.Error()
@@ -178,12 +186,18 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 
 		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
 
+		readingFinishedChannel := make(chan bool)
 		go func() {
 			readBuf := make([]byte, 1024)
 			fullOutput := make([]byte, 0)
 			for {
 				bytesRead, err := pythonOut.Read(readBuf)
 				lineRead := readBuf[:bytesRead]
+
+				errStr := ""
+				if bytes.Contains(lineRead, []byte("PROXIMITY_PYTHON_INTERPRETER_ERROR")) {
+					errStr = string(stripOutputTags(lineRead))
+				}
 
 				if bytesRead != 0 {
 					fullOutput = stripOutputTags(append(fullOutput, lineRead...))
@@ -194,16 +208,18 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 					outputUpdate.Record()
 				}
 
-				if err != nil {
+				if err != nil || errStr != "" {
 					// will indicate that the file has been closed
-					recordInProject(guid, scriptGroup, mainScript, title, development, string(fullOutput), "", "Completed")
+					recordInProject(guid, scriptGroup, mainScript, title, development, string(fullOutput), errStr, "Completed")
 					request_queue.CloseQueueIfEmpty(guid)
+					readingFinishedChannel <- true
 					return
 				}
 			}
 		}()
 
 		pythonCmd.Wait()
+		<-readingFinishedChannel
 
 		delete(runningScripts, guid)
 	}()

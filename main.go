@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"flag"
@@ -9,8 +10,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
@@ -79,6 +83,9 @@ func main() {
 	}
 	defer db.Close()
 
+	ioHub := project.NewIOHub()
+	ioHub.Run(parameters.ProjectPath)
+
 	gormDB, err = gorm.Open(sqlite.Open(databasePath), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -106,6 +113,8 @@ func main() {
 		fmt.Printf("Preview proxy is available at: http://localhost:%d/\n", previewProxyListener.Addr().(*net.TCPAddr).Port)
 	}
 
+	proxy.StartOutOfBandClient()
+
 	http.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
 	http.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
 	http.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
@@ -124,6 +133,7 @@ func main() {
 	http.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
 	http.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
 	http.HandleFunc("/proxy/make_request", authenticate(proxy.MakeRequest))
+	http.HandleFunc("/proxy/out_of_band/url", authenticate(proxy.GetOOBURL))
 	http.HandleFunc("/proxy/ping", ping)
 	http.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
 	http.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
@@ -139,8 +149,6 @@ func main() {
 	http.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
 	http.HandleFunc("/scripts/update_progress", authenticate(scripting.UpdateProgress))
 
-	ioHub := project.NewIOHub()
-	go ioHub.Run(parameters.ProjectPath)
 	http.HandleFunc("/project/notifications", authenticate(func(w http.ResponseWriter, r *http.Request) {
 		project.Notifications(ioHub, apiToken, w, r)
 	}))
@@ -149,7 +157,33 @@ func main() {
 	http.HandleFunc("/swagger/", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json")))
 	http.HandleFunc("/swagger/doc.json", handleSwaggerJSON)
 
-	log.Fatal(http.Serve(listener, nil))
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	srv := &http.Server{
+		Handler: logRequest(http.DefaultServeMux),
+	}
+
+	go func() {
+		err := srv.Serve(listener)
+
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatalf("%s", err)
+		}
+	}()
+
+	<-done
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		// extra handling here
+		proxy.CloseOutOfBandClient()
+		cancel()
+	}()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server Shutdown Failed:%+v", err)
+	}
 }
 
 func addCorsHeaders(w *http.ResponseWriter, req *http.Request) {
@@ -208,7 +242,7 @@ func createListener(portParameter int, hostname string) net.Listener {
 			fmt.Printf("Error: Port %d is already in use, could not use it for the UI. Using a random one.\n", portParameter)
 			return createListener(0, hostname)
 		} else {
-		panic(err)
+			panic(err)
 		}
 	}
 
@@ -243,6 +277,13 @@ func isLocalhost(remoteAddr string) bool {
 	remoteAddr = remoteAddr[0:portIdx]
 
 	return remoteAddr == "[::1]" || remoteAddr == "127.0.0.1"
+}
+
+func logRequest(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("API Request Received: %s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
 }
 
 func monitorParentProcess(parentPID int32) {
