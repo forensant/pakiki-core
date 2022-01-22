@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -52,14 +53,26 @@ type InjectOperation struct {
 	DoNotRecord        bool `gorm:"-"`
 }
 
+var injectOperationCacheMutex sync.Mutex
+var injectOperationCache map[string]*InjectOperation
+
 func InjectFromGUID(guid string) *InjectOperation {
-	var operation InjectOperation
-	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", guid).Limit(1).Find(&operation)
+	injectOperationCacheMutex.Lock()
+	injectOperation, cached := injectOperationCache[guid]
+	injectOperationCacheMutex.Unlock()
+
+	if cached {
+		return injectOperation
+	}
+
+	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", guid).Limit(1).Find(injectOperation)
 	if tx.Error != nil || tx.RowsAffected < 1 {
 		return nil
 	}
 
-	return &operation
+	injectOperationCache[guid] = injectOperation
+
+	return injectOperation
 }
 
 func CancelInjectOperation(guid string, err string) {
@@ -87,6 +100,10 @@ func (injectOperation *InjectOperation) Record() {
 
 	injectOperation.UpdateForDisplay()
 	ioHub.broadcast <- injectOperation
+
+	injectOperationCacheMutex.Lock()
+	injectOperationCache[injectOperation.GUID] = injectOperation
+	injectOperationCacheMutex.Unlock()
 }
 
 // RecordError updates the error field and transmits notification of the error to the GUI
@@ -111,7 +128,7 @@ func TitlizeName(filename string) string {
 }
 
 func (injectOperation *InjectOperation) UpdateAndRecord() {
-	injectOperation.updatePercentCompleted()
+	injectOperation.updatePercentCompleted(false)
 	injectOperation.UpdateForDisplay()
 	injectOperation.Record()
 }
@@ -144,36 +161,30 @@ func (injectOperation *InjectOperation) UpdateForDisplay() {
 	injectOperation.URL = injectOperation.parseURL()
 }
 
-func (injectOperation *InjectOperation) updatePercentCompleted() {
-	var requestCount int64
-	tx := readableDatabase.Model(&Request{}).Where("scan_id = ?", injectOperation.GUID).Count(&requestCount)
-	if tx.Error != nil {
-		return
-	}
+func (injectOperation *InjectOperation) IncrementRequestCount() {
+	injectOperation.RequestsMadeCount++
+	injectOperation.UpdateAndRecord()
+}
 
-	injectOperation.RequestsMadeCount = int(requestCount)
+func (injectOperation *InjectOperation) updatePercentCompleted(queryFromDatabase bool) {
+	var requestCount int64
+
+	if queryFromDatabase {
+		tx := readableDatabase.Model(&Request{}).Where("scan_id = ?", injectOperation.GUID).Count(&requestCount)
+		if tx.Error != nil {
+			return
+		}
+
+		injectOperation.RequestsMadeCount = int(requestCount)
+	} else {
+		requestCount = int64(injectOperation.RequestsMadeCount)
+	}
 
 	if requestCount >= int64(injectOperation.TotalRequestCount) {
 		injectOperation.PercentCompleted = 100
 	} else {
 		injectOperation.PercentCompleted = int((float32(requestCount) / float32(injectOperation.TotalRequestCount)) * 100.0)
 	}
-}
-
-func updateRequestCountForScan(scanId string) {
-	var scan InjectOperation
-	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", scanId).Limit(1).Find(&scan)
-	if tx.Error != nil || tx.RowsAffected < 1 {
-		// it might be a script instead
-		sendScriptProgressUpdate(scanId)
-		return
-	}
-
-	scan.updatePercentCompleted()
-	scan.DoNotRecord = true
-
-	scan.UpdateForDisplay()
-	scan.Record()
 }
 
 func (injectOperation *InjectOperation) WriteToDatabase(db *gorm.DB) {

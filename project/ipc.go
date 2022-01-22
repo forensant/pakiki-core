@@ -82,7 +82,9 @@ type WebSocketClient struct {
 }
 
 func (h *IOHub) Run(projectPath string) {
-	writableDatabase, err := gorm.Open(sqlite.Open(projectPath), &gorm.Config{})
+	writableDatabase, err := gorm.Open(sqlite.Open(projectPath), &gorm.Config{
+		SkipDefaultTransaction: true,
+	})
 	if err != nil {
 		log.Fatal("Could not open the writable database: " + err.Error())
 		return

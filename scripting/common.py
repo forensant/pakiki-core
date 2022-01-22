@@ -87,6 +87,7 @@ class Request:
         if i == index:
           orig_request_part = base64.standard_b64decode(part['RequestPart'])
           part['RequestPart'] = base64.standard_b64encode(to_bytes(replacement))
+          break
         else:
           i += 1
     

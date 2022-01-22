@@ -86,7 +86,7 @@ func NewRequest(rawBytes []byte) (*Request, error) {
 }
 
 func NewRequestFromHttpWithoutBytes(httpRequest *http.Request) (*Request, error) {
-	rawBytes, err := httputil.DumpRequest(httpRequest, true)
+	rawBytes, err := httputil.DumpRequestOut(httpRequest, true)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +96,11 @@ func NewRequestFromHttpWithoutBytes(httpRequest *http.Request) (*Request, error)
 func NewRequestFromHttp(httpRequest *http.Request, rawBytes []byte) *Request {
 	var body []byte
 	if httpRequest.Body != nil {
-		body, _ = io.ReadAll(httpRequest.Body)
+		requestBody := httpRequest.Body
+		httpRequest.Body.Close()
+		body, _ = io.ReadAll(requestBody)
 		httpRequest.Body = io.NopCloser(bytes.NewBuffer(body))
+		defer httpRequest.Body.Close()
 
 		if httpRequest.Header.Get("Content-Encoding") == "gzip" && len(body) > 0 {
 			reader, _ := gzip.NewReader(bytes.NewBuffer(body))
@@ -206,7 +209,9 @@ func (request *Request) HandleResponse(resp *http.Response) {
 	var body []byte
 	if resp.Body != nil {
 		body, _ = io.ReadAll(resp.Body)
+		resp.Body.Close()
 		resp.Body = io.NopCloser(bytes.NewBuffer(body))
+		defer resp.Body.Close()
 
 		if resp.Header.Get("Content-Encoding") == "gzip" && len(body) > 0 {
 			reader, err := gzip.NewReader(bytes.NewBuffer(body))
@@ -215,6 +220,7 @@ func (request *Request) HandleResponse(resp *http.Response) {
 				fmt.Println(errStr)
 				request.Error = errStr
 			} else {
+				defer reader.Close()
 				body, _ = ioutil.ReadAll(reader)
 			}
 		}
@@ -234,6 +240,39 @@ func (request *Request) HandleResponse(resp *http.Response) {
 	request.DataPackets = append(request.DataPackets, DataPacket{Data: responseBytes, Direction: "Response", Modified: false})
 }
 
+func (request *Request) isResource() bool {
+	content_types := [...]string{
+		"font/",
+		"image/",
+		"javascript/",
+		"text/css",
+	}
+
+	for _, content_type := range content_types {
+		if strings.HasPrefix(request.ResponseContentType, content_type) {
+			return true
+		}
+	}
+
+	file_types := [...]string{
+		".jpg",
+		".gif",
+		".png",
+		".svg",
+		".woff2",
+		".css",
+		".js",
+	}
+
+	for _, file_type := range file_types {
+		if strings.Contains(request.URL, file_type) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Record sends the request to the user interface and record it in the database
 func (request *Request) Record() {
 	err := request.update()
@@ -242,17 +281,19 @@ func (request *Request) Record() {
 		return
 	}
 
-	if request.SiteMapPath.Path == "" && request.Protocol != "Out of Band" {
+	successful := request.ResponseStatusCode < 200 && request.ResponseStatusCode > 299
+
+	if request.SiteMapPath.Path == "" &&
+		request.Protocol != "Out of Band" &&
+		(successful || request.ScanID == "") {
+
 		request.SiteMapPath = getSiteMapPath(request.URL)
+
 	}
 	ioHub.databaseWriter <- request
 
 	request.ObjectType = "HTTP Request"
 	ioHub.broadcast <- request
-
-	if request.ScanID != "" && (request.ResponseStatusCode != 0 || request.Error != "") {
-		updateRequestCountForScan(request.ScanID)
-	}
 }
 
 func (request *Request) ShouldFilter(filter string) bool {
@@ -265,6 +306,10 @@ func (request *Request) ShouldFilter(filter string) bool {
 		filter = strings.Replace(filter, "exclude_resources:true", "", 1)
 		filter = strings.TrimLeft(filter, " ")
 		excludeResources = true
+	}
+
+	if excludeResources && filter == "" {
+		return request.isResource()
 	}
 
 	var requests []Request

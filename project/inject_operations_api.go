@@ -22,7 +22,7 @@ func GetInjectOperations(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	result := db.Preload(clause.Associations).Order("inject_operations.id").Find(&operations)
 
 	for idx := range operations {
-		operations[idx].updatePercentCompleted()
+		operations[idx].updatePercentCompleted(true)
 		operations[idx].UpdateForDisplay()
 	}
 
@@ -63,10 +63,9 @@ func PutInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	var operation InjectOperation
-	tx := db.Preload(clause.Associations).Where("guid = ?", paramOperation.GUID).First(&operation)
-	if tx.Error != nil {
-		http.Error(w, "Could not find injection operation: "+tx.Error.Error(), http.StatusInternalServerError)
+	operation := InjectFromGUID(paramOperation.GUID)
+	if operation == nil {
+		http.Error(w, "Could not find injection operation", http.StatusNotFound)
 		return
 	}
 
@@ -101,10 +100,9 @@ func PutArchiveInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.
 		return
 	}
 
-	var operation InjectOperation
-	tx := db.Preload(clause.Associations).Where("guid = ?", guid).First(&operation)
-	if tx.Error != nil {
-		http.Error(w, "Could not find injection operation: "+tx.Error.Error(), http.StatusInternalServerError)
+	operation := InjectFromGUID(guid)
+	if operation == nil {
+		http.Error(w, "Could not find injection operation", http.StatusNotFound)
 		return
 	}
 

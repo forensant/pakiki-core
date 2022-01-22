@@ -167,6 +167,13 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 			request.Payloads = params.Payloads
 			request.Record()
 		}
+
+		injectOp := project.InjectFromGUID(params.ScanID)
+
+		if injectOp != nil {
+			injectOp.IncrementRequestCount()
+			injectOp.UpdateAndRecord()
+		}
 		close(requestFinishedChannel)
 	}()
 

@@ -14,5 +14,7 @@ func initDatabase(db *gorm.DB) {
 	db.AutoMigrate(&SiteMapPath{})
 	db.AutoMigrate(&Setting{})
 
+	injectOperationCache = make(map[string]*InjectOperation)
+
 	loadSitemap(db)
 }
