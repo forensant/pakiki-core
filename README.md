@@ -51,7 +51,7 @@ HomeBrew will need to be installed with python3.9, with both x86_64 and arm64 su
 
 For arm64 on an M1 Mac, run:
 ```
-mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 brew install python@3.9
 ```
 
@@ -60,6 +60,8 @@ For x86_64 support, run:
 arch --x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 arch --x86_64 /usr/local/bin/brew install python@3.9
 ```
+
+*At this point, Python is only compiled with x86_64 support, so that we're only bundling one set of libraries*
 
 ### Linux dependencies
 

@@ -10,7 +10,6 @@ package scripting
 // deploying the application.
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -60,17 +59,33 @@ func CancelScriptInternal(guid string) error {
 	return nil
 }
 
-func readString(delimeter byte, r *bufio.Reader) (string, error) {
+func printPythonErrors(stderr io.ReadCloser) {
+	readBuf := make([]byte, 10240)
+
 	for {
-		str, err := r.ReadString(delimeter)
-		if err == nil {
-			return str, nil
-		} else if err != io.EOF {
-			return "", err
-		} else {
-			if str != "" {
-				fmt.Printf("EOF reached, string: %s\n", str)
+		bytesRead, err := stderr.Read(readBuf)
+		if bytesRead != 0 {
+			fmt.Printf("Error from Python process: %s\n", readBuf)
+		}
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Error reading Python stderr: %s\n", err.Error())
 			}
+			return
+		}
+	}
+}
+
+func readLine(r io.ReadCloser) (string, error) {
+	readBuf := make([]byte, 4096)
+
+	for {
+		bytesRead, err := r.Read(readBuf)
+		if bytesRead != 0 {
+			output := readBuf[:bytesRead]
+			return string(output), nil
+		} else {
+			return "", err
 		}
 	}
 }
@@ -97,6 +112,14 @@ func recordInProject(guid string, scriptGroup, script string, title string, deve
 	}
 
 	scriptRun.RecordOrUpdate()
+}
+
+func replaceCodeVariables(code string, guid string, port string, apiKey string) string {
+	code = strings.ReplaceAll(code, "PROXIMITY_PROXY_PORT", port)
+	code = strings.ReplaceAll(code, "PROXIMITY_SCRIPT_ID", guid)
+	code = strings.ReplaceAll(code, "PROXIMITY_API_KEY", apiKey)
+
+	return code
 }
 
 func StartScript(hostPort string, scriptCode []ScriptCode, title string, development bool, guid string, scriptGroup string, apiKey string, scriptCaller ScriptCaller) (string, error) {
@@ -134,12 +157,17 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 		return "", err
 	}
 
-	bufferedOutput := bufio.NewReader(pythonOut)
+	pythonErr, err := pythonCmd.StderrPipe()
+	if err != nil {
+		return "", err
+	}
 
 	err = pythonCmd.Start()
 	if err != nil {
 		return "", err
 	}
+
+	go printPythonErrors(pythonErr)
 
 	runningScripts[guid] = pythonCmd
 
@@ -161,15 +189,14 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 	recordInProject(guid, scriptGroup, mainScript, title, development, "", "", "Running")
 
 	go func() {
-		fullScriptCode := ""
 		for idx, scriptPart := range scriptCode {
 			code := replaceCodeVariables(scriptPart.Code, guid, hostPort, apiKey)
-			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, bufferedOutput, idx == len(scriptCode)-1)
-
-			fullScriptCode += code + "\n"
+			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, pythonOut, idx == len(scriptCode)-1)
 
 			if err != nil {
 				err := "Error running script: " + err.Error()
+				fmt.Println(err + "\n")
+
 				if scriptCaller != nil {
 					scriptCaller.RecordError(err)
 				} else {
@@ -227,21 +254,13 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 	return guid, nil
 }
 
-func replaceCodeVariables(code string, guid string, port string, apiKey string) string {
-	code = strings.ReplaceAll(code, "PROXIMITY_PROXY_PORT", port)
-	code = strings.ReplaceAll(code, "PROXIMITY_SCRIPT_ID", guid)
-	code = strings.ReplaceAll(code, "PROXIMITY_API_KEY", apiKey)
-
-	return code
-}
-
 func stripOutputTags(output []byte) []byte {
 	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED\n"), []byte(""))
 	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_ERROR\n"), []byte(""))
 	return output
 }
 
-func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, stdout *bufio.Reader, lastBlock bool) error {
+func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, stdout io.ReadCloser, lastBlock bool) error {
 	_, err := stdin.Write([]byte(filename + "\n"))
 	if err != nil {
 		fmt.Println("Error writing bytes to process: " + err.Error())
@@ -252,17 +271,16 @@ func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, s
 	if lastBlock {
 		return nil
 	}
-
 	stdin.Write([]byte("\n\nPROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
 
-	output, err := readString('\n', stdout)
+	output, err := readLine(stdout)
 	if err != nil {
 		return err
 	}
 
 	if strings.TrimSpace(output) != "PROXIMITY_PYTHON_INTERPRETER_READY" {
 		// this should be the stack trace
-		allOutput := make([]byte, 4096)
+		allOutput := make([]byte, 10240)
 		stdout.Read(allOutput)
 		outputStr := strings.ReplaceAll(string(allOutput), "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED", "")
 		outputStr = strings.TrimSpace(outputStr)
