@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	_ "embed"
@@ -128,19 +129,24 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 		guid = uuid.NewString()
 	}
 
+	executableName := "/pythoninterpreter"
+	if runtime.GOOS == "windows" {
+		executableName = "\\pythoninterpreter.exe"
+	}
+
 	executablePath, err := os.Executable()
 	if err != nil {
 		return "", err
 	}
 	executablePath = filepath.Dir(executablePath)
-	pythonPath := executablePath + "/pythoninterpreter"
+	pythonPath := executablePath + executableName
 
 	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
 		executablePath, err = os.Getwd()
 		if err != nil {
 			log.Println(err)
 		}
-		pythonPath = executablePath + "/pythoninterpreter"
+		pythonPath = executablePath + executableName
 	}
 
 	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
