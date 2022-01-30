@@ -4,8 +4,10 @@ package project
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -169,7 +171,7 @@ func (c *WebSocketClient) readPump() {
 // writePump pumps messages from the hub to the websocket connection.
 //
 // A single goroutine is used per connection to ensure there's only a single writer for each connection
-func (c *WebSocketClient) writePump(filter string) {
+func (c *WebSocketClient) writePump(filter string, objectFieldFilter map[string]string) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -186,18 +188,19 @@ func (c *WebSocketClient) writePump(filter string) {
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
+			if !message.ShouldFilter(filter) && !shouldFilterByFields(objectFieldFilter, message) {
+				w, err := c.conn.NextWriter(websocket.TextMessage)
+				if err != nil {
+					return
+				}
 
-			if !message.ShouldFilter(filter) {
 				w.Write(marshalObject(message))
+
+				if err := w.Close(); err != nil {
+					return
+				}
 			}
 
-			if err := w.Close(); err != nil {
-				return
-			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -238,11 +241,44 @@ func Notifications(hub *IOHub, apiToken string, w http.ResponseWriter, r *http.R
 	client := &WebSocketClient{hub: hub, conn: conn, send: make(chan BroadcastableObject, 255)}
 	client.hub.register <- client
 
-	go client.writePump(r.FormValue("filter"))
+	objectFieldFilter := make(map[string]string)
+	fieldFilterVal := r.FormValue("objectfieldfilter")
+
+	if fieldFilterVal != "" {
+		err := json.Unmarshal([]byte(fieldFilterVal), &objectFieldFilter)
+		if err != nil {
+			log.Printf("Error when unmarshalling objectfieldfilter: %s\n", err)
+		}
+	}
+
+	go client.writePump(r.FormValue("filter"), objectFieldFilter)
 	go client.readPump()
 }
 
 func marshalObject(obj interface{}) []byte {
 	b, _ := json.Marshal(obj)
 	return b
+}
+
+func shouldFilterByFields(objectFieldFilter map[string]string, message interface{}) bool {
+	messageValues := reflect.ValueOf(message).Elem()
+
+	for key, value := range objectFieldFilter {
+		field := messageValues.FieldByName(key)
+
+		if !field.IsValid() {
+			return true
+		}
+
+		if field.Kind() != reflect.String {
+			fmt.Printf("Filtering notification, field %s was not a string.\n", key)
+			return true
+		}
+
+		if field.String() != value {
+			return true
+		}
+	}
+
+	return false
 }
