@@ -46,7 +46,7 @@ class GeneratedRequest:
     if self.request_body.find(b'\r\n') == -1:
       self.request_body.replace(b'\n', b'\r\n')
 
-  def make(self):
+  def make(self, queue=True):
     b64request = base64.b64encode(self.request_body)
     request_data = str(b64request, 'UTF-8')
 
@@ -56,7 +56,18 @@ class GeneratedRequest:
     properties['host']    = self.request.host
     properties['ssl']     = self.request.ssl
 
-    return make_request_to_core('/proxy/add_request_to_queue', properties)
+    url = '/proxy/add_request_to_queue'
+    if queue == False:
+      url = '/proxy/make_request'
+
+    return make_request_to_core(url, properties)
+
+  def get_response(self):
+    make_req_response = self.make(False)
+    json_response = json.loads(make_req_response)
+    guid = json_response['GUID']
+  
+    return get_response_for_request(guid)
 
 class Request:
   def __init__(self, host, ssl, request_parts):
@@ -78,6 +89,9 @@ class Request:
 
   def make(self):
     return GeneratedRequest(self).make()
+
+  def make_get_response(self):
+    return GeneratedRequest(self).get_response()
 
   def replace_injection_point(self, index, replacement):
     i = 0
