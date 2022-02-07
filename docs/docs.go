@@ -1109,6 +1109,37 @@ var doc = `{
                 }
             }
         },
+        "/proxy/out_of_band/url": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a unique URL which can be used to test out of band interactions",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "OutOfBand"
+                ],
+                "summary": "Get Out of Band URL",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/proxy/set_intercepted_response": {
             "put": {
                 "security": [
@@ -1438,6 +1469,9 @@ var doc = `{
                     "type": "string",
                     "example": "Either browser_to_server or server_to_browser"
                 },
+                "guid": {
+                    "type": "string"
+                },
                 "objectType": {
                     "type": "string"
                 },
@@ -1590,9 +1624,6 @@ var doc = `{
                 "requestsMadeCount": {
                     "type": "integer"
                 },
-                "script": {
-                    "type": "string"
-                },
                 "scriptGroup": {
                     "type": "string"
                 },
@@ -1649,16 +1680,22 @@ var doc = `{
                     "type": "string",
                     "example": "\u003cbase64 encoded body\u003e"
                 },
+                "dataPacketGUID": {
+                    "type": "string"
+                },
                 "direction": {
                     "type": "string",
                     "example": "Either browser_to_server or server_to_browser"
                 },
-                "guid": {
-                    "type": "string"
+                "id": {
+                    "type": "integer"
                 },
                 "requestAction": {
                     "type": "string",
                     "example": "One of: forward, forward_and_intercept_response or drop"
+                },
+                "requestGUID": {
+                    "type": "string"
                 }
             }
         },
@@ -1714,6 +1751,9 @@ var doc = `{
             "properties": {
                 "http11ProxyAddr": {
                     "type": "string"
+                },
+                "http11ProxyListening": {
+                    "type": "boolean"
                 },
                 "http11UpstreamProxyAddr": {
                     "type": "string"

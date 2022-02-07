@@ -183,7 +183,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		tx = tx.Where(FilterResourcesSQL)
 	}
 
-	validColumns := []string{"url", "time", "protocol", "verb", "response_size", "response_time", "response_status_code", "response_content_type", "notes", "error"}
+	validColumns := []string{"url", "time", "protocol", "verb", "response_size", "response_time", "response_status_code", "response_content_type", "payloads", "notes", "error"}
 	validDirections := []string{"asc", "desc"}
 
 	sortColumn := "time"

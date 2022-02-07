@@ -12,6 +12,7 @@ type ProxySettings struct {
 	Http11ProxyAddr         string
 	Http11UpstreamProxyAddr string
 	MaxConnectionsPerHost   int
+	Http11ProxyListening    bool
 }
 
 func GetSettings() (*ProxySettings, error) {

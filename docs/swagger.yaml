@@ -71,6 +71,8 @@ definitions:
       direction:
         example: Either browser_to_server or server_to_browser
         type: string
+      guid:
+        type: string
       objectType:
         type: string
       recordAction:
@@ -171,8 +173,6 @@ definitions:
         type: integer
       requestsMadeCount:
         type: integer
-      script:
-        type: string
       scriptGroup:
         type: string
       status:
@@ -210,13 +210,17 @@ definitions:
       body:
         example: <base64 encoded body>
         type: string
+      dataPacketGUID:
+        type: string
       direction:
         example: Either browser_to_server or server_to_browser
         type: string
-      guid:
-        type: string
+      id:
+        type: integer
       requestAction:
         example: 'One of: forward, forward_and_intercept_response or drop'
+        type: string
+      requestGUID:
         type: string
     type: object
   proxy.MakeRequestParameters:
@@ -254,6 +258,8 @@ definitions:
     properties:
       http11ProxyAddr:
         type: string
+      http11ProxyListening:
+        type: boolean
       http11UpstreamProxyAddr:
         type: string
       maxConnectionsPerHost:
@@ -972,6 +978,25 @@ paths:
       summary: Make a single request
       tags:
       - Requests
+  /proxy/out_of_band/url:
+    get:
+      description: gets a unique URL which can be used to test out of band interactions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get Out of Band URL
+      tags:
+      - OutOfBand
   /proxy/set_intercepted_response:
     put:
       description: set how an intercepted request will be responded to

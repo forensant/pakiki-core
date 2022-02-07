@@ -48,6 +48,8 @@ func getProxySettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	proxySettings.Http11ProxyListening = http11ProxyServer != nil
+
 	js, err := json.Marshal(proxySettings)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
