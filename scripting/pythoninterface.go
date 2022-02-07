@@ -77,7 +77,7 @@ func printPythonErrors(stderr io.ReadCloser) {
 	}
 }
 
-func readLine(r io.ReadCloser) (string, error) {
+func readFromBuffer(r io.ReadCloser) (string, error) {
 	readBuf := make([]byte, 4096)
 
 	for {
@@ -91,23 +91,12 @@ func readLine(r io.ReadCloser) (string, error) {
 	}
 }
 
-func recordInProject(guid string, scriptGroup, script string, title string, development bool, output string, err string, status string) {
-	scriptRun := project.ScriptRun{
-		GUID:        guid,
-		Script:      script,
-		TextOutput:  output,
-		Title:       title,
-		Error:       err,
-		Status:      status,
-		Development: development,
-		ScriptGroup: scriptGroup,
+func recordInProject(scriptRun project.ScriptRun) {
+	if scriptRun.Status == "Error" || scriptRun.Error != "" {
+		project.CancelInjectOperation(scriptRun.GUID, scriptRun.Error)
 	}
 
-	if status == "Error" || err != "" {
-		project.CancelInjectOperation(guid, err)
-	}
-
-	databaseScriptRun := project.ScriptRunFromGUID(guid)
+	databaseScriptRun := project.ScriptRunFromGUID(scriptRun.GUID)
 	if databaseScriptRun != nil {
 		scriptRun.TotalRequestCount = databaseScriptRun.TotalRequestCount
 	}
@@ -123,12 +112,7 @@ func replaceCodeVariables(code string, guid string, port string, apiKey string) 
 	return code
 }
 
-func StartScript(hostPort string, scriptCode []ScriptCode, title string, development bool, guid string, scriptGroup string, apiKey string, scriptCaller ScriptCaller) (string, error) {
-
-	if guid == "" {
-		guid = uuid.NewString()
-	}
-
+func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCloser, err error) {
 	executableName := "/pythoninterpreter"
 	if runtime.GOOS == "windows" {
 		executableName = "\\pythoninterpreter.exe"
@@ -136,7 +120,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 
 	executablePath, err := os.Executable()
 	if err != nil {
-		return "", err
+		return
 	}
 	executablePath = filepath.Dir(executablePath)
 	pythonPath := executablePath + executableName
@@ -149,33 +133,48 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 		pythonPath = executablePath + executableName
 	}
 
-	if _, err := os.Stat(pythonPath); os.IsNotExist(err) {
-		return "", errors.New("could not find Python interpreter")
+	if _, err = os.Stat(pythonPath); os.IsNotExist(err) {
+		err = errors.New("could not find Python interpreter")
+		return
 	}
 
 	pythonCmd := exec.Command(pythonPath)
-	pythonIn, err := pythonCmd.StdinPipe()
+	stdin, err = pythonCmd.StdinPipe()
 	if err != nil {
-		return "", err
+		return
 	}
-	pythonOut, err := pythonCmd.StdoutPipe()
+	stdout, err = pythonCmd.StdoutPipe()
 	if err != nil {
-		return "", err
+		return
 	}
 
 	pythonErr, err := pythonCmd.StderrPipe()
 	if err != nil {
-		return "", err
+		return
 	}
 
 	err = pythonCmd.Start()
 	if err != nil {
-		return "", err
+		return
 	}
 
 	go printPythonErrors(pythonErr)
 
 	runningScripts[guid] = pythonCmd
+
+	return
+}
+
+func StartScript(hostPort string, scriptCode []ScriptCode, title string, development bool, guid string, scriptGroup string, apiKey string, scriptCaller ScriptCaller) (string, error) {
+
+	if guid == "" {
+		guid = uuid.NewString()
+	}
+
+	pythonIn, pythonOut, err := startPythonInterpreter(guid)
+	if err != nil {
+		return "", err
+	}
 
 	commonScriptCode := ScriptCode{
 		Code:     commonCode,
@@ -191,8 +190,19 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 		}
 	}
 
+	scriptRun := project.ScriptRun{
+		GUID:        guid,
+		Script:      mainScript,
+		TextOutput:  "",
+		Title:       title,
+		Error:       "",
+		Status:      "Running",
+		Development: development,
+		ScriptGroup: scriptGroup,
+	}
+
 	// create the initial record within the project
-	recordInProject(guid, scriptGroup, mainScript, title, development, "", "", "Running")
+	recordInProject(scriptRun)
 
 	go func() {
 		for idx, scriptPart := range scriptCode {
@@ -209,9 +219,12 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 					fmt.Println(err)
 				}
 
-				recordInProject(guid, scriptGroup, mainScript, title, development, "", err, "Error")
+				scriptRun.Error = err
+				scriptRun.Status = "Error"
 
-				pythonCmd.Process.Kill()
+				recordInProject(scriptRun)
+
+				runningScripts[guid].Process.Kill()
 				delete(runningScripts, guid)
 				return
 			}
@@ -241,9 +254,13 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 					outputUpdate.Record()
 				}
 
-				if err != nil || errStr != "" {
-					// will indicate that the file has been closed
-					recordInProject(guid, scriptGroup, mainScript, title, development, string(fullOutput), errStr, "Completed")
+				if err != nil || errStr != "" { // will indicate that the file has been closed
+					scriptRun.TextOutput = string(fullOutput)
+					scriptRun.Error = errStr
+					scriptRun.Status = "Completed"
+
+					recordInProject(scriptRun)
+
 					request_queue.CloseQueueIfEmpty(guid)
 					readingFinishedChannel <- true
 					return
@@ -251,7 +268,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 			}
 		}()
 
-		pythonCmd.Wait()
+		runningScripts[guid].Wait()
 		<-readingFinishedChannel
 
 		delete(runningScripts, guid)
@@ -279,7 +296,7 @@ func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, s
 	}
 	stdin.Write([]byte("\n\nPROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
 
-	output, err := readLine(stdout)
+	output, err := readFromBuffer(stdout)
 	if err != nil {
 		return err
 	}
