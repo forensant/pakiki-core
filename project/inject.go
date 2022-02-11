@@ -134,8 +134,17 @@ func (injectOperation *InjectOperation) UpdateAndRecord() {
 }
 
 func (injectOperation *InjectOperation) UpdateForDisplay() {
-	injectOperation.FuzzDB = strings.Split(injectOperation.FuzzDBGorm, ";")
-	injectOperation.CustomFilenames = strings.Split(injectOperation.CustomFilesGorm, ";")
+	if injectOperation.FuzzDBGorm == "" {
+		injectOperation.FuzzDB = make([]string, 0)
+	} else {
+		injectOperation.FuzzDB = strings.Split(injectOperation.FuzzDBGorm, ";")
+	}
+
+	if injectOperation.CustomFilesGorm == "" {
+		injectOperation.CustomFilenames = make([]string, 0)
+	} else {
+		injectOperation.CustomFilenames = strings.Split(injectOperation.CustomFilesGorm, ";")
+	}
 
 	payloads := make([]string, 0)
 	if injectOperation.IterateFrom != 0 || injectOperation.IterateTo != 0 {

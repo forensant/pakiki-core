@@ -388,23 +388,27 @@ paths:
       - Injection Operations
   /inject_operations:
     get:
-      description: gets a list of all injection operations
+      description: gets a single inject operation
+      parameters:
+      - description: The GUID of the request to fetch
+        in: query
+        name: guid
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/project.InjectOperation'
-            type: array
+            $ref: '#/definitions/project.InjectOperation'
         "500":
           description: Internal Server Error
           schema:
             type: string
       security:
       - ApiKeyAuth: []
-      summary: Get All Inject Operations
+      summary: Get Inject Operation
       tags:
       - Injection Operations
   /inject_operations/fuzzdb_payload:

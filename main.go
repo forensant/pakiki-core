@@ -142,7 +142,7 @@ func main() {
 	http.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
 	http.HandleFunc("/inject_operations/run", authenticate(proxy.RunInjection))
 	http.HandleFunc("/inject_operations", authenticateWithGormDB(project.GetInjectOperations))
-	http.HandleFunc("/inject_operation", authenticateWithGormDB(project.PutInjectOperation))
+	http.HandleFunc("/inject_operation", authenticateWithGormDB(project.HandleInjectOperation))
 	http.HandleFunc("/inject_operation/archive", authenticateWithGormDB(project.PutArchiveInjectOperation))
 
 	http.HandleFunc("/scripts/cancel", authenticate(scripting.CancelScript))

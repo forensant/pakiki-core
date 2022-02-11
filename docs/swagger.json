@@ -158,22 +158,28 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "gets a list of all injection operations",
+                "description": "gets a single inject operation",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Injection Operations"
                 ],
-                "summary": "Get All Inject Operations",
+                "summary": "Get Inject Operation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The GUID of the request to fetch",
+                        "name": "guid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/project.InjectOperation"
-                            }
+                            "$ref": "#/definitions/project.InjectOperation"
                         }
                     },
                     "500": {

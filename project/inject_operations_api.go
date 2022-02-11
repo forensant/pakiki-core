@@ -21,14 +21,14 @@ func GetInjectOperations(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var operations []InjectOperation
 	result := db.Preload(clause.Associations).Order("inject_operations.id").Find(&operations)
 
-	for idx := range operations {
-		operations[idx].updatePercentCompleted(true)
-		operations[idx].UpdateForDisplay()
-	}
-
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for idx := range operations {
+		operations[idx].updatePercentCompleted(true)
+		operations[idx].UpdateForDisplay()
 	}
 
 	response, err := json.Marshal(operations)
@@ -38,6 +38,54 @@ func GetInjectOperations(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.Write(response)
+}
+
+// GetInjectOperations godoc
+// @Summary Get Inject Operation
+// @Description gets a single inject operation
+// @Tags Injection Operations
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid query string true "The GUID of the request to fetch"
+// @Success 200 {object} project.InjectOperation
+// @Failure 500 {string} string Error
+// @Router /inject_operations [get]
+func GetInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	guid := r.FormValue("guid")
+
+	if guid == "" {
+		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
+		return
+	}
+
+	var operation InjectOperation
+	result := db.Preload(clause.Associations).First(&operation, "guid = ?", guid)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	operation.updatePercentCompleted(true)
+	operation.UpdateForDisplay()
+
+	response, err := json.Marshal(operation)
+	if err != nil {
+		http.Error(w, "Could not marshal requests: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(response)
+}
+
+func HandleInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method == "GET" {
+		GetInjectOperation(w, r, db)
+	} else if r.Method == "PUT" || r.Method == "POST" {
+		PutInjectOperation(w, r, db)
+	} else {
+		http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
+	}
 }
 
 // PutInjectOperation godoc
