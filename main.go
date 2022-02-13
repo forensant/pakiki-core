@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"embed"
+	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -40,6 +43,7 @@ var swaggerJson string
 
 type commandLineParameters struct {
 	APIKey           string
+	BindAddress      string
 	ProjectPath      string
 	ParentPID        int32
 	APIPort          int
@@ -66,7 +70,7 @@ type commandLineParameters struct {
 // @BasePath
 func main() {
 	parameters := parseCommandLineFlags()
-	listener := createListener(parameters.APIPort, "")
+	listener := createListener(parameters.APIPort, parameters.BindAddress)
 	port = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 
 	if parameters.ParentPID != 0 {
@@ -154,6 +158,7 @@ func main() {
 	}))
 	http.HandleFunc("/debug", authenticate(project.Debug))
 
+	http.HandleFunc("/api_key.js", handleAPIKey)
 	http.HandleFunc("/swagger/", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json")))
 	http.HandleFunc("/swagger/doc.json", handleSwaggerJSON)
 
@@ -187,32 +192,26 @@ func main() {
 }
 
 func addCorsHeaders(w *http.ResponseWriter, req *http.Request) {
-	if project.IsValidOrigin(req, apiToken) {
-		(*w).Header().Set("Access-Control-Allow-Origin", req.Header.Get("Origin"))
-		(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-API-Key")
-	}
+	(*w).Header().Set("Access-Control-Allow-Origin", req.Header.Get("Origin")) // all requests have API keys, so we're not worried about CORS attacks
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-API-Key")
 }
 
 func authenticateAndProcessRequest(w http.ResponseWriter, r *http.Request) bool {
 	addCorsHeaders(&w, r)
-	clientAPIKey := r.Header.Get("X-API-Key")
-	authenticated := false
-	if apiToken != "" && clientAPIKey == apiToken {
-		authenticated = true
-	} else if apiToken != "" {
+
+	// allow the pre-flight requests as they don't have API Keys, but don't actually execute them
+	if r.Method == http.MethodOptions {
+		w.Write([]byte("OK"))
+		return false
+	}
+
+	headerAPIKey := r.Header.Get("X-API-Key")
+	formAPIKey := r.FormValue("api_key")
+
+	if headerAPIKey != apiToken && formAPIKey != apiToken {
 		fmt.Println("Invalid API key")
 		http.Error(w, "Invalid API Key", http.StatusUnauthorized)
-		return false
-	}
-
-	if !authenticated && !isLocalhost(r.RemoteAddr) {
-		fmt.Println("Unauthorised")
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return false
-	}
-
-	if r.Method == http.MethodOptions {
 		return false
 	}
 
@@ -261,22 +260,46 @@ func ensureProcessExists(parentPID int32) {
 	}
 }
 
+func generateAPIKey() (string, error) {
+	b := make([]byte, 32)
+	n, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+
+	if n != 32 {
+		return "", errors.New("did not generate 32 bytes")
+	}
+
+	dst := make([]byte, hex.EncodedLen(len(b)))
+	hex.Encode(dst, b)
+
+	key := string(dst)
+
+	fmt.Printf("API Key: %s\n", key)
+
+	return key, nil
+}
+
+func handleAPIKey(w http.ResponseWriter, r *http.Request) {
+	key := ""
+	if isLocalhost(r) {
+		key = apiToken
+	}
+
+	js := "CORE_API_KEY = '" + key + "'"
+	w.Write([]byte(js))
+}
+
 func handleSwaggerJSON(w http.ResponseWriter, r *http.Request) {
 	data := strings.ReplaceAll(swaggerJson, "\"host\": \"localhost\",", "\"host\": \"localhost:"+port+"\",")
 
 	w.Write([]byte(data))
 }
 
-func isLocalhost(remoteAddr string) bool {
-	portIdx := strings.LastIndex(remoteAddr, ":")
-
-	if portIdx == -1 {
-		return false
-	}
-
-	remoteAddr = remoteAddr[0:portIdx]
-
-	return remoteAddr == "[::1]" || remoteAddr == "127.0.0.1"
+func isLocalhost(r *http.Request) bool {
+	hostnameComponents := strings.Split(r.Host, ":")
+	return (hostnameComponents[0] == "localhost" || hostnameComponents[0] == "127.0.0.1")
 }
 
 func logRequest(handler http.Handler) http.Handler {
@@ -301,6 +324,7 @@ func monitorParentProcess(parentPID int32) {
 
 func parseCommandLineFlags() commandLineParameters {
 	apiKeyPtr := flag.String("api-key", "", "A key required to be passed to the X-API-Key header for every request")
+	bindAddressPtr := flag.String("bind-address", "localhost", "The address to bind the API and UI to")
 	parentPIDInt := flag.Int("parentpid", 0, "The process id (PID) of the proxy parent process")
 	projectPathPtr := flag.String("project", "", "The path to the project to open")
 	apiPortPtr := flag.Int("api-port", 10101, "The port for the API and UI to listen on (set to 0 for a random available port)")
@@ -314,13 +338,24 @@ func parseCommandLineFlags() commandLineParameters {
 		log.Fatal("A project path must be specified")
 	}
 
-	return commandLineParameters{
+	params := commandLineParameters{
 		*apiKeyPtr,
+		*bindAddressPtr,
 		*projectPathPtr,
 		parentPID,
 		*apiPortPtr,
 		*previewProxyPortPtr,
 	}
+
+	if params.APIKey == "" {
+		var err error
+		params.APIKey, err = generateAPIKey()
+		if err != nil {
+			log.Fatal("Unable to generate API key: " + err.Error())
+		}
+	}
+
+	return params
 }
 
 func ping(w http.ResponseWriter, r *http.Request) {

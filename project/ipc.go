@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"reflect"
-	"strings"
 	"time"
 
 	"gorm.io/driver/sqlite"
@@ -220,16 +219,10 @@ func Debug(w http.ResponseWriter, r *http.Request) {
 	w.Write(debugPageHTML)
 }
 
-func IsValidOrigin(req *http.Request, apiToken string) bool {
-	hostnameComponents := strings.Split(req.Host, ":")
-	localhost := (hostnameComponents[0] == "localhost" || hostnameComponents[0] == "127.0.0.1")
-
-	return apiToken != "" || localhost
-}
-
 func Notifications(hub *IOHub, apiToken string, w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool {
-		return IsValidOrigin(r, apiToken)
+		key := r.FormValue("api_key")
+		return key == apiToken
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 
