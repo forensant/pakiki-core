@@ -70,7 +70,7 @@ jobs:
       - name: Build golang executable
         run: |
           go get -u github.com/swaggo/swag/cmd/swag
-          ./build.sh
+          ./scripts/build.sh
 
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
@@ -79,10 +79,18 @@ jobs:
 
       - name: Copy Dependencies
         working-directory: build
-        run: ../copy_lib_linux.rb ./
+        run: ../scripts/copy_lib_linux.rb ./
 
       - name: Set permissions
         run: chmod +x build/*
+
+      - name: Run tests
+        working-directory: build
+        run: ../scripts/test.sh
+
+      - name: Upload code coverage
+        working-directory: build
+        run: bash <(curl -s https://codecov.io/bash)
   
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3

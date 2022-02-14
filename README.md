@@ -33,7 +33,7 @@ git submodule update
 
 You can then cd into the html_frontend directory and run ```./build.sh``` to build the frontend.
 
-Then to build the main core, from the root directory of the project run ```./build.sh```
+Then to build the main core, from the root directory of the project run ```./scripts/build.sh```
 
 If you're going to be running a development build, then will also need to copy the pythoninterpreter executable and the python39 dependency directory (generated as part of the build script) into the working directory.
 
