@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	_ "dev.forensant.com/pipeline/razor/proximitycore/internal/testing_init"
 )
 
 func TestRunScript(t *testing.T) {
