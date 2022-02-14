@@ -80,14 +80,23 @@ func encryptPEMData(plaintext string) (base64CipherText string, err error) {
 	return hex.EncodeToString(cipherText), nil
 }
 
-func getDatabase() (*sql.DB, error) {
+func getDatabaseFilename() (string, error) {
 	configPath := configdir.LocalConfig("Forensant", "Proximity")
 	err := configdir.MakePath(configPath) // Ensure it exists.
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	databaseFile := filepath.Join(configPath, caDatabaseFilename)
+
+	return databaseFile, nil
+}
+
+func getDatabase() (*sql.DB, error) {
+	databaseFile, err := getDatabaseFilename()
+	if err != nil {
+		return nil, err
+	}
 
 	db, err := sql.Open("sqlite3", databaseFile)
 	if err != nil {

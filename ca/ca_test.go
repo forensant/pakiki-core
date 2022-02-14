@@ -5,10 +5,16 @@ import (
 	"encoding/pem"
 	"os"
 	"testing"
+
+	_ "dev.forensant.com/pipeline/razor/proximitycore/internal/testing_init"
 )
 
 func TestMain(m *testing.M) {
 	caDatabaseFilename = "certs_test.db"
+	filePath, _ := getDatabaseFilename()
+
+	os.Remove(filePath)
+
 	os.Exit(m.Run())
 }
 

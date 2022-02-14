@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"runtime"
+
+	"github.com/zalando/go-keyring"
 )
 
 func init() {
@@ -15,4 +17,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	keyring.MockInit()
 }
