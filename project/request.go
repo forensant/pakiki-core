@@ -169,7 +169,7 @@ func (request *Request) CorrectModifiedRequestResponse(direction string) {
 func GetLastResponseOfURL(url string) ([]byte, error) {
 	var request Request
 	// If the resource is protected by auth, get the last successful response
-	result := readableDatabase.Where("url = ? AND (response_status_code < 400 OR response_status_code > 499)", url).Last(&request)
+	result := readableDatabase.Where("url = ? AND response_status_code >= 200 AND response_status_code < 300", url).Last(&request)
 
 	if result.Error != nil {
 		return nil, result.Error

@@ -211,6 +211,7 @@ func authenticateAndProcessRequest(w http.ResponseWriter, r *http.Request) bool 
 
 	if headerAPIKey != apiToken && formAPIKey != apiToken {
 		fmt.Println("Invalid API key")
+		w.Header().Add("WWW-Authenticate", "API Key")
 		http.Error(w, "Invalid API Key", http.StatusUnauthorized)
 		return false
 	}
