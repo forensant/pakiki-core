@@ -288,6 +288,7 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	requestSummary.URL = httpRequest.URL
 	requestSummary.SiteMapPath = siteMapPath.Path
 	requestSummary.Headers = headers
+	requestSummary.SplitRequest = findInjectPoints(requestData)
 
 	response, err := json.Marshal(requestSummary)
 	if err != nil {

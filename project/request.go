@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -51,13 +52,14 @@ type Request struct {
 // RequestSummary represents all of the fields required by the GUI
 // to render the screens where you can manipulate reqeusts
 type RequestSummary struct {
-	Hostname    string
-	GUID        string
-	Protocol    string
-	RequestData string
-	URL         string
-	SiteMapPath string
-	Headers     map[string]string
+	Hostname     string
+	GUID         string
+	Protocol     string
+	RequestData  string
+	URL          string
+	SiteMapPath  string
+	Headers      map[string]string
+	SplitRequest []InjectOperationRequestPart
 }
 
 // DataPacket holds further details of either the request or the response to an HTTP request
@@ -164,6 +166,143 @@ func (request *Request) CorrectModifiedRequestResponse(direction string) {
 			request.DataPackets[i].Data = CorrectLengthHeaders(request.DataPackets[i].Data)
 		}
 	}
+}
+
+type urlPart struct {
+	key   string
+	value string
+}
+
+func findInjectPointsSplitURLEncoded(start []byte, b []byte, body bool) (parts []InjectOperationRequestPart, remaining []byte) {
+	urlParts := make([]urlPart, 0)
+	parts = make([]InjectOperationRequestPart, 0)
+	remaining = make([]byte, 0)
+
+	if !body {
+		queryStart := bytes.Index(b, []byte("?"))
+		if queryStart == -1 {
+			remaining = append(remaining, start...)
+			remaining = append(remaining, b...)
+			return
+		}
+		start = append(start, b[0:queryStart+1]...)
+		b = b[queryStart+1:]
+	}
+
+	queryParts := bytes.Split(b, []byte("&"))
+	for _, queryPart := range queryParts {
+		partStart := bytes.Index(queryPart, []byte("="))
+		if partStart == -1 {
+			urlParts = append(urlParts, urlPart{key: string(queryPart), value: ""})
+		} else {
+			urlParts = append(urlParts, urlPart{key: string(queryPart[:partStart+1]), value: string(queryPart[partStart+1:])})
+		}
+	}
+
+	// now pull it back all together
+	if len(urlParts) == 0 {
+		remaining = append(remaining, start...)
+		remaining = append(remaining, b...)
+		return
+	}
+
+	keyLine := make([]byte, 0)
+	for i, urlPart := range urlParts {
+		if i == 0 {
+			keyLine = append(keyLine, start...)
+
+		} else {
+			keyLine = append(keyLine, []byte("&")...)
+		}
+		keyLine = append(keyLine, []byte(urlPart.key)...)
+
+		if keyLine[len(keyLine)-1] == '=' {
+			parts = append(parts, InjectOperationRequestPart{
+				RequestPart: base64.StdEncoding.EncodeToString(keyLine),
+				Inject:      false,
+			})
+
+			parts = append(parts, InjectOperationRequestPart{
+				RequestPart: base64.StdEncoding.EncodeToString([]byte(urlPart.value)),
+				Inject:      true,
+			})
+
+			keyLine = make([]byte, 0)
+		}
+	}
+
+	if len(keyLine) > 0 {
+		remaining = keyLine
+	}
+
+	return
+}
+
+func findInjectPoints(b []byte) []InjectOperationRequestPart {
+	parts := make([]InjectOperationRequestPart, 0)
+	lines := bytes.Split(b, []byte("\r\n"))
+
+	if len(lines) == 0 {
+		return parts
+	}
+
+	firstLineParts := bytes.Split(lines[0], []byte(" "))
+	if len(firstLineParts) != 3 {
+		return parts
+	}
+
+	firstLineParts[0] = append(firstLineParts[0], []byte(" ")...)
+
+	parts, remainingFirstLine := findInjectPointsSplitURLEncoded(firstLineParts[0], firstLineParts[1], false)
+
+	remainingFirstLine = append(remainingFirstLine, []byte(" ")...)
+	remainingFirstLine = append(remainingFirstLine, firstLineParts[2]...) // protocol
+
+	remainingHeaders := remainingFirstLine
+	remainingHeaders = append(remainingHeaders, []byte("\r\n")...)
+
+	body := make([]byte, 0)
+	bodyFound := false
+
+	for i := 1; i < len(lines); i++ {
+		if bodyFound {
+			body = append(body, lines[i]...)
+			if i < len(lines)-1 {
+				remainingHeaders = append(body, []byte("\r\n")...)
+			}
+		} else {
+			if string(lines[i]) == "" && i < len(lines)-1 && string(lines[i+1]) != "" {
+				bodyFound = true
+			} else {
+				remainingHeaders = append(remainingHeaders, lines[i]...)
+				if i < len(lines)-1 {
+					remainingHeaders = append(remainingHeaders, []byte("\r\n")...)
+				}
+			}
+		}
+	}
+
+	if bodyFound {
+		remainingHeaders = append(remainingHeaders, []byte("\r\n")...)
+	}
+
+	if bodyFound && !strings.Contains(strings.ToLower(string(b)), "content-type: application/x-www-form-urlencoded") {
+		remainingHeaders = append(remainingHeaders, body...)
+		bodyFound = false
+	}
+
+	if !bodyFound {
+		parts = append(parts, InjectOperationRequestPart{
+			RequestPart: base64.StdEncoding.EncodeToString(remainingHeaders),
+			Inject:      false,
+		})
+		return parts
+	}
+
+	bodyParts, _ := findInjectPointsSplitURLEncoded(remainingHeaders, body, true)
+	parts = append(parts, bodyParts...)
+
+	return parts
 }
 
 func GetLastResponseOfURL(url string) ([]byte, error) {
