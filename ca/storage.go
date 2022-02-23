@@ -75,9 +75,12 @@ func encryptPEMData(plaintext string) (base64CipherText string, err error) {
 		return "", err
 	}
 
-	cipherText := aesGCM.Seal(nonce, nonce, []byte(plaintext), nil)
+	cipherText := aesGCM.Seal(nil, nonce, []byte(plaintext), nil)
 
-	return hex.EncodeToString(cipherText), nil
+	packedData := nonce
+	packedData = append(packedData, cipherText...)
+
+	return hex.EncodeToString(packedData), nil
 }
 
 func getDatabaseFilename() (string, error) {

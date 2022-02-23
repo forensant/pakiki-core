@@ -127,7 +127,7 @@ jobs:
       - name: Launch compiler
         shell: cmd
         run: |
-          call "C:/Program Files (x86)/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+          call "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
           call cl.exe /EHsc scripting/interpreter/PythonInterpreter.cpp /I${{ env.pythonLocation }}\include python39.lib /link /LIBPATH:${{ env.pythonLocation}}\libs /out:build\pythoninterpreter.exe
 
       - name: Download and extract Python
