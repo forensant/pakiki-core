@@ -28,6 +28,7 @@ type RequestResponse struct {
 	URL              string
 	MimeType         string
 	DataPackets      []DataPacket
+	LargeResponse    bool
 }
 
 // GetRequestResponse godoc
@@ -89,7 +90,13 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 				if dataPacket.Modified {
 					modResp = append(modResp, dataPacket.Data...)
 				} else {
-					origResp = append(origResp, dataPacket.Data...)
+					if len(origResp) != 0 || len(dataPacket.Data) > (MaxResponsePacketSize) {
+						requestResponse.LargeResponse = true
+					}
+
+					if len(origResp) == 0 {
+						origResp = append(origResp, dataPacket.Data...)
+					}
 				}
 			}
 		}

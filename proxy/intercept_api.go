@@ -180,6 +180,7 @@ func SetInterceptedResponse(w http.ResponseWriter, r *http.Request) {
 				}
 
 				req.Request.DataPackets = append(req.Request.DataPackets, dataPacket)
+
 				if req.Request.Protocol != "Websocket" {
 					req.Request.CorrectModifiedRequestResponse(direction)
 				}

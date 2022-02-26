@@ -99,32 +99,19 @@ func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.
 	if resp == nil || resp.Body == nil {
 		return resp
 	}
-	bodyBytes, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		fmt.Printf("Could not read response body: %s\n", err)
-		return resp
-	}
-
-	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	var errorToReport = ctx.Error
-
-	if err != nil {
-		fmt.Printf("Error reading body from response\nURL: %s\n", resp.Request.URL)
-		errorToReport = err
-	}
 
 	request, typecastOK := ctx.UserData.(*project.Request)
 	if !typecastOK {
 		fmt.Printf("Could not convert the response's user context to a request\n")
-		errorToReport = err
+		errorToReport = errors.New("could not convert the response's user context to a request")
 	}
 
 	if request != nil {
-		request.HandleResponse(resp)
+		can_intercept := request.HandleResponse(resp)
 
-		if interceptSettings.ServerToBrowser || request.InterceptResponse {
+		if can_intercept && (interceptSettings.ServerToBrowser || request.InterceptResponse) {
 			interceptedResponse := interceptRequest(request, "", "server_to_browser", request.GetRequestResponseData("Response", false))
 			<-interceptedResponse.ResponseReady
 
@@ -133,8 +120,8 @@ func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.
 				responseBytes = request.GetRequestResponseData("Response", false)
 			}
 
+			responseBytes = project.CorrectLengthHeaders(responseBytes)
 			modifiedResponse := bufio.NewReader(io.NopCloser(bytes.NewBuffer(responseBytes)))
-
 			newResponse, err := http.ReadResponse(modifiedResponse, resp.Request)
 
 			if err != nil {

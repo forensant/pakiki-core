@@ -75,6 +75,9 @@ type DataPacket struct {
 	DisplayData string
 }
 
+// 2 MB is the maximum size of a single "packet" for a request
+var MaxResponsePacketSize = 1024 * 1024 * 2
+
 // NewRequest creates a new request from a byte stream
 func NewRequest(rawBytes []byte) (*Request, error) {
 	b := bytes.NewReader(rawBytes)
@@ -344,30 +347,46 @@ func (request *Request) GetRequestResponseData(direction string, modified bool) 
 	return req
 }
 
-func (request *Request) HandleResponse(resp *http.Response) {
-	var body []byte
-	if resp.Body != nil {
-		body, _ = io.ReadAll(resp.Body)
-		resp.Body.Close()
-		resp.Body = io.NopCloser(bytes.NewBuffer(body))
-		defer resp.Body.Close()
+func (request *Request) HandleResponse(resp *http.Response) bool {
+	var body io.Reader
+	var bodyWriter io.WriteCloser
+	isCompressed := false
 
-		if resp.Header.Get("Content-Encoding") == "gzip" && len(body) > 0 {
-			reader, err := gzip.NewReader(bytes.NewBuffer(body))
+	if resp.Body != nil {
+		body = resp.Body
+
+		var pipeReader io.ReadCloser
+		pipeReader, bodyWriter = io.Pipe()
+		resp.Body = pipeReader
+
+		if resp.Header.Get("Content-Encoding") == "gzip" {
+			gzipBody, err := gzip.NewReader(body)
 			if err != nil {
 				errStr := "Error occurrred when gunzipping response: " + err.Error()
 				fmt.Println(errStr)
 				request.Error = errStr
+				body = nil
 			} else {
-				defer reader.Close()
-				body, _ = ioutil.ReadAll(reader)
+				isCompressed = true
+				body = gzipBody
 			}
 		}
 	}
 
+	if isCompressed {
+		resp.Header.Del("Content-Encoding")
+	}
+
 	headers, _ := httputil.DumpResponse(resp, false)
 
-	responseBytes := append(headers, body...)
+	bodyBytes := make([]byte, int64(MaxResponsePacketSize))
+
+	if body != nil {
+		n, _ := io.ReadAtLeast(body, bodyBytes, MaxResponsePacketSize)
+		bodyBytes = bodyBytes[:n]
+	}
+
+	responseBytes := append(headers, bodyBytes...)
 
 	startTime := time.Unix(request.Time, 0)
 
@@ -375,8 +394,18 @@ func (request *Request) HandleResponse(resp *http.Response) {
 	request.ResponseContentType = resp.Header.Get("Content-Type")
 	request.ResponseTime = int(time.Since(startTime).Milliseconds())
 	request.ResponseSize = len(responseBytes)
-
 	request.DataPackets = append(request.DataPackets, DataPacket{Data: responseBytes, Direction: "Response", Modified: false})
+
+	if len(bodyBytes) == int(MaxResponsePacketSize) {
+		go streamLargeRequest(request, startTime, bodyBytes, body, bodyWriter)
+		return false
+	} else {
+		go func() {
+			bodyWriter.Write(responseBytes)
+			bodyWriter.Close()
+		}()
+		return true
+	}
 }
 
 func (request *Request) isResource() bool {
@@ -410,6 +439,49 @@ func (request *Request) isResource() bool {
 	}
 
 	return false
+}
+
+func streamLargeRequest(request *Request, startTime time.Time, initialResponse []byte, body io.Reader, bodyWriter io.WriteCloser) {
+	bodyWriter.Write(initialResponse)
+
+	totalLength := len(initialResponse)
+	request.Record()
+
+	for {
+		bodyBytes := make([]byte, MaxResponsePacketSize)
+		n, err := io.ReadAtLeast(body, bodyBytes, MaxResponsePacketSize)
+
+		if n != 0 {
+			bodyBytes = bodyBytes[:n]
+			totalLength += n
+
+			packet := DataPacket{
+				Data:      bodyBytes,
+				Direction: "Response",
+				Modified:  false,
+				RequestID: request.ID,
+			}
+			packet.Record()
+
+			request.ResponseTime = int(time.Since(startTime).Milliseconds())
+			request.ResponseSize = totalLength
+			request.Record()
+
+			bodyWriter.Write(bodyBytes)
+		}
+
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Error occurred while reading: %s\n", err.Error())
+			}
+			bodyWriter.Close()
+			return
+		}
+	}
+}
+
+func (p *DataPacket) Record() {
+	ioHub.databaseWriter <- p
 }
 
 // Record sends the request to the user interface and record it in the database
@@ -487,6 +559,10 @@ func (request *Request) update() error {
 	return nil
 }
 
-func (request *Request) WriteToDatabase(db *gorm.DB) {
-	db.Save(request)
+func (p *DataPacket) WriteToDatabase(db *gorm.DB) {
+	db.Save(p)
+}
+
+func (r *Request) WriteToDatabase(db *gorm.DB) {
+	db.Save(r)
 }
