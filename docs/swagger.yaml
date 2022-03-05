@@ -130,6 +130,10 @@ definitions:
         type: string
       siteMapPath:
         type: string
+      splitRequest:
+        items:
+          $ref: '#/definitions/project.InjectOperationRequestPart'
+        type: array
       url:
         type: string
     type: object
@@ -264,6 +268,15 @@ definitions:
         type: string
       maxConnectionsPerHost:
         type: integer
+      openFile:
+        description: cannot be set externally
+        type: string
+      openProcessPID:
+        description: cannot be set externally
+        type: integer
+      openTempFile:
+        description: cannot be set externally
+        type: string
     type: object
   scripting.RunScriptParameters:
     properties:

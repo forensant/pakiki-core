@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"embed"
 	"encoding/hex"
 	"errors"
@@ -15,13 +14,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
 	process "github.com/shirou/gopsutil/process"
@@ -32,8 +32,8 @@ import (
 )
 
 var apiToken, port string
-var db *sql.DB
 var gormDB *gorm.DB
+var shouldCleanupProjectSettings bool
 
 //go:embed html_frontend/dist/*
 var frontendDir embed.FS
@@ -78,21 +78,22 @@ func main() {
 	}
 
 	apiToken = parameters.APIKey
-	var err error
-	databasePath := parameters.ProjectPath + "?mode=ro&_busy_timeout=5000"
-	db, err = sql.Open("sqlite3", databasePath)
-	if err != nil {
-		log.Fatal("Could not open the database: " + err.Error())
-		return
-	}
-	defer db.Close()
+
+	projectPath, tempDBPath, shouldSave := getProjectPath(parameters.ProjectPath)
+	shouldCleanupProjectSettings = shouldSave
 
 	ioHub := project.NewIOHub()
-	ioHub.Run(parameters.ProjectPath)
+	gormDB, tempDBPath = ioHub.Run(projectPath, tempDBPath)
 
-	gormDB, err = gorm.Open(sqlite.Open(databasePath), &gorm.Config{})
-	if err != nil {
+	if gormDB == nil {
 		panic("failed to connect database")
+	}
+
+	if shouldSave {
+		err := saveDatabasePaths(projectPath, tempDBPath)
+	if err != nil {
+			panic("could not save database settings: " + err.Error())
+		}
 	}
 
 	fmt.Printf("Web frontend is available at: http://localhost:%s/\n", port)
@@ -179,10 +180,9 @@ func main() {
 
 	<-done
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer func() {
-		// extra handling here
-		proxy.CloseOutOfBandClient()
+		cleanup()
 		cancel()
 	}()
 
@@ -235,6 +235,31 @@ func authenticateWithGormDB(fn func(http.ResponseWriter, *http.Request, *gorm.DB
 	}
 }
 
+func cleanup() {
+	err := proxy.StopListeners()
+	if err != nil {
+		fmt.Printf("Could not stop proxy listeners: %s", err)
+	}
+
+	proxy.CloseOutOfBandClient()
+	project.CloseProject()
+
+	if shouldCleanupProjectSettings {
+		settings, err := proxy.GetSettings()
+		if err != nil {
+			log.Printf("Error getting settings: %v\n", err.Error())
+			return
+		}
+		settings.OpenFile = ""
+		settings.OpenTempFile = ""
+		settings.OpenProcessPID = 0
+		err = proxy.SaveSettings(settings)
+		if err != nil {
+			log.Printf("Error saving settings: %v\n", err.Error())
+		}
+	}
+}
+
 func createListener(portParameter int, hostname string) net.Listener {
 	listener, err := net.Listen("tcp", hostname+":"+strconv.Itoa(portParameter))
 	if err != nil {
@@ -257,8 +282,20 @@ func ensureProcessExists(parentPID int32) {
 	}
 
 	if !exists {
-		log.Fatal("Parent process ended, killing proxy")
+		cleanup()
+		log.Fatal("Parent process ended, proxy killed")
 	}
+}
+
+func fileExists(name string) (bool, error) {
+	_, err := os.Stat(name)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }
 
 func generateAPIKey() (string, error) {
@@ -280,6 +317,73 @@ func generateAPIKey() (string, error) {
 	fmt.Printf("API Key: %s\n", key)
 
 	return key, nil
+}
+
+func getProjectPath(requested string) (projectPath string, tempFilePath string, shouldSave bool) {
+	settings, err := proxy.GetSettings()
+	projectPath = requested
+	shouldSave = false
+	if err != nil {
+		log.Printf("Error getting settings: %v\n", err.Error())
+		return
+	}
+
+	projectPath, err = filepath.Abs(requested) // default case
+	if err != nil {
+		log.Printf("Error getting absolute path: %v\n", err.Error())
+		return
+	}
+	shouldSave = true
+
+	if settings.OpenTempFile == "" || settings.OpenFile == "" {
+		return
+	}
+
+	tempFileExists, err := fileExists(settings.OpenTempFile)
+	if !tempFileExists {
+		log.Printf("The temp file %s does not exist.\n", settings.OpenTempFile)
+		return
+	}
+	if err != nil {
+		log.Printf("Error checking whether temp project file exists: %v\n", err.Error())
+		return
+	}
+
+	openFileExists, err := fileExists(settings.OpenFile)
+	if !openFileExists {
+		log.Printf("The project file %s does not exist.\n", settings.OpenFile)
+		return
+	}
+	if err != nil {
+		log.Printf("Error checking whether open project file exists: %v\n", err.Error())
+		return
+	}
+
+	pidExists, err := process.PidExists(settings.OpenProcessPID)
+	if err != nil {
+		log.Printf("Error checking whether open project process exists: %v\n", err.Error())
+		return
+	}
+
+	if pidExists && settings.OpenProcessPID != 0 {
+		log.Printf("The process was found, not saving...\n")
+		shouldSave = false
+		return
+	}
+
+	var input string
+	for input != "y" && input != "n" {
+		fmt.Printf("A previous project was not closed properly (%s). Do you want to restore it? (y/n)\n", settings.OpenFile)
+		fmt.Scanf("%s", &input)
+		input = strings.ToLower(input)
+	}
+
+	if input == "y" {
+		projectPath = settings.OpenFile
+		tempFilePath = settings.OpenTempFile
+	}
+
+	return
 }
 
 func handleAPIKey(w http.ResponseWriter, r *http.Request) {
@@ -361,4 +465,20 @@ func parseCommandLineFlags() commandLineParameters {
 
 func ping(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("pong"))
+}
+
+func saveDatabasePaths(proj string, temp string) error {
+	settings, err := proxy.GetSettings()
+	if err != nil {
+		return err
+	}
+	settings.OpenFile = proj
+	settings.OpenTempFile = temp
+	settings.OpenProcessPID = int32(os.Getpid())
+	err = proxy.SaveSettings(settings)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

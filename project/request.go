@@ -401,7 +401,7 @@ func (request *Request) HandleResponse(resp *http.Response) bool {
 		return false
 	} else {
 		go func() {
-			bodyWriter.Write(responseBytes)
+			bodyWriter.Write(bodyBytes)
 			bodyWriter.Close()
 		}()
 		return true

@@ -14,17 +14,10 @@ var http11ProxyServer *http.Server
 
 //RestartListeners restarts all proxy listeners, with the new addresses
 func RestartListeners(settings *ProxySettings) error {
-	log.Println("About to shutdown server")
-	if http11ProxyServer != nil {
-		err := http11ProxyServer.Shutdown(context.Background())
-		if err != nil {
-			return err
-		}
-
-		listenerWaitGroup.Wait()
+	err := StopListeners()
+	if err != nil {
+		return err
 	}
-
-	request_queue.Close()
 
 	log.Println("About to restart server")
 	return startListenersWithConfig(settings)
@@ -51,5 +44,21 @@ func startListenersWithConfig(settings *ProxySettings) error {
 		listenerWaitGroup.Done()
 		return err
 	}
+	return nil
+}
+
+// StopListeners stops all proxy listeners and closes the request queue
+func StopListeners() error {
+	log.Println("Shutting down proxy listeners")
+	if http11ProxyServer != nil {
+		err := http11ProxyServer.Shutdown(context.Background())
+		if err != nil {
+			return err
+		}
+
+		listenerWaitGroup.Wait()
+	}
+
+	request_queue.Close()
 	return nil
 }

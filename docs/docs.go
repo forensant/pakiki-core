@@ -1564,6 +1564,12 @@ var doc = `{
                 "siteMapPath": {
                     "type": "string"
                 },
+                "splitRequest": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/project.InjectOperationRequestPart"
+                    }
+                },
                 "url": {
                     "type": "string"
                 }
@@ -1766,6 +1772,18 @@ var doc = `{
                 },
                 "maxConnectionsPerHost": {
                     "type": "integer"
+                },
+                "openFile": {
+                    "description": "cannot be set externally",
+                    "type": "string"
+                },
+                "openProcessPID": {
+                    "description": "cannot be set externally",
+                    "type": "integer"
+                },
+                "openTempFile": {
+                    "description": "cannot be set externally",
+                    "type": "string"
                 }
             }
         },

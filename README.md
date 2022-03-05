@@ -11,6 +11,8 @@ This repository contains the core which proxies traffic, and exposes an API to i
 
 One of the reasons for developing this is to give back to the community. I want to help people who are new to pentesting, while still having 99% of what experienced pentesters need day to day.
 
+Please only use this against applications that you have permission to test.
+
 Feedback would be greatly appreciated.
 
 ## Installation

@@ -49,6 +49,9 @@ func getProxySettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	proxySettings.Http11ProxyListening = http11ProxyServer != nil
+	proxySettings.OpenFile = ""
+	proxySettings.OpenTempFile = ""
+	proxySettings.OpenProcessPID = 0
 
 	js, err := json.Marshal(proxySettings)
 	if err != nil {
@@ -77,6 +80,16 @@ func setProxySettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	currentSettings, err := GetSettings()
+	if err != nil {
+		http.Error(w, "Couldn't open current settings: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	proxySettings.OpenFile = currentSettings.OpenFile
+	proxySettings.OpenTempFile = currentSettings.OpenTempFile
+	proxySettings.OpenProcessPID = currentSettings.OpenProcessPID
 
 	err = RestartListeners(&proxySettings)
 	if err != nil {

@@ -13,6 +13,10 @@ type ProxySettings struct {
 	Http11UpstreamProxyAddr string
 	MaxConnectionsPerHost   int
 	Http11ProxyListening    bool
+
+	OpenFile       string // cannot be set externally
+	OpenTempFile   string // cannot be set externally
+	OpenProcessPID int32  // cannot be set externally
 }
 
 func GetSettings() (*ProxySettings, error) {
