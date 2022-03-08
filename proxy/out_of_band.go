@@ -15,7 +15,29 @@ import (
 
 var oob_client *interactsh.Client = nil
 
-func getOOBClient(createIfRequired bool) (*interactsh.Client, error) {
+func generateOOBClient() error {
+	var err error
+	fmt.Printf("Generating new interactsh client, this may take a while...\n")
+	oob_client, err = interactsh.New(&interactsh.Options{
+		ServerURL:         "https://interact.sh",
+		PersistentSession: true,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	client_json, err := oob_client.ToJSON()
+	if err != nil {
+		return err
+	}
+
+	project.SetSetting("oob_client", client_json)
+	fmt.Printf("Interactsh client generated\n")
+	return nil
+}
+
+func getOOBClient() (*interactsh.Client, error) {
 	if oob_client != nil {
 		return oob_client, nil
 	}
@@ -23,31 +45,20 @@ func getOOBClient(createIfRequired bool) (*interactsh.Client, error) {
 	var err error
 	client_json := project.GetSetting("oob_client")
 
-	if client_json == "" && !createIfRequired {
-		return nil, nil
-	}
-
 	if client_json == "" {
-		oob_client, err = interactsh.New(&interactsh.Options{
-			ServerURL:         "https://interact.sh",
-			PersistentSession: true,
-		})
-
-		if err != nil {
-			return nil, err
-		}
-
-		client_json, err = oob_client.ToJSON()
+		err := generateOOBClient()
 		if err != nil {
 			return oob_client, err
 		}
-
-		project.SetSetting("oob_client", client_json)
 	} else {
 		oob_client, err = interactsh.ClientFromJSON(client_json)
 		if err != nil {
-			fmt.Printf("Could not create or retrieve interactsh client: %s\n", err.Error())
-			return nil, err
+			fmt.Printf("Could not create or retrieve interactsh client, generating new client: %s\n", err.Error())
+
+			err = generateOOBClient()
+			if err != nil {
+				return oob_client, err
+			}
 		}
 	}
 
@@ -113,7 +124,7 @@ func oobStartPolling() {
 }
 
 func StartOutOfBandClient() error {
-	_, err := getOOBClient(false)
+	_, err := getOOBClient()
 	return err
 }
 

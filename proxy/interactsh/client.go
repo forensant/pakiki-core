@@ -93,6 +93,7 @@ type serialisedClient struct {
 	ServerURL     string
 	PrivKey       string
 	Token         string
+	GeneratedAt   time.Time
 }
 
 func (c *Client) ToJSON() (string, error) {
@@ -109,6 +110,7 @@ func (c *Client) ToJSON() (string, error) {
 		ServerURL:     c.serverURL.String(),
 		PrivKey:       string(privKeyPem),
 		Token:         c.token,
+		GeneratedAt:   time.Now(),
 	}
 
 	json, err := json.Marshal(jsonObj)
@@ -123,6 +125,12 @@ func ClientFromJSON(json string) (*Client, error) {
 	var jsonObj serialisedClient
 	if err := jsoniter.Unmarshal([]byte(json), &jsonObj); err != nil {
 		return nil, err
+	}
+
+	currentTime := time.Now()
+	diff := currentTime.Sub(jsonObj.GeneratedAt)
+	if diff > (29 * 24 * time.Hour) {
+		return nil, errors.New("client is expired")
 	}
 
 	pemBlock, _ := pem.Decode([]byte(jsonObj.PrivKey))

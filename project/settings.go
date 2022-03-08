@@ -34,5 +34,6 @@ func (setting *Setting) Record() {
 }
 
 func (setting *Setting) WriteToDatabase(db *gorm.DB) {
+	db.Where("name = ?", setting.Name).Delete(&Setting{})
 	db.Save(setting)
 }

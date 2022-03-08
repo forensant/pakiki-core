@@ -24,6 +24,9 @@ def make_request_to_core(uri, obj = {}):
     'X-API-Key': 'PROXIMITY_API_KEY'
   }
 
+  if property_data is not None:
+    headers['Content-Type'] = 'application/json'
+
   req = urllib.request.Request("http://localhost:PROXIMITY_PROXY_PORT" + uri, property_data, headers)
   
   try:

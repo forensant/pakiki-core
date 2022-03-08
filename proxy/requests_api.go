@@ -120,7 +120,7 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 	var params AddRequestToQueueParameters
 	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
-		fmt.Println("Error decoding JSON")
+		fmt.Println("Error decoding JSON: " + err.Error())
 		http.Error(w, "Error decoding JSON:"+err.Error(), http.StatusBadRequest)
 		return
 	}

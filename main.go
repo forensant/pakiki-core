@@ -118,7 +118,7 @@ func main() {
 		fmt.Printf("Preview proxy is available at: http://localhost:%d/\n", previewProxyListener.Addr().(*net.TCPAddr).Port)
 	}
 
-	proxy.StartOutOfBandClient()
+	go proxy.StartOutOfBandClient()
 
 	http.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
 	http.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))

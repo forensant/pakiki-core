@@ -14,7 +14,7 @@ import (
 // @Failure 500 {string} string Error
 // @Router /proxy/out_of_band/url [get]
 func GetOOBURL(w http.ResponseWriter, r *http.Request) {
-	client, err := getOOBClient(true)
+	client, err := getOOBClient()
 
 	if err != nil {
 		http.Error(w, "Could not create or retrieve interactsh client: "+err.Error(), http.StatusInternalServerError)
