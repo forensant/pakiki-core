@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
@@ -20,15 +22,125 @@ const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND respons
 
 // RequestResponse contains the request and response in base64 format
 type RequestResponse struct {
-	Protocol         string
-	Request          string
-	Response         string
-	ModifiedRequest  string
-	ModifiedResponse string
-	URL              string
-	MimeType         string
-	DataPackets      []DataPacket
-	LargeResponse    bool
+	Protocol              string
+	Request               string
+	Response              string
+	ModifiedRequest       string
+	ModifiedResponse      string
+	Modified              bool
+	URL                   string
+	MimeType              string
+	DataPackets           []DataPacket
+	LargeResponse         bool
+	CombinedContentLength int64
+}
+
+type PartialRequestResponseData struct {
+	From uint64
+	To   uint64
+	Data string
+}
+
+// GetRequestData godoc
+// @Summary Get Request/Response Data
+// @Description gets part of the request/response. will attempt to return at least 5MB of data to cache
+// @Tags Requests
+// @Produce  text/text
+// @Security ApiKeyAuth
+// @Param guid path string true "Request guid"
+// @Param from query int true "Offset to request from"
+// @Success 200 {string} string Request Data
+// @Failure 500 {string} string Error
+// @Router /project/requests/{guid}/data [get]
+func GetRequestData(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	from, err := strconv.ParseInt(r.FormValue("from"), 10, 64)
+	dataToReturn := make([]byte, 0)
+
+	if err != nil {
+		http.Error(w, "Error parsing from value: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var httpRequest Request
+	result := db.First(&httpRequest, "guid = ?", guid)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	modified := false
+	res := db.Where("request_id = ? AND direction = 'Request' AND modified = true", httpRequest.ID).Find(&DataPacket{})
+	if res.RowsAffected > 0 {
+		modified = true
+	}
+
+	if guid == "" {
+		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
+		return
+	}
+
+	query := "request_id = ? AND ? >= start_offset AND ? < end_offset"
+	if modified {
+		// working under the assumption that we can't modify large responses
+		query = "request_id = ? AND ? >= start_offset AND ? < end_offset AND ((direction = 'Request' AND modified = true) OR (direction = 'Response' AND modified = false))"
+	}
+
+	var dp DataPacket
+	result = db.Where(query, httpRequest.ID, from, from).Limit(1).First(&dp)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if result.RowsAffected != 1 {
+		http.Error(w, "Error retrieving request from database: did not retrieve exactly one row", http.StatusInternalServerError)
+		return
+	}
+
+	toWrite := (5 * 1024 * 1024) // 5MB
+	dataOffset := from - dp.StartOffset
+	dataToReturn = append(dataToReturn, dp.Data[dataOffset:]...)
+
+	for len(dataToReturn) < toWrite {
+		newOffset := dp.EndOffset + 1
+		dp = DataPacket{}
+		result = db.Where("request_id = ? AND start_offset = ?", httpRequest.ID, newOffset).Limit(1).First(&dp)
+
+		if result.Error != nil {
+			fmt.Printf("Error retrieving request from database: %s\n", result.Error.Error())
+			break
+		}
+
+		if result.RowsAffected != 1 {
+			fmt.Printf("Error retrieving request from database: did not retrieve exactly one row\n")
+			break
+		}
+
+		dataToReturn = append(dataToReturn, dp.Data...)
+	}
+
+	if toWrite < len(dataToReturn) {
+		dataToReturn = dataToReturn[0:toWrite]
+	}
+
+	response := PartialRequestResponseData{
+		From: uint64(from),
+		To:   uint64(from + int64(len(dataToReturn))),
+		Data: base64.StdEncoding.EncodeToString(dataToReturn),
+	}
+
+	responseToWrite, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Error marshalling response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(responseToWrite)
 }
 
 // GetRequestResponse godoc
@@ -57,29 +169,43 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	var requestResponse RequestResponse
+	requestResponse.Protocol = httpRequest.Protocol
+	requestResponse.CombinedContentLength = httpRequest.RequestSize + httpRequest.ResponseSize
+	requestResponse.LargeResponse = requestResponse.CombinedContentLength > int64(MaxResponsePacketSize) && httpRequest.Protocol == "HTTP/1.1"
+
 	var dataPackets []DataPacket
 	dataPacketOrder := "direction, id"
 	if httpRequest.Protocol == "Websocket" {
 		dataPacketOrder = "id"
 	}
-	result = db.Order(dataPacketOrder).Where("request_id = ?", httpRequest.ID).Find(&dataPackets)
+	qry := "request_id = ?"
+	if requestResponse.LargeResponse {
+		qry += " AND direction = 'Request'"
+	}
+	result = db.Order(dataPacketOrder).Where(qry, httpRequest.ID).Find(&dataPackets)
 
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var requestResponse RequestResponse
-	requestResponse.Protocol = httpRequest.Protocol
-
 	if httpRequest.Protocol == "Websocket" || httpRequest.Protocol == "Out of Band" {
 		requestResponse.DataPackets = dataPackets
+
+		res := db.Where("request_id = ? AND modified = true", httpRequest.ID).Find(&DataPacket{})
+		requestResponse.Modified = (res.RowsAffected > 0)
+
 	} else {
 		var origReq []byte
 		var origResp []byte
 		var modReq []byte
 		var modResp []byte
 		for _, dataPacket := range dataPackets {
+			if dataPacket.Modified {
+				requestResponse.Modified = true
+			}
+
 			if dataPacket.Direction == "Request" {
 				if dataPacket.Modified {
 					modReq = append(modReq, dataPacket.Data...)
@@ -105,6 +231,7 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		requestResponse.Response = base64.StdEncoding.EncodeToString(origResp)
 		requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
 		requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(modResp)
+
 	}
 
 	requestResponse.URL = httpRequest.URL

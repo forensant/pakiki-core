@@ -254,7 +254,7 @@ func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient
 		request.Error = "Error making request to site: " + err.Error()
 		return request, err
 	} else {
-		request.HandleResponse(response)
+		request.HandleResponse(response, nil)
 	}
 
 	return request, nil

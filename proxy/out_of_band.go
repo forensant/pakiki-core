@@ -98,7 +98,7 @@ func oobStartPolling() {
 			URL:          url,
 			Time:         interaction.Timestamp.Unix(),
 			Protocol:     "Out of Band",
-			ResponseSize: len(interaction.RawRequest),
+			ResponseSize: int64(len(interaction.RawRequest)),
 			Verb:         verb,
 		}
 

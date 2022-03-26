@@ -24,6 +24,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"gorm.io/gorm"
 
+	"github.com/gorilla/mux"
 	process "github.com/shirou/gopsutil/process"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
@@ -103,7 +104,6 @@ func main() {
 		return
 	}
 	frontendFilesystem := http.FileServer(http.FS(frontendSubdirectory))
-	http.Handle("/", frontendFilesystem)
 
 	err = proxy.StartListeners()
 	if err != nil {
@@ -120,48 +120,55 @@ func main() {
 
 	go proxy.StartOutOfBandClient()
 
-	http.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
-	http.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
-	http.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
-	http.HandleFunc("/project/request/payloads", authenticateWithGormDB(project.PutRequestPayloads))
-	http.HandleFunc("/project/scripts", authenticateWithGormDB(project.GetScripts))
-	http.HandleFunc("/project/script", authenticateWithGormDB(project.GetScript))
-	http.HandleFunc("/project/script/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
-	http.HandleFunc("/project/script/archive", authenticateWithGormDB(project.PutArchiveScript))
-	http.HandleFunc("/project/script_groups", authenticateWithGormDB(project.GetScriptGroups))
-	http.HandleFunc("/project/script_group", authenticateWithGormDB(project.HandleScriptGroup))
-	http.HandleFunc("/project/script_group/archive", authenticateWithGormDB(project.PutArchiveScriptGroup))
-	http.HandleFunc("/project/sitemap", authenticate(project.GetSitemap))
+	rtr := mux.NewRouter()
 
-	http.HandleFunc("/proxy/add_request_to_queue", authenticate(proxy.AddRequestToQueue))
-	http.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
-	http.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
-	http.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
-	http.HandleFunc("/proxy/make_request", authenticate(proxy.MakeRequest))
-	http.HandleFunc("/proxy/out_of_band/url", authenticate(proxy.GetOOBURL))
-	http.HandleFunc("/proxy/ping", ping)
-	http.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
-	http.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
+	rtr.Handle("/", frontendFilesystem)
 
-	http.HandleFunc("/inject_operations/fuzzdb_payload", authenticate(proxy.GetFuzzdbPayload))
-	http.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
-	http.HandleFunc("/inject_operations/run", authenticate(proxy.RunInjection))
-	http.HandleFunc("/inject_operations", authenticateWithGormDB(project.GetInjectOperations))
-	http.HandleFunc("/inject_operation", authenticateWithGormDB(project.HandleInjectOperation))
-	http.HandleFunc("/inject_operation/archive", authenticateWithGormDB(project.PutArchiveInjectOperation))
+	rtr.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
+	rtr.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
+	rtr.HandleFunc("/project/requests/{guid}/data", authenticateWithGormDB(project.GetRequestData))
+	rtr.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
+	rtr.HandleFunc("/project/request/payloads", authenticateWithGormDB(project.PutRequestPayloads))
+	rtr.HandleFunc("/project/scripts", authenticateWithGormDB(project.GetScripts))
+	rtr.HandleFunc("/project/script", authenticateWithGormDB(project.GetScript))
+	rtr.HandleFunc("/project/script/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
+	rtr.HandleFunc("/project/script/archive", authenticateWithGormDB(project.PutArchiveScript))
+	rtr.HandleFunc("/project/script_groups", authenticateWithGormDB(project.GetScriptGroups))
+	rtr.HandleFunc("/project/script_group", authenticateWithGormDB(project.HandleScriptGroup))
+	rtr.HandleFunc("/project/script_group/archive", authenticateWithGormDB(project.PutArchiveScriptGroup))
+	rtr.HandleFunc("/project/sitemap", authenticate(project.GetSitemap))
 
-	http.HandleFunc("/scripts/cancel", authenticate(scripting.CancelScript))
-	http.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
-	http.HandleFunc("/scripts/update_progress", authenticate(scripting.UpdateProgress))
+	rtr.HandleFunc("/proxy/add_request_to_queue", authenticate(proxy.AddRequestToQueue))
+	rtr.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
+	rtr.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
+	rtr.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
+	rtr.HandleFunc("/proxy/make_request", authenticate(proxy.MakeRequest))
+	rtr.HandleFunc("/proxy/out_of_band/url", authenticate(proxy.GetOOBURL))
+	rtr.HandleFunc("/proxy/ping", ping)
+	rtr.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
+	rtr.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
 
-	http.HandleFunc("/project/notifications", authenticate(func(w http.ResponseWriter, r *http.Request) {
+	rtr.HandleFunc("/inject_operations/fuzzdb_payload", authenticate(proxy.GetFuzzdbPayload))
+	rtr.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
+	rtr.HandleFunc("/inject_operations/run", authenticate(proxy.RunInjection))
+	rtr.HandleFunc("/inject_operations", authenticateWithGormDB(project.GetInjectOperations))
+	rtr.HandleFunc("/inject_operation", authenticateWithGormDB(project.HandleInjectOperation))
+	rtr.HandleFunc("/inject_operation/archive", authenticateWithGormDB(project.PutArchiveInjectOperation))
+
+	rtr.HandleFunc("/scripts/cancel", authenticate(scripting.CancelScript))
+	rtr.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
+	rtr.HandleFunc("/scripts/update_progress", authenticate(scripting.UpdateProgress))
+
+	rtr.HandleFunc("/project/notifications", authenticate(func(w http.ResponseWriter, r *http.Request) {
 		project.Notifications(ioHub, apiToken, w, r)
 	}))
-	http.HandleFunc("/debug", authenticate(project.Debug))
+	rtr.HandleFunc("/debug", authenticate(project.Debug))
 
-	http.HandleFunc("/api_key.js", handleAPIKey)
-	http.HandleFunc("/swagger/", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json")))
-	http.HandleFunc("/swagger/doc.json", handleSwaggerJSON)
+	rtr.HandleFunc("/api_key.js", handleAPIKey)
+	rtr.HandleFunc("/swagger/", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json")))
+	rtr.HandleFunc("/swagger/doc.json", handleSwaggerJSON)
+
+	http.Handle("/", rtr)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

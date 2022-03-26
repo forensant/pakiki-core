@@ -16,7 +16,6 @@ func compressDatabase(src *gorm.DB, dstPath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Temporary compressed path: %s\n", tempdbpath)
 	defer os.Remove(tempdbpath)
 
 	tempcompressedPath, err := tempFilename()
@@ -25,15 +24,19 @@ func compressDatabase(src *gorm.DB, dstPath string) error {
 		return err
 	}
 
+	fmt.Printf("Step 1 of 2: Creating a copy of the project database.\n")
 	err = copyDB(src, tempdbpath)
 	if err != nil {
 		fmt.Printf("Failed copying the database\n")
+		os.Remove(tempdbpath)
 		return err
 	}
 
+	fmt.Printf("Step 2 of 2: Compressing the project.\n")
 	err = compressFile(tempdbpath, tempcompressedPath)
 	if err != nil {
 		fmt.Printf("Failed compressing file\n")
+		os.Remove(tempdbpath)
 		return err
 	}
 
@@ -76,6 +79,7 @@ func copyDB(src *gorm.DB, dst string) error {
 		return err
 	}
 	migrateTables(db)
+
 	udb, err := db.DB()
 	if err != nil {
 		return err
@@ -84,31 +88,37 @@ func copyDB(src *gorm.DB, dst string) error {
 		return err
 	}
 
-	res := src.Exec("ATTACH DATABASE ? AS dst;", dst)
-	if res.Error != nil {
-		return res.Error
-	}
+	return src.Transaction(func(tx *gorm.DB) error {
+		res := src.Exec("ATTACH DATABASE ? AS dst;", dst)
+		defer func() {
+			res = src.Exec("DETACH DATABASE dst;")
+			if res.Error != nil {
+				err = res.Error
+			}
+		}()
 
-	var tbls []string
-	res = src.Raw("SELECT tbl_name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").Scan(&tbls)
-	if res.Error != nil {
-		return res.Error
-	}
-
-	for _, tbl := range tbls {
-		cmd := "INSERT INTO dst." + tbl + " SELECT * FROM " + tbl
-		res = src.Exec(cmd)
 		if res.Error != nil {
 			return res.Error
 		}
-	}
 
-	res = src.Exec("DETACH DATABASE dst;")
-	if res.Error != nil {
-		return res.Error
-	}
+		var tbls []string
+		res = src.Raw("SELECT tbl_name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").Scan(&tbls)
+		if res.Error != nil {
+			return res.Error
+		}
 
-	return nil
+		for _, tbl := range tbls {
+			res = src.Exec("INSERT INTO dst." + tbl + " SELECT * FROM " + tbl)
+			if res.Error != nil {
+				return res.Error
+			}
+		}
+
+		// it may be set in the event of an error by the deferred close function
+		err = nil
+
+		return err
+	})
 }
 
 func decompressDatabase(src string) (string, error) {

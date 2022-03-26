@@ -171,12 +171,19 @@ func SetInterceptedResponse(w http.ResponseWriter, r *http.Request) {
 
 			origRequestBytes, _ := base64.StdEncoding.DecodeString(req.Body)
 			if !bytes.Equal(origRequestBytes, requestBytes) {
+				var startOffset int64 = 0
+				if direction == "Response" {
+					startOffset = req.Request.RequestSize
+				}
+
 				dataPacket := project.DataPacket{
-					Data:      requestBytes,
-					Direction: direction,
-					Modified:  true,
-					GUID:      response.DataPacketGUID,
-					Time:      time.Now().Unix(),
+					Data:        requestBytes,
+					Direction:   direction,
+					Modified:    true,
+					GUID:        response.DataPacketGUID,
+					Time:        time.Now().Unix(),
+					StartOffset: startOffset,
+					EndOffset:   int64(startOffset) + int64(len(requestBytes)) - 1,
 				}
 
 				req.Request.DataPackets = append(req.Request.DataPackets, dataPacket)

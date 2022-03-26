@@ -54,25 +54,28 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 		}
 
 		modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(modifiedRequestData)))
+		forward := false
 
 		switch interceptedRequest.RequestAction {
 		case "forward":
-			// modified, potentially
-			oldUrl := req.URL
-			req, err = http.ReadRequest(modifiedRequest)
-			req.URL.Scheme = oldUrl.Scheme
-			req.URL.Host = oldUrl.Host
-		case "forward_and_intercept_response":
-			oldUrl := req.URL
-			req, err = http.ReadRequest(modifiedRequest)
-			req.URL.Scheme = oldUrl.Scheme
-			req.URL.Host = oldUrl.Host
+			forward = true
 
+		case "forward_and_intercept_response":
+			forward = true
 			request.InterceptResponse = true
+
 		default:
 			response = goproxy.NewResponse(req,
 				goproxy.ContentTypeText, http.StatusForbidden,
 				"Request dropped by Proximity")
+		}
+
+		if forward {
+			oldUrl := req.URL
+			req, err = http.ReadRequest(modifiedRequest)
+			req.URL.Scheme = oldUrl.Scheme
+			req.URL.Host = oldUrl.Host
+			request.RequestSize = int64(len(modifiedRequestData))
 		}
 
 		if err != nil {
@@ -109,7 +112,7 @@ func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.
 	}
 
 	if request != nil {
-		can_intercept := request.HandleResponse(resp)
+		can_intercept := request.HandleResponse(resp, ctx)
 
 		if can_intercept && (interceptSettings.ServerToBrowser || request.InterceptResponse) {
 			interceptedResponse := interceptRequest(request, "", "server_to_browser", request.GetRequestResponseData("Response", false))
