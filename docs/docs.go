@@ -527,6 +527,53 @@ var doc = `{
                 }
             }
         },
+        "/project/requests/{guid}/data": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets part of the request/response. will attempt to return at least 5MB of data to cache",
+                "produces": [
+                    "text/text"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Get Request/Response Data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset to request from",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/project/script": {
             "get": {
                 "security": [
@@ -1513,6 +1560,9 @@ var doc = `{
                 },
                 "protocol": {
                     "type": "string"
+                },
+                "requestSize": {
+                    "type": "integer"
                 },
                 "responseContentType": {
                     "type": "string"

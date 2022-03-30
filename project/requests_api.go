@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"gorm.io/gorm"
 )
 
@@ -35,10 +36,96 @@ type RequestResponse struct {
 	CombinedContentLength int64
 }
 
+// PartialRequestResponseData contains a slice of the request/response from a given request
 type PartialRequestResponseData struct {
 	From uint64
 	To   uint64
 	Data string
+}
+
+// RequestDifference contains an individual difference between two requests
+type RequestDifference struct {
+	Text    string
+	Request int // 1 for request number one, 2 for request number two, 0 for both
+}
+
+// CompareRequests godoc
+// @Summary Compare Two Requests
+// @Description compares two requests and returns the differences
+// @Tags Requests
+// @Produce  text/text
+// @Security ApiKeyAuth
+// @Param base_guid path string true "Base Request guid"
+// @Param compare_guid path string true "Request to Compare guid"
+// @Success 200 {array} RequestDifference
+// @Failure 500 {string} string Error
+// @Router /project/requests/{base_guid}/compare/{compare_guid} [get]
+func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+
+	var baseRequest Request
+	var compareRequest Request
+
+	result := db.First(&baseRequest, "guid = ?", vars["base_guid"])
+	if result.Error != nil {
+		http.Error(w, "Error retrieving base request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	result = db.First(&compareRequest, "guid = ?", vars["compare_guid"])
+	if result.Error != nil {
+		http.Error(w, "Error retrieving comparison request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if baseRequest.GUID == compareRequest.GUID {
+		http.Error(w, "Cannot compare a request to itself", http.StatusBadRequest)
+		return
+	}
+
+	if baseRequest.Protocol != "HTTP/1.1" || compareRequest.Protocol != "HTTP/1.1" {
+		http.Error(w, "Only HTTP requests can be compared.", http.StatusBadRequest)
+		return
+	}
+
+	req1, large1, err := getRequestResponseString(db, baseRequest)
+	if err != nil {
+		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+	req2, large2, err := getRequestResponseString(db, compareRequest)
+	if err != nil {
+		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if large1 || large2 {
+		http.Error(w, "One or both of the requests/responses are too large to compare.", http.StatusInternalServerError)
+		return
+	}
+
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(req1, req2, false)
+
+	rDiffs := make([]RequestDifference, 0)
+	for _, d := range diffs {
+		r := 0
+		if d.Type == diffmatchpatch.DiffInsert {
+			r = 2
+		} else if d.Type == diffmatchpatch.DiffDelete {
+			r = 1
+		}
+
+		rDiffs = append(rDiffs, RequestDifference{Text: d.Text, Request: r})
+	}
+
+	responseToWrite, err := json.Marshal(rDiffs)
+	if err != nil {
+		http.Error(w, "Error marshalling response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(responseToWrite)
 }
 
 // GetRequestData godoc
@@ -49,7 +136,7 @@ type PartialRequestResponseData struct {
 // @Security ApiKeyAuth
 // @Param guid path string true "Request guid"
 // @Param from query int true "Offset to request from"
-// @Success 200 {string} string Request Data
+// @Success 200 {object} project.PartialRequestResponseData
 // @Failure 500 {string} string Error
 // @Router /project/requests/{guid}/data [get]
 func GetRequestData(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
@@ -249,6 +336,43 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.Write(responseToWrite)
+}
+
+func getRequestResponseString(db *gorm.DB, r Request) (string, bool, error) {
+	if r.RequestSize > int64(MaxResponsePacketSize) || r.ResponseSize > int64(MaxResponsePacketSize) {
+		return "", true, nil
+	}
+
+	reqData := ""
+	respData := ""
+
+	dataPackets := make([]DataPacket, 0)
+	db.Where("request_id = ? AND direction = 'Request' AND modified = true", r.ID).Order("id").Find(&dataPackets)
+	if len(dataPackets) == 0 {
+		res := db.Where("request_id = ? AND direction = 'Request' AND modified = false", r.ID).Order("id").Find(&dataPackets)
+		if res.Error != nil {
+			return "", false, res.Error
+		}
+
+		for _, pkt := range dataPackets {
+			reqData += string(pkt.Data)
+		}
+	}
+
+	dataPackets = make([]DataPacket, 0)
+	db.Where("request_id = ? AND direction = 'Response' AND modified = true", r.ID).Order("id").Find(&dataPackets)
+	if len(dataPackets) == 0 {
+		res := db.Where("request_id = ? AND direction = 'Response' AND modified = false", r.ID).Order("id").Find(&dataPackets)
+		if res.Error != nil {
+			return "", false, res.Error
+		}
+
+		for _, pkt := range dataPackets {
+			respData += string(pkt.Data)
+		}
+	}
+
+	return reqData + "\x0A\x0D\x0A\x0D" + respData, false, nil
 }
 
 // isInSlice takes a slice and looks for an element in it. If found it will

@@ -97,6 +97,8 @@ definitions:
         type: string
       protocol:
         type: string
+      requestSize:
+        type: integer
       responseContentType:
         type: string
       responseSize:
@@ -624,6 +626,37 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get All Requests
+      tags:
+      - Requests
+  /project/requests/{guid}/data:
+    get:
+      description: gets part of the request/response. will attempt to return at least
+        5MB of data to cache
+      parameters:
+      - description: Request guid
+        in: path
+        name: guid
+        required: true
+        type: string
+      - description: Offset to request from
+        in: query
+        name: from
+        required: true
+        type: integer
+      produces:
+      - text/text
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Get Request/Response Data
       tags:
       - Requests
   /project/script:

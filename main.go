@@ -127,6 +127,7 @@ func main() {
 	rtr.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
 	rtr.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
 	rtr.HandleFunc("/project/requests/{guid}/data", authenticateWithGormDB(project.GetRequestData))
+	rtr.HandleFunc("/project/requests/{base_guid}/compare/{compare_guid}", authenticateWithGormDB(project.CompareRequests))
 	rtr.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
 	rtr.HandleFunc("/project/request/payloads", authenticateWithGormDB(project.PutRequestPayloads))
 	rtr.HandleFunc("/project/scripts", authenticateWithGormDB(project.GetScripts))
