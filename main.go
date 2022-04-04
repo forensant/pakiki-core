@@ -122,8 +122,6 @@ func main() {
 
 	rtr := mux.NewRouter()
 
-	rtr.Handle("/", frontendFilesystem)
-
 	rtr.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
 	rtr.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
 	rtr.HandleFunc("/project/requests/{guid}/data", authenticateWithGormDB(project.GetRequestData))
@@ -168,6 +166,8 @@ func main() {
 	rtr.HandleFunc("/api_key.js", handleAPIKey)
 	rtr.HandleFunc("/swagger/", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json")))
 	rtr.HandleFunc("/swagger/doc.json", handleSwaggerJSON)
+
+	rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
 
 	http.Handle("/", rtr)
 

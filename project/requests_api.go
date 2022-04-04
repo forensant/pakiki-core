@@ -503,12 +503,14 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var siteMapPath SiteMapPath
 	db.First(&siteMapPath, "id = ?", httpRequest.SiteMapPathID)
 
-	var dataPackets []DataPacket
-	result = db.Order("direction, id").Where("request_id = ? AND direction = 'Request'", httpRequest.ID).Find(&dataPackets)
-
-	if result.Error != nil {
-		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
-		return
+	dataPackets := make([]DataPacket, 0)
+	db.Where("request_id = ? AND direction = 'Request' AND modified = true", httpRequest.ID).Order("id").Find(&dataPackets)
+	if len(dataPackets) == 0 {
+		res := db.Where("request_id = ? AND direction = 'Request' AND modified = false", httpRequest.ID).Order("id").Find(&dataPackets)
+		if res.Error != nil {
+			http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// assemble the raw request

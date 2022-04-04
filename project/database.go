@@ -43,6 +43,7 @@ func compressDatabase(src *gorm.DB, dstPath string) error {
 	// move once the compression has completed, to minimise the chance of data corruption
 	// rather than compressing in place (which would minimise disk usage)
 	os.Rename(tempcompressedPath, dstPath)
+	fmt.Printf("Project successfully copied to: %s\n", dstPath)
 
 	return nil
 }
