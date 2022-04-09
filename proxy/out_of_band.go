@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -85,9 +86,15 @@ func oobStartPolling() {
 			}
 		}
 
+		addr := interaction.RemoteAddress
+		lookup, _ := net.LookupAddr(addr)
+		if len(lookup) != 0 {
+			addr += " (" + strings.Join(lookup, ", ") + ")"
+		}
+
 		displayProperties := map[string]interface{}{
 			"Protocol":       strings.ToUpper(interaction.Protocol),
-			"Remote Address": interaction.RemoteAddress,
+			"Remote Address": addr,
 			"Query Type":     interaction.QType,
 			"SMTP From":      interaction.SMTPFrom,
 		}

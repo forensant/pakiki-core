@@ -202,6 +202,7 @@ func releaseInterceptedRequests() {
 	interceptedRequestsLock.Lock()
 	for _, req := range interceptedRequests {
 		if !interceptSettings.BrowserToServer && req.Direction == "browser_to_server" {
+			req.RequestAction = "forward"
 			req.ResponseReady <- true
 			req.Record(project.RecordActionDelete)
 		}
