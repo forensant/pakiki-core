@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <title>Debug</title>
+<script src="/api_key.js"></script>
 <script type="text/javascript">
 window.onload = function () {
     var conn;
@@ -31,7 +32,7 @@ window.onload = function () {
     };
 
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://" + document.location.host + "/project/notifications");
+        conn = new WebSocket("ws://" + document.location.host + "/project/notifications?api_key=" + CORE_API_KEY);
         conn.onclose = function (evt) {
             var item = document.createElement("div");
             item.innerHTML = "<b>Connection closed.</b>";

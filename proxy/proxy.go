@@ -51,6 +51,7 @@ func startListenersWithConfig(settings *ProxySettings) error {
 func StopListeners() error {
 	log.Println("Shutting down proxy listeners")
 	if http11ProxyServer != nil {
+		releaseInterceptedRequests()
 		err := http11ProxyServer.Shutdown(context.Background())
 		if err != nil {
 			return err

@@ -161,7 +161,7 @@ func main() {
 	rtr.HandleFunc("/project/notifications", authenticate(func(w http.ResponseWriter, r *http.Request) {
 		project.Notifications(ioHub, apiToken, w, r)
 	}))
-	rtr.HandleFunc("/debug", authenticate(project.Debug))
+	rtr.HandleFunc("/debug", project.Debug)
 
 	rtr.HandleFunc("/api_key.js", handleAPIKey)
 	rtr.HandleFunc("/swagger/", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json")))

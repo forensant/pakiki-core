@@ -125,21 +125,7 @@ func setInterceptSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// release any requests in the queue
-	interceptedRequestsLock.Lock()
-	for _, req := range interceptedRequests {
-		if !interceptSettings.BrowserToServer && req.Direction == "browser_to_server" {
-			req.ResponseReady <- true
-			req.Record(project.RecordActionDelete)
-		}
-
-		if !interceptSettings.ServerToBrowser && req.Direction == "server_to_browser" {
-			req.ResponseReady <- true
-			req.Record(project.RecordActionDelete)
-		}
-	}
-
-	interceptedRequestsLock.Unlock()
+	releaseInterceptedRequests()
 }
 
 // InterceptSettings godoc
@@ -210,4 +196,21 @@ func HandleInterceptSettingsRequest(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Unsupported method", http.StatusInternalServerError)
 	}
+}
+
+func releaseInterceptedRequests() {
+	interceptedRequestsLock.Lock()
+	for _, req := range interceptedRequests {
+		if !interceptSettings.BrowserToServer && req.Direction == "browser_to_server" {
+			req.ResponseReady <- true
+			req.Record(project.RecordActionDelete)
+		}
+
+		if !interceptSettings.ServerToBrowser && req.Direction == "server_to_browser" {
+			req.ResponseReady <- true
+			req.Record(project.RecordActionDelete)
+		}
+	}
+
+	interceptedRequestsLock.Unlock()
 }
