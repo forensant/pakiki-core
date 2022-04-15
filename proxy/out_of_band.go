@@ -15,9 +15,12 @@ import (
 )
 
 var oob_client *interactsh.Client = nil
+var generation_chan chan bool = nil
 
 func generateOOBClient() error {
 	var err error
+	generation_chan = make(chan bool)
+	defer close(generation_chan)
 	fmt.Printf("Generating new interactsh client, this may take a while...\n")
 	oob_client, err = interactsh.New(&interactsh.Options{
 		ServerURL:         "https://interact.sh",
@@ -39,6 +42,10 @@ func generateOOBClient() error {
 }
 
 func getOOBClient() (*interactsh.Client, error) {
+	if generation_chan != nil {
+		// wait until generation has finished
+		<-generation_chan
+	}
 	if oob_client != nil {
 		return oob_client, nil
 	}
@@ -58,6 +65,7 @@ func getOOBClient() (*interactsh.Client, error) {
 
 			err = generateOOBClient()
 			if err != nil {
+				close(generation_chan)
 				return oob_client, err
 			}
 		}

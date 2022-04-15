@@ -131,6 +131,17 @@ func NewIOHub() *IOHub {
 	return ioHub
 }
 
+// Notifications godoc
+// @Summary Stream updates
+// @Description websocket endpoint to stream data as it is inserted/modified
+// @Tags Misc
+// @Produce json
+// @Security ApiKeyAuth
+// @Param objectfieldfilter query string false "JSON object (key:value) where the returned objects will be filtered by the values"
+// @Param filter query string false "additional filter to apply to the objects (behaviour is object dependent)"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /notifications [get]
 func Notifications(hub *IOHub, apiToken string, w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		key := r.FormValue("api_key")

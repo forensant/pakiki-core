@@ -33,95 +33,6 @@ var doc = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/inject_operation": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "updates the properties of an inject operation",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Injection Operations"
-                ],
-                "summary": "Update Inject Operation",
-                "parameters": [
-                    {
-                        "description": "Injection details in JSON format (not all fields can be set)",
-                        "name": "default",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/project.InjectOperation"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/inject_operation/archive": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "updates the the archived status of an inject operation",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Injection Operations"
-                ],
-                "summary": "Archive Inject Operation",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "inject operation guid",
-                        "name": "guid",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "archive status to set",
-                        "name": "archive",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/inject_operation/run": {
             "post": {
                 "security": [
@@ -143,7 +54,7 @@ var doc = `{
                 "parameters": [
                     {
                         "description": "Injection details in JSON format (not all fields can be set)",
-                        "name": "default",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -174,28 +85,22 @@ var doc = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "gets a single inject operation",
+                "description": "gets a list of all injection operations",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Injection Operations"
                 ],
-                "summary": "Get Inject Operation",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "The GUID of the request to fetch",
-                        "name": "guid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
+                "summary": "Get All Inject Operations",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/project.InjectOperation"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/project.InjectOperation"
+                            }
                         }
                     },
                     "500": {
@@ -281,27 +186,34 @@ var doc = `{
                 }
             }
         },
-        "/project/request": {
-            "get": {
+        "/inject_operations/{guid}/archive": {
+            "patch": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "gets a specific request",
+                "description": "updates the the archived status of an inject operation",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Requests"
+                    "Injection Operations"
                 ],
-                "summary": "Get A Request",
+                "summary": "Archive Inject Operation",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "The GUID of the request to fetch",
+                        "description": "inject operation guid",
                         "name": "guid",
-                        "in": "query",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "archive status to set",
+                        "name": "archive",
+                        "in": "formData",
                         "required": true
                     }
                 ],
@@ -309,7 +221,248 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/project.RequestSummary"
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/inject_operations/{guid}/title": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates the title of an inject operation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Injection Operations"
+                ],
+                "summary": "Set Inject Operation Title",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "inject operation guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "title to set",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/inject_operations/{path}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a single inject operation",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Injection Operations"
+                ],
+                "summary": "Get Inject Operation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The GUID of the request to fetch",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project.InjectOperation"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "websocket endpoint to stream data as it is inserted/modified",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Misc"
+                ],
+                "summary": "Stream updates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "JSON object (key:value) where the returned objects will be filtered by the values",
+                        "name": "objectfieldfilter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "additional filter to apply to the objects (behaviour is object dependent)",
+                        "name": "filter",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/out_of_band/url": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a unique URL which can be used to test out of band interactions",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Out of Band"
+                ],
+                "summary": "Get Out of Band URL",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/ping": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "returns a simple request to indicate that the service is up",
+                "tags": [
+                    "Misc"
+                ],
+                "summary": "Healthcheck",
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/proxy/ca_certificate.pem": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "returns the certificate authority root certificate",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Proxy"
+                ],
+                "summary": "Gets the root CA",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/proxy/intercept_settings": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "get intercept settings",
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Get Intercept Settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/proxy.InterceptSettings"
                         }
                     },
                     "500": {
@@ -326,40 +479,25 @@ var doc = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "updates a specific request",
-                "produces": [
-                    "application/json"
-                ],
+                "description": "set intercept settings",
                 "tags": [
-                    "Requests"
+                    "Settings"
                 ],
-                "summary": "Update A Request",
+                "summary": "Set Intercept Settings",
                 "parameters": [
                     {
-                        "description": "The GUID of the request to update",
-                        "name": "guid",
+                        "description": "Proxy Intercept Settings Object",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "The notes for the request",
-                        "name": "notes",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/proxy.InterceptSettings"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
+                        "description": ""
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -370,86 +508,29 @@ var doc = `{
                 }
             }
         },
-        "/project/request/payloads": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "sets the payloads associated with a specific request",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Requests"
-                ],
-                "summary": "Set Request Payloads",
-                "parameters": [
-                    {
-                        "description": "The GUID of the request to update",
-                        "name": "guid",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "A JSON Object containing the payloads in {'key':'value'} format",
-                        "name": "payloads",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/project/requestresponse": {
+        "/proxy/intercepted_requests": {
             "get": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "gets the full request and response of a given request",
+                "description": "gets a list of all requests which have been intercepted, which are awaiting a response",
                 "produces": [
-                    "text/text"
+                    "application/json"
                 ],
                 "tags": [
-                    "Requests"
+                    "Proxy"
                 ],
-                "summary": "Get Request and Response",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Request guid",
-                        "name": "guid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
+                "summary": "Get Intercept Requests",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/project.InterceptedRequest"
+                            }
                         }
                     },
                     "500": {
@@ -461,7 +542,105 @@ var doc = `{
                 }
             }
         },
-        "/project/requests": {
+        "/proxy/set_intercepted_response": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "set how an intercepted request will be responded to",
+                "tags": [
+                    "Proxy"
+                ],
+                "summary": "Modify Intercepted Request",
+                "parameters": [
+                    {
+                        "description": "Proxy Intercept Response Object",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/proxy.InterceptedRequestResponse"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/proxy/settings": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "get proxy settings",
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Get Proxy Settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/proxy.ProxySettings"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "set proxy settings",
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Set Proxy Settings",
+                "parameters": [
+                    {
+                        "description": "Proxy Settings Object",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/proxy.ProxySettings"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests": {
             "get": {
                 "security": [
                     {
@@ -527,7 +706,323 @@ var doc = `{
                 }
             }
         },
-        "/project/requests/{guid}/data": {
+        "/requests/make": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "makes a single request to a given server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Make a single request",
+                "parameters": [
+                    {
+                        "description": "Make Request Parameters in JSON format",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/proxy.MakeRequestParameters"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/queue": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "add a request to the queue for scanning sites",
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Add Request to Queue",
+                "parameters": [
+                    {
+                        "description": "Request Details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/proxy.AddRequestToQueueParameters"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/sitemap": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a list of all paths observed by the proxy",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Gets the sitemap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "An optional filter on the query to restrict to specific paths",
+                        "name": "parent",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "An optional filter on the query to restrict to the paths to those seen for a particular scan",
+                        "name": "scan_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{base_guid}/compare/{compare_guid}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "compares two requests and returns the differences",
+                "produces": [
+                    "text/text"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Compare Two Requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Base Request guid",
+                        "name": "base_guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request to Compare guid",
+                        "name": "compare_guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/project.RequestDifference"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{guid}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a specific request",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Get A Request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The GUID of the request to fetch",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project.RequestSummary"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{guid}/contents": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets the full request and response of a given request",
+                "produces": [
+                    "text/text"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Get Request and Response",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request GUID",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project.RequestResponseContents"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{guid}/notes": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates a specific request's notes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Update Request Notes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The GUID of the request to update",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The notes for the request",
+                        "name": "notes",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{guid}/partial_data": {
             "get": {
                 "security": [
                     {
@@ -562,7 +1057,7 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/project.PartialRequestResponseData"
                         }
                     },
                     "500": {
@@ -574,69 +1069,36 @@ var doc = `{
                 }
             }
         },
-        "/project/script": {
-            "get": {
+        "/requests/{guid}/payloads": {
+            "patch": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "gets a single script",
+                "description": "sets the payloads associated with a specific request",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Scripting"
+                    "Requests"
                 ],
-                "summary": "Get A Script",
+                "summary": "Set Request Payloads",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "The GUID of the script to fetch",
+                        "description": "The GUID of the request to update",
                         "name": "guid",
-                        "in": "query",
+                        "in": "path",
                         "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/project/script/append_html_output": {
-            "post": {
-                "security": [
                     {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "appends the given HTML to the HTML output of the script",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Scripting"
-                ],
-                "summary": "Append HTML Output for a Script",
-                "parameters": [
-                    {
-                        "description": "HTML Output",
-                        "name": "default",
+                        "description": "A JSON Object containing the payloads in {'key':'value'} format",
+                        "name": "payloads",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/project.AppendHTMLScriptParameters"
+                            "type": "string"
                         }
                     }
                 ],
@@ -656,181 +1118,7 @@ var doc = `{
                 }
             }
         },
-        "/project/script/archive": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "updates the the archived status of a script",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Scripting"
-                ],
-                "summary": "Archive Script",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "script guid",
-                        "name": "guid",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "archive status to set",
-                        "name": "archive",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/project/script_group": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "gets a specific script group",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Scripting"
-                ],
-                "summary": "Get Script Group",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Script group guid",
-                        "name": "guid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/project.ScriptGroup"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "adds or updates a script group",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Scripting"
-                ],
-                "summary": "Add/Update Script Group",
-                "parameters": [
-                    {
-                        "description": "Script Group details in JSON format",
-                        "name": "default",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/project.ScriptGroup"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/project/script_group/archive": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "updates the the archived status of a script group",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Scripting"
-                ],
-                "summary": "Archive Script Group",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "script group guid",
-                        "name": "guid",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "archive status to set",
-                        "name": "archive",
-                        "in": "formData",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/project/script_groups": {
+        "/script_groups": {
             "get": {
                 "security": [
                     {
@@ -862,9 +1150,183 @@ var doc = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "adds or updates a script group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Add/Update Script Group",
+                "parameters": [
+                    {
+                        "description": "Script Group details in JSON format",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.ScriptGroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             }
         },
-        "/project/scripts": {
+        "/script_groups/{guid}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a specific script group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Get Script Group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Script group guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/project.ScriptGroup"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/script_groups/{guid}/archive": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates the archived status of a script group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Archive Script Group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "script group guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "archive status to set",
+                        "name": "archive",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/script_groups/{guid}/title": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates the title of a script group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Set Script Group Title",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "script group guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "title to set",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/scripts": {
             "get": {
                 "security": [
                     {
@@ -898,439 +1360,6 @@ var doc = `{
                 }
             }
         },
-        "/project/sitemap": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "gets a list of all paths observed by the proxy",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Requests"
-                ],
-                "summary": "Gets the sitemap",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "An optional filter on the query to restrict to specific paths",
-                        "name": "parent",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "An optional filter on the query to restrict to the paths to those seen for a particular scan",
-                        "name": "scanid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/add_request_to_queue": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "add a request to the queue for scanning sites",
-                "tags": [
-                    "Requests"
-                ],
-                "summary": "Add Request to Queue",
-                "parameters": [
-                    {
-                        "description": "Request Details",
-                        "name": "default",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/proxy.AddRequestToQueueParameters"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/ca_certificate.pem": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "returns the certificate authority root certificate",
-                "produces": [
-                    "text/plain"
-                ],
-                "tags": [
-                    "Settings"
-                ],
-                "summary": "Gets the root CA",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/intercept_settings": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "get intercept settings",
-                "tags": [
-                    "Settings"
-                ],
-                "summary": "Get Intercept Settings",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/proxy.InterceptSettings"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "set intercept settings",
-                "tags": [
-                    "Settings"
-                ],
-                "summary": "Set Intercept Settings",
-                "parameters": [
-                    {
-                        "description": "Proxy Intercept Settings Object",
-                        "name": "default",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/proxy.InterceptSettings"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/intercepted_requests": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "gets a list of all requests which have been intercepted, which are awaiting a response",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Requests"
-                ],
-                "summary": "Get Intercept Requests",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/project.InterceptedRequest"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/make_request": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "makes a single request to a given server",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Requests"
-                ],
-                "summary": "Make a single request",
-                "parameters": [
-                    {
-                        "description": "Make Request Parameters in JSON format",
-                        "name": "default",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/proxy.MakeRequestParameters"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/out_of_band/url": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "gets a unique URL which can be used to test out of band interactions",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "OutOfBand"
-                ],
-                "summary": "Get Out of Band URL",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/set_intercepted_response": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "set how an intercepted request will be responded to",
-                "tags": [
-                    "Settings"
-                ],
-                "summary": "Modify Intercepted Request",
-                "parameters": [
-                    {
-                        "description": "Proxy Intercept Response Object",
-                        "name": "default",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/proxy.InterceptedRequestResponse"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/proxy/settings": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "get proxy settings",
-                "tags": [
-                    "Settings"
-                ],
-                "summary": "Get Proxy Settings",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/proxy.ProxySettings"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "set proxy settings",
-                "tags": [
-                    "Settings"
-                ],
-                "summary": "Set Proxy Settings",
-                "parameters": [
-                    {
-                        "description": "Proxy Settings Object",
-                        "name": "default",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/proxy.ProxySettings"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": ""
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/scripts/cancel": {
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "cancels the provided script",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Scripting"
-                ],
-                "summary": "Cancel the running script",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Script to cancel",
-                        "name": "guid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/scripts/run": {
             "post": {
                 "security": [
@@ -1349,7 +1378,7 @@ var doc = `{
                 "parameters": [
                     {
                         "description": "Run Script Parameters in JSON format",
-                        "name": "default",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -1373,7 +1402,183 @@ var doc = `{
                 }
             }
         },
-        "/scripts/update_progress": {
+        "/scripts/{guid}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "gets a single script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Get A Script",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The GUID of the script to fetch",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/scripts/{guid}/append_html_output": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "appends the given HTML to the HTML output of the script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Append HTML Output for a Script",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The GUID of the script to fetch",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "HTML Output to append",
+                        "name": "html",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/scripts/{guid}/archive": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates the the archived status of a script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Archive Script",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "script guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "archive status to set",
+                        "name": "archive",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/scripts/{guid}/cancel": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "cancels the provided script",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Cancel the running script",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Script to cancel",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/scripts/{guid}/update_progress": {
             "post": {
                 "security": [
                     {
@@ -1390,8 +1595,15 @@ var doc = `{
                 "summary": "Updates running script progress",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Script to update",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
                         "description": "Update Details",
-                        "name": "default",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -1414,14 +1626,41 @@ var doc = `{
         }
     },
     "definitions": {
-        "project.AppendHTMLScriptParameters": {
+        "project.DataPacket": {
             "type": "object",
             "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "direction": {
+                    "type": "string"
+                },
+                "displayData": {
+                    "type": "string"
+                },
+                "endOffset": {
+                    "type": "integer"
+                },
                 "guid": {
                     "type": "string"
                 },
-                "outputHTML": {
-                    "type": "string"
+                "id": {
+                    "type": "integer"
+                },
+                "modified": {
+                    "type": "boolean"
+                },
+                "requestID": {
+                    "type": "integer"
+                },
+                "startOffset": {
+                    "type": "integer"
+                },
+                "time": {
+                    "type": "integer"
                 }
             }
         },
@@ -1537,6 +1776,20 @@ var doc = `{
                 }
             }
         },
+        "project.PartialRequestResponseData": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "integer"
+                },
+                "to": {
+                    "type": "integer"
+                }
+            }
+        },
         "project.Request": {
             "type": "object",
             "properties": {
@@ -1586,6 +1839,59 @@ var doc = `{
                     "type": "string"
                 },
                 "verb": {
+                    "type": "string"
+                }
+            }
+        },
+        "project.RequestDifference": {
+            "type": "object",
+            "properties": {
+                "request": {
+                    "description": "1 for request number one, 2 for request number two, 0 for both",
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "project.RequestResponseContents": {
+            "type": "object",
+            "properties": {
+                "combinedContentLength": {
+                    "type": "integer"
+                },
+                "dataPackets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/project.DataPacket"
+                    }
+                },
+                "largeResponse": {
+                    "type": "boolean"
+                },
+                "mimeType": {
+                    "type": "string"
+                },
+                "modified": {
+                    "type": "boolean"
+                },
+                "modifiedRequest": {
+                    "type": "string"
+                },
+                "modifiedResponse": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "request": {
+                    "type": "string"
+                },
+                "response": {
+                    "type": "string"
+                },
+                "url": {
                     "type": "string"
                 }
             }

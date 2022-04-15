@@ -207,12 +207,14 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 		}
 	}()
 	if err != nil {
+		fmt.Printf("Err: %s\n", err.Error())
 		return err
 	}
 	if resp.StatusCode != 200 {
 		if resp.StatusCode == http.StatusUnauthorized {
 			return authError
 		}
+		fmt.Printf("Error code: %d, message: %+v\n", resp.StatusCode, resp.Body)
 		return errors.New("couldn't poll interactions")
 	}
 	response := &server.PollResponse{}

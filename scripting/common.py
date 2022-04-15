@@ -15,19 +15,25 @@ def to_bytes(string):
 
 def make_request_to_core(uri, obj = {}):
   property_data = None
+  method = 'GET'
+  content_type = 'application/json'
   
-  if obj != {}:
+  if obj != {} and type(obj) is dict:
     obj['scan_id'] = 'PROXIMITY_SCRIPT_ID'
     property_data = json.dumps(obj).encode('UTF-8')
+    method = 'POST'
+  elif obj != {} and type(obj) is str:
+    property_data = obj
+    method = 'PATCH'
 
   headers = {
     'X-API-Key': 'PROXIMITY_API_KEY'
   }
 
-  if property_data is not None:
-    headers['Content-Type'] = 'application/json'
+  if property_data is not None and property_data != {}:
+    headers['Content-Type'] = content_type
 
-  req = urllib.request.Request("http://localhost:PROXIMITY_PROXY_PORT" + uri, property_data, headers)
+  req = urllib.request.Request("http://localhost:PROXIMITY_PROXY_PORT" + uri, property_data, headers, method=method)
   
   try:
     with urllib.request.urlopen(req) as call_response:
@@ -59,9 +65,9 @@ class GeneratedRequest:
     properties['host']    = self.request.host
     properties['ssl']     = self.request.ssl
 
-    url = '/proxy/add_request_to_queue'
+    url = '/requests/queue'
     if queue == False:
-      url = '/proxy/make_request'
+      url = '/requests/make'
 
     return make_request_to_core(url, properties)
 

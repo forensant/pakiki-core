@@ -3,6 +3,8 @@ package proxy
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 )
@@ -15,7 +17,7 @@ var interceptSettings = &InterceptSettings{
 // CACertificate godoc
 // @Summary Gets the root CA
 // @Description returns the certificate authority root certificate
-// @Tags Settings
+// @Tags Proxy
 // @Produce  plain
 // @Security ApiKeyAuth
 // @Success 200 {string} string certificate
@@ -68,7 +70,7 @@ func getProxySettings(w http.ResponseWriter, r *http.Request) {
 // @Description set proxy settings
 // @Tags Settings
 // @Security ApiKeyAuth
-// @Param default body proxy.ProxySettings true "Proxy Settings Object"
+// @Param body body proxy.ProxySettings true "Proxy Settings Object"
 // @Success 200
 // @Failure 500 {string} string Error
 // @Router /proxy/settings [put]
@@ -78,6 +80,17 @@ func setProxySettings(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&proxySettings)
 	if err != nil {
 		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if proxySettings.Http11UpstreamProxyAddr != "" && !strings.Contains(proxySettings.Http11UpstreamProxyAddr, "://") {
+		http.Error(w, "Upstream proxy must be in the format of: http://host:port ", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = url.Parse(proxySettings.Http11UpstreamProxyAddr)
+	if err != nil {
+		http.Error(w, "Invalid upstream proxy address: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

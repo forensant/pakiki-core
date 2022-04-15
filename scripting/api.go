@@ -7,6 +7,7 @@ import (
 
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
 	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
+	"github.com/gorilla/mux"
 )
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
@@ -23,12 +24,14 @@ type RunScriptParameters struct {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid query string true "Script to cancel"
+// @Param guid path string true "Script to cancel"
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
-// @Router /scripts/cancel [put]
+// @Router /scripts/{guid}/cancel [patch]
 func CancelScript(w http.ResponseWriter, r *http.Request) {
-	guid := r.FormValue("guid")
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
 	err := CancelScriptInternal(guid)
 
 	if err != nil {
@@ -55,7 +58,7 @@ func CancelScript(w http.ResponseWriter, r *http.Request) {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param default body scripting.RunScriptParameters true "Run Script Parameters in JSON format"
+// @Param body body scripting.RunScriptParameters true "Run Script Parameters in JSON format"
 // @Success 200 {string} string Guid
 // @Failure 500 {string} string Error
 // @Router /scripts/run [post]
@@ -88,11 +91,15 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param default body project.ScriptProgressUpdate true "Update Details"
+// @Param guid path string true "Script to update"
+// @Param body body project.ScriptProgressUpdate true "Update Details"
 // @Success 200
 // @Failure 500 {string} string Error
-// @Router /scripts/update_progress [post]
+// @Router /scripts/{guid}/update_progress [post]
 func UpdateProgress(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
 	var params project.ScriptProgressUpdate
 
 	// Try to decode the request body into the struct. If there is an error,
@@ -104,6 +111,7 @@ func UpdateProgress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params.ShouldUpdate = true
+	params.GUID = guid
 
 	params.Record()
 }

@@ -21,8 +21,8 @@ const RequestFilterSQL = "url LIKE ? OR id IN (SELECT request_id FROM data_packe
 // Ensure that the code-based check is also updated in this scenario
 const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND response_content_type NOT LIKE 'image/%' AND response_content_type NOT LIKE 'javascript/%' AND response_content_type NOT LIKE 'text/css%' AND url NOT LIKE '%.jpg%' AND url NOT LIKE '%.gif%' AND url NOT LIKE '%.png%' AND url NOT LIKE '%.svg' AND url NOT LIKE '%.woff2%' AND url NOT LIKE '%.css%' AND url NOT LIKE '%.js%')"
 
-// RequestResponse contains the request and response in base64 format
-type RequestResponse struct {
+// RequestResponseContents contains the request and response in base64 format
+type RequestResponseContents struct {
 	Protocol              string
 	Request               string
 	Response              string
@@ -59,7 +59,7 @@ type RequestDifference struct {
 // @Param compare_guid path string true "Request to Compare guid"
 // @Success 200 {array} RequestDifference
 // @Failure 500 {string} string Error
-// @Router /project/requests/{base_guid}/compare/{compare_guid} [get]
+// @Router /requests/{base_guid}/compare/{compare_guid} [get]
 func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	vars := mux.Vars(r)
 
@@ -128,7 +128,7 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(responseToWrite)
 }
 
-// GetRequestData godoc
+// GetRequestPartialData godoc
 // @Summary Get Request/Response Data
 // @Description gets part of the request/response. will attempt to return at least 5MB of data to cache
 // @Tags Requests
@@ -138,8 +138,8 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Param from query int true "Offset to request from"
 // @Success 200 {object} project.PartialRequestResponseData
 // @Failure 500 {string} string Error
-// @Router /project/requests/{guid}/data [get]
-func GetRequestData(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+// @Router /requests/{guid}/partial_data [get]
+func GetRequestPartialData(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	vars := mux.Vars(r)
 	guid := vars["guid"]
 
@@ -230,18 +230,19 @@ func GetRequestData(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(responseToWrite)
 }
 
-// GetRequestResponse godoc
+// GetRequestResponseContents godoc
 // @Summary Get Request and Response
 // @Description gets the full request and response of a given request
 // @Tags Requests
 // @Produce  text/text
 // @Security ApiKeyAuth
-// @Param guid query string true "Request guid"
-// @Success 200 {string} string Request Data
+// @Param guid path string true "Request GUID"
+// @Success 200 {object} project.RequestResponseContents
 // @Failure 500 {string} string Error
-// @Router /project/requestresponse [get]
-func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	guid := r.FormValue("guid")
+// @Router /requests/{guid}/contents [get]
+func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
 
 	if guid == "" {
 		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
@@ -256,7 +257,7 @@ func GetRequestResponse(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	var requestResponse RequestResponse
+	var requestResponse RequestResponseContents
 	requestResponse.Protocol = httpRequest.Protocol
 	requestResponse.CombinedContentLength = httpRequest.RequestSize + httpRequest.ResponseSize
 	requestResponse.LargeResponse = requestResponse.CombinedContentLength > int64(MaxResponsePacketSize) && httpRequest.Protocol == "HTTP/1.1"
@@ -399,7 +400,7 @@ func isInSlice(slice []string, val string) bool {
 // @Security ApiKeyAuth
 // @Success 200 {array} project.Request
 // @Failure 500 {string} string Error
-// @Router /project/requests [get]
+// @Router /requests [get]
 func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var requests []Request
 	var result *gorm.DB
@@ -480,12 +481,13 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Tags Requests
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid query string true "The GUID of the request to fetch"
+// @Param guid path string true "The GUID of the request to fetch"
 // @Success 200 {object} project.RequestSummary
 // @Failure 500 {string} string Error
-// @Router /project/request [get]
+// @Router /requests/{guid} [get]
 func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	guid := r.FormValue("guid")
+	vars := mux.Vars(r)
+	guid := vars["guid"]
 
 	if guid == "" {
 		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
@@ -559,28 +561,52 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-func HandleRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	if r.Method == "GET" {
-		GetRequest(w, r, db)
-	} else if r.Method == "PUT" || r.Method == "POST" {
-		UpdateRequest(w, r, db)
-	} else {
-		http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
+// PatchRequestNotes godoc
+// @Summary Update Request Notes
+// @Description updates a specific request's notes
+// @Tags Requests
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "The GUID of the request to update"
+// @Param notes body string true "The notes for the request"
+// @Success 200 {string} string message
+// @Failure 500 {string} string Error
+// @Router /requests/{guid}/notes [patch]
+func PatchRequestNotes(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	if guid == "" {
+		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
+		return
 	}
+
+	var httpRequest Request
+	result := db.First(&httpRequest, "guid = ?", guid)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	httpRequest.Notes = r.FormValue("notes")
+	httpRequest.Record()
+
+	w.Write([]byte("OK"))
 }
 
-// PutRequestPayloads godoc
+// PatchRequestPayloads godoc
 // @Summary Set Request Payloads
 // @Description sets the payloads associated with a specific request
 // @Tags Requests
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid body string true "The GUID of the request to update"
+// @Param guid path string true "The GUID of the request to update"
 // @Param payloads body string true "A JSON Object containing the payloads in {'key':'value'} format"
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
-// @Router /project/request/payloads [put]
-func PutRequestPayloads(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+// @Router /requests/{guid}/payloads [patch]
+func PatchRequestPayloads(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	guid := r.FormValue("guid")
 	payloads := r.FormValue("payloads")
 
@@ -606,39 +632,6 @@ func PutRequestPayloads(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	httpRequest.Payloads = payloads
-	httpRequest.Record()
-
-	w.Write([]byte("OK"))
-}
-
-// UpdateRequest godoc
-// @Summary Update A Request
-// @Description updates a specific request
-// @Tags Requests
-// @Produce  json
-// @Security ApiKeyAuth
-// @Param guid body string true "The GUID of the request to update"
-// @Param notes body string true "The notes for the request"
-// @Success 200 {string} string message
-// @Failure 500 {string} string Error
-// @Router /project/request [put]
-func UpdateRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	guid := r.FormValue("guid")
-
-	if guid == "" {
-		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
-		return
-	}
-
-	var httpRequest Request
-	result := db.First(&httpRequest, "guid = ?", guid)
-
-	if result.Error != nil {
-		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	httpRequest.Notes = r.FormValue("notes")
 	httpRequest.Record()
 
 	w.Write([]byte("OK"))

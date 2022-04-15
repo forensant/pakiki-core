@@ -20,7 +20,6 @@ import (
 	"syscall"
 	"time"
 
-
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"gorm.io/gorm"
 
@@ -92,7 +91,7 @@ func main() {
 
 	if shouldSave {
 		err := saveDatabasePaths(projectPath, tempDBPath)
-	if err != nil {
+		if err != nil {
 			panic("could not save database settings: " + err.Error())
 		}
 	}
@@ -122,50 +121,62 @@ func main() {
 
 	rtr := mux.NewRouter()
 
-	rtr.HandleFunc("/project/requestresponse", authenticateWithGormDB(project.GetRequestResponse))
-	rtr.HandleFunc("/project/requests", authenticateWithGormDB(project.GetRequests))
-	rtr.HandleFunc("/project/requests/{guid}/data", authenticateWithGormDB(project.GetRequestData))
-	rtr.HandleFunc("/project/requests/{base_guid}/compare/{compare_guid}", authenticateWithGormDB(project.CompareRequests))
-	rtr.HandleFunc("/project/request", authenticateWithGormDB(project.HandleRequest))
-	rtr.HandleFunc("/project/request/payloads", authenticateWithGormDB(project.PutRequestPayloads))
-	rtr.HandleFunc("/project/scripts", authenticateWithGormDB(project.GetScripts))
-	rtr.HandleFunc("/project/script", authenticateWithGormDB(project.GetScript))
-	rtr.HandleFunc("/project/script/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
-	rtr.HandleFunc("/project/script/archive", authenticateWithGormDB(project.PutArchiveScript))
-	rtr.HandleFunc("/project/script_groups", authenticateWithGormDB(project.GetScriptGroups))
-	rtr.HandleFunc("/project/script_group", authenticateWithGormDB(project.HandleScriptGroup))
-	rtr.HandleFunc("/project/script_group/archive", authenticateWithGormDB(project.PutArchiveScriptGroup))
-	rtr.HandleFunc("/project/sitemap", authenticate(project.GetSitemap))
-
-	rtr.HandleFunc("/proxy/add_request_to_queue", authenticate(proxy.AddRequestToQueue))
-	rtr.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
-	rtr.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
-	rtr.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
-	rtr.HandleFunc("/proxy/make_request", authenticate(proxy.MakeRequest))
-	rtr.HandleFunc("/proxy/out_of_band/url", authenticate(proxy.GetOOBURL))
-	rtr.HandleFunc("/proxy/ping", ping)
-	rtr.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
-	rtr.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
-
+	rtr.HandleFunc("/inject_operations", authenticateWithGormDB(project.GetInjectOperations))
 	rtr.HandleFunc("/inject_operations/fuzzdb_payload", authenticate(proxy.GetFuzzdbPayload))
 	rtr.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
 	rtr.HandleFunc("/inject_operations/run", authenticate(proxy.RunInjection))
-	rtr.HandleFunc("/inject_operations", authenticateWithGormDB(project.GetInjectOperations))
-	rtr.HandleFunc("/inject_operation", authenticateWithGormDB(project.HandleInjectOperation))
-	rtr.HandleFunc("/inject_operation/archive", authenticateWithGormDB(project.PutArchiveInjectOperation))
+	rtr.HandleFunc("/inject_operations/{guid}", authenticateWithGormDB(project.GetInjectOperation))
+	rtr.HandleFunc("/inject_operations/{guid}/archive", authenticateWithGormDB(project.PatchInjectOperationArchive))
+	rtr.HandleFunc("/inject_operations/{guid}/title", authenticateWithGormDB(project.PatchInjectOperationTitle))
 
-	rtr.HandleFunc("/scripts/cancel", authenticate(scripting.CancelScript))
+	rtr.HandleFunc("/out_of_band/url", authenticate(proxy.GetOOBURL))
+
+	rtr.HandleFunc("/proxy/ca_certificate.pem", proxy.CACertificate)
+	rtr.HandleFunc("/proxy/intercepted_requests", authenticate(proxy.GetInterceptedRequests))
+	rtr.HandleFunc("/proxy/intercept_settings", authenticate(proxy.HandleInterceptSettingsRequest))
+	rtr.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
+	rtr.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
+
+	rtr.HandleFunc("/requests", authenticateWithGormDB(project.GetRequests))
+	rtr.HandleFunc("/requests/make", authenticate(proxy.MakeRequest))
+	rtr.HandleFunc("/requests/queue", authenticate(proxy.AddRequestToQueue))
+	rtr.HandleFunc("/requests/sitemap", authenticate(project.GetSitemap))
+	rtr.HandleFunc("/requests/{base_guid}/compare/{compare_guid}", authenticateWithGormDB(project.CompareRequests))
+	rtr.HandleFunc("/requests/{guid}", authenticateWithGormDB(project.GetRequest))
+	rtr.HandleFunc("/requests/{guid}/contents", authenticateWithGormDB(project.GetRequestResponseContents))
+	rtr.HandleFunc("/requests/{guid}/notes", authenticateWithGormDB(project.PatchRequestNotes))
+	rtr.HandleFunc("/requests/{guid}/partial_data", authenticateWithGormDB(project.GetRequestPartialData))
+	rtr.HandleFunc("/requests/{guid}/payloads", authenticateWithGormDB(project.PatchRequestPayloads))
+
+	rtr.HandleFunc("/script_groups", authenticateWithGormDB(project.HandleScriptGroups))
+	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))
+	rtr.HandleFunc("/script_groups/{guid}/archive", authenticateWithGormDB(project.PatchScriptGroupArchive))
+	rtr.HandleFunc("/script_groups/{guid}/title", authenticateWithGormDB(project.PatchScriptGroupTitle))
+
+	rtr.HandleFunc("/scripts", authenticateWithGormDB(project.GetScripts))
 	rtr.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
-	rtr.HandleFunc("/scripts/update_progress", authenticate(scripting.UpdateProgress))
+	rtr.HandleFunc("/scripts/{guid}", authenticateWithGormDB(project.GetScript))
+	rtr.HandleFunc("/scripts/{guid}/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
+	rtr.HandleFunc("/scripts/{guid}/archive", authenticateWithGormDB(project.PatchArchiveScript))
+	rtr.HandleFunc("/scripts/{guid}/cancel", authenticate(scripting.CancelScript))
+	rtr.HandleFunc("/scripts/{guid}/update_progress", authenticate(scripting.UpdateProgress))
 
-	rtr.HandleFunc("/project/notifications", authenticate(func(w http.ResponseWriter, r *http.Request) {
+	rtr.HandleFunc("/ping", ping)
+
+	rtr.HandleFunc("/notifications", authenticate(func(w http.ResponseWriter, r *http.Request) {
 		project.Notifications(ioHub, apiToken, w, r)
 	}))
 	rtr.HandleFunc("/debug", project.Debug)
 
 	rtr.HandleFunc("/api_key.js", handleAPIKey)
-	rtr.HandleFunc("/swagger/", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json")))
 	rtr.HandleFunc("/swagger/doc.json", handleSwaggerJSON)
+
+	rtr.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:"+port+"/swagger/doc.json"), //The url pointing to API definition
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("#swagger-ui"),
+	))
 
 	rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
 
@@ -201,7 +212,7 @@ func main() {
 
 func addCorsHeaders(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Origin", req.Header.Get("Origin")) // all requests have API keys, so we're not worried about CORS attacks
-	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, PATCH")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-API-Key")
 }
 
@@ -471,6 +482,13 @@ func parseCommandLineFlags() commandLineParameters {
 	return params
 }
 
+// ping godoc
+// @Summary Healthcheck
+// @Description returns a simple request to indicate that the service is up
+// @Tags Misc
+// @Security ApiKeyAuth
+// @Success 200
+// @Router /ping [get]
 func ping(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("pong"))
 }

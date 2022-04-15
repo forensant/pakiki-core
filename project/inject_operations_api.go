@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -40,18 +41,19 @@ func GetInjectOperations(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-// GetInjectOperations godoc
+// GetInjectOperation godoc
 // @Summary Get Inject Operation
 // @Description gets a single inject operation
 // @Tags Injection Operations
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid query string true "The GUID of the request to fetch"
+// @Param guid path string true "The GUID of the request to fetch"
 // @Success 200 {object} project.InjectOperation
 // @Failure 500 {string} string Error
-// @Router /inject_operations [get]
+// @Router /inject_operations/{path} [get]
 func GetInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	guid := r.FormValue("guid")
+	vars := mux.Vars(r)
+	guid := vars["guid"]
 
 	if guid == "" {
 		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
@@ -78,69 +80,26 @@ func GetInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-func HandleInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	if r.Method == "GET" {
-		GetInjectOperation(w, r, db)
-	} else if r.Method == "PUT" || r.Method == "POST" {
-		PutInjectOperation(w, r, db)
-	} else {
-		http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
-	}
-}
-
-// PutInjectOperation godoc
-// @Summary Update Inject Operation
-// @Description updates the properties of an inject operation
-// @Tags Injection Operations
-// @Produce  json
-// @Security ApiKeyAuth
-// @Param default body project.InjectOperation true "Injection details in JSON format (not all fields can be set)"
-// @Success 200 {string} string Message
-// @Failure 500 {string} string Error
-// @Router /inject_operation [put]
-func PutInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
-		return
-	}
-
-	var paramOperation InjectOperation
-	err := json.NewDecoder(r.Body).Decode(&paramOperation)
-	if err != nil {
-		http.Error(w, "Error decoding JSON:"+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	operation := InjectFromGUID(paramOperation.GUID)
-	if operation == nil {
-		http.Error(w, "Could not find injection operation", http.StatusNotFound)
-		return
-	}
-
-	operation.Title = paramOperation.Title
-	operation.UpdateAndRecord()
-
-	w.Write([]byte("OK"))
-}
-
-// PutInjectOperation godoc
+// PatchInjectOperationArchive godoc
 // @Summary Archive Inject Operation
 // @Description updates the the archived status of an inject operation
 // @Tags Injection Operations
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid formData string true "inject operation guid"
+// @Param guid path string true "inject operation guid"
 // @Param archive formData bool true "archive status to set"
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
-// @Router /inject_operation/archive [put]
-func PutArchiveInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	if r.Method != http.MethodPut {
+// @Router /inject_operations/{guid}/archive [patch]
+func PatchInjectOperationArchive(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPatch {
 		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
 		return
 	}
 
-	guid := r.FormValue("guid")
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
 	archived := r.FormValue("archive")
 
 	if guid == "" || archived == "" || (archived != "true" && archived != "false") {
@@ -155,6 +114,45 @@ func PutArchiveInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.
 	}
 
 	operation.Archived = (archived == "true")
+	operation.UpdateAndRecord()
+
+	w.Write([]byte("OK"))
+}
+
+// PatchInjectOperationArchive godoc
+// @Summary Set Inject Operation Title
+// @Description updates the title of an inject operation
+// @Tags Injection Operations
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "inject operation guid"
+// @Param title formData string true "title to set"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /inject_operations/{guid}/title [patch]
+func PatchInjectOperationTitle(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	title := r.FormValue("title")
+
+	if guid == "" {
+		http.Error(w, "guid must be present", http.StatusInternalServerError)
+		return
+	}
+
+	operation := InjectFromGUID(guid)
+	if operation == nil {
+		http.Error(w, "Could not find injection operation", http.StatusNotFound)
+		return
+	}
+
+	operation.Title = title
 	operation.UpdateAndRecord()
 
 	w.Write([]byte("OK"))

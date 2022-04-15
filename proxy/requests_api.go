@@ -60,11 +60,11 @@ func (params *MakeRequestParameters) hostWithPort() string {
 // @Accept json
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param default body proxy.MakeRequestParameters true "Make Request Parameters in JSON format"
+// @Param body body proxy.MakeRequestParameters true "Make Request Parameters in JSON format"
 // @Success 200 {string} string Message
 // @Failure 400 {string} string Error
 // @Failure 500 {string} string Error
-// @Router /proxy/make_request [post]
+// @Router /requests/make [post]
 func MakeRequest(w http.ResponseWriter, r *http.Request) {
 	var params MakeRequestParameters
 
@@ -112,10 +112,10 @@ type AddRequestToQueueParameters struct {
 // @Description add a request to the queue for scanning sites
 // @Tags Requests
 // @Security ApiKeyAuth
-// @Param default body proxy.AddRequestToQueueParameters true "Request Details"
+// @Param body body proxy.AddRequestToQueueParameters true "Request Details"
 // @Success 200
 // @Failure 500 {string} string Error
-// @Router /proxy/add_request_to_queue [post]
+// @Router /requests/queue [post]
 func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 	var params AddRequestToQueueParameters
 	err := json.NewDecoder(r.Body).Decode(&params)
@@ -275,6 +275,7 @@ func updateConnectionPool(connectionPool *http.Client) {
 	if settings.Http11UpstreamProxyAddr != "" {
 		proxyUrl, err := url.Parse(settings.Http11UpstreamProxyAddr)
 		if err != nil {
+			fmt.Printf("Error parsing proxy address: %s\n", err.Error())
 			return
 		}
 

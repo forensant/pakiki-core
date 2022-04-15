@@ -13,13 +13,13 @@ import (
 // @Produce  json
 // @Security ApiKeyAuth
 // @Param parent query string true "An optional filter on the query to restrict to specific paths"
-// @Param scanid query string true "An optional filter on the query to restrict to the paths to those seen for a particular scan"
+// @Param scan_id query string true "An optional filter on the query to restrict to the paths to those seen for a particular scan"
 // @Success 200 {array} string
 // @Failure 500 {string} string Error
-// @Router /project/sitemap [get]
+// @Router /requests/sitemap [get]
 func GetSitemap(w http.ResponseWriter, r *http.Request) {
 	parent := r.FormValue("parent")
-	scanId := r.FormValue("scanid")
+	scanId := r.FormValue("scan_id")
 
 	var siteMaps []SiteMapPath
 	readableDatabase.Distinct("site_map_paths.path").Joins("left join requests on site_map_path_id = site_map_paths.id").Where("requests.scan_id = ?", scanId).Find(&siteMaps)

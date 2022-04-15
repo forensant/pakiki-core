@@ -44,7 +44,7 @@ type PayloadOptions struct {
 // @Accept json
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param default body project.InjectOperation true "Injection details in JSON format (not all fields can be set)"
+// @Param body body project.InjectOperation true "Injection details in JSON format (not all fields can be set)"
 // @Success 200 {string} string GUID
 // @Failure 500 {string} string Error
 // @Router /inject_operation/run [post]

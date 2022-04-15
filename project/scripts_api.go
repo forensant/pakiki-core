@@ -4,14 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
-
-// AppendHTMLScriptParameters contains the parameters which are parsed to append HTML to the script output
-type AppendHTMLScriptParameters struct {
-	GUID       string
-	OutputHTML string
-}
 
 // GetScript godoc
 // @Summary Get A Script
@@ -19,12 +14,13 @@ type AppendHTMLScriptParameters struct {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid query string true "The GUID of the script to fetch"
+// @Param guid path string true "The GUID of the script to fetch"
 // @Success 200 {string} string ScriptRun Data
 // @Failure 500 {string} string Error
-// @Router /project/script [get]
+// @Router /scripts/{guid} [get]
 func GetScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	guid := r.FormValue("guid")
+	vars := mux.Vars(r)
+	guid := vars["guid"]
 
 	if guid == "" {
 		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
@@ -58,7 +54,7 @@ func GetScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Security ApiKeyAuth
 // @Success 200 {array} project.ScriptRun
 // @Failure 500 {string} string Error
-// @Router /project/scripts [get]
+// @Router /scripts [get]
 func GetScripts(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var scripts []ScriptRun
 	result := db.Order("script_runs.id").Find(&scripts)
@@ -81,72 +77,26 @@ func GetScripts(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-// PostAppendHTMLOutputScript godoc
-// @Summary Append HTML Output for a Script
-// @Description appends the given HTML to the HTML output of the script
-// @Tags Scripting
-// @Produce  json
-// @Security ApiKeyAuth
-// @Param default body project.AppendHTMLScriptParameters true "HTML Output"
-// @Success 200 {string} string Message
-// @Failure 500 {string} string Error
-// @Router /project/script/append_html_output [post]
-func PostAppendHTMLOutputScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
-		return
-	}
-
-	var params AppendHTMLScriptParameters
-	err := json.NewDecoder(r.Body).Decode(&params)
-	if err != nil {
-		http.Error(w, "Error decoding JSON:"+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if params.GUID == "" {
-		http.Error(w, "the guid parameter must be present", http.StatusInternalServerError)
-		return
-	}
-
-	var script ScriptRun
-	tx := db.Where("guid = ?", params.GUID).First(&script)
-	if tx.Error != nil {
-		http.Error(w, "Could not find script: "+tx.Error.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	script.HtmlOutput += params.OutputHTML
-	script.DoNotBroadcast = true
-	script.Record()
-
-	runningUpdate := ScriptOutputUpdate{
-		GUID:       params.GUID,
-		HTMLOutput: params.OutputHTML,
-	}
-	runningUpdate.Record()
-
-	w.Write([]byte("OK"))
-}
-
-// PutArchiveScript godoc
+// PatchArchiveScript godoc
 // @Summary Archive Script
 // @Description updates the the archived status of a script
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid formData string true "script guid"
+// @Param guid path string true "script guid"
 // @Param archive formData bool true "archive status to set"
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
-// @Router /project/script/archive [put]
-func PutArchiveScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	if r.Method != http.MethodPut {
+// @Router /scripts/{guid}/archive [patch]
+func PatchArchiveScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	if r.Method != http.MethodPatch {
 		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
 		return
 	}
 
-	guid := r.FormValue("guid")
 	archived := r.FormValue("archive")
 
 	if guid == "" || archived == "" || (archived != "true" && archived != "false") {
@@ -168,6 +118,58 @@ func PutArchiveScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	script.Status = status
 	script.RecordOrUpdate()
+
+	w.Write([]byte("OK"))
+}
+
+// PostAppendHTMLOutputScript godoc
+// @Summary Append HTML Output for a Script
+// @Description appends the given HTML to the HTML output of the script
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "The GUID of the script to fetch"
+// @Param html body string true "HTML Output to append"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /scripts/{guid}/append_html_output [post]
+func PostAppendHTMLOutputScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
+		return
+	}
+
+	outputHTML := r.FormValue("html")
+
+	if outputHTML == "" {
+		http.Error(w, "the html parameter must be present", http.StatusInternalServerError)
+		return
+	}
+
+	if guid == "" {
+		http.Error(w, "the guid parameter must be present", http.StatusInternalServerError)
+		return
+	}
+
+	var script ScriptRun
+	tx := db.Where("guid = ?", guid).First(&script)
+	if tx.Error != nil {
+		http.Error(w, "Could not find script: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	script.HtmlOutput += outputHTML
+	script.DoNotBroadcast = true
+	script.Record()
+
+	runningUpdate := ScriptOutputUpdate{
+		GUID:       guid,
+		HTMLOutput: outputHTML,
+	}
+	runningUpdate.Record()
 
 	w.Write([]byte("OK"))
 }

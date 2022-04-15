@@ -68,7 +68,7 @@ func removeInterceptedRequest(request *project.InterceptedRequest) {
 // GetInterceptRequests godoc
 // @Summary Get Intercept Requests
 // @Description gets a list of all requests which have been intercepted, which are awaiting a response
-// @Tags Requests
+// @Tags Proxy
 // @Produce  json
 // @Security ApiKeyAuth
 // @Success 200 {array} project.InterceptedRequest
@@ -114,7 +114,7 @@ func getInterceptSettings(w http.ResponseWriter, r *http.Request) {
 // @Description set intercept settings
 // @Tags Settings
 // @Security ApiKeyAuth
-// @Param default body proxy.InterceptSettings true "Proxy Intercept Settings Object"
+// @Param body body proxy.InterceptSettings true "Proxy Intercept Settings Object"
 // @Success 200
 // @Failure 500 {string} string Error
 // @Router /proxy/intercept_settings [put]
@@ -131,9 +131,9 @@ func setInterceptSettings(w http.ResponseWriter, r *http.Request) {
 // InterceptSettings godoc
 // @Summary Modify Intercepted Request
 // @Description set how an intercepted request will be responded to
-// @Tags Settings
+// @Tags Proxy
 // @Security ApiKeyAuth
-// @Param default body proxy.InterceptedRequestResponse true "Proxy Intercept Response Object"
+// @Param body body proxy.InterceptedRequestResponse true "Proxy Intercept Response Object"
 // @Success 200
 // @Failure 500 {string} string Error
 // @Router /proxy/set_intercepted_response [put]

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -14,13 +15,13 @@ import (
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid query string true "Script group guid"
+// @Param guid path string true "Script group guid"
 // @Success 200 {object} project.ScriptGroup
 // @Failure 500 {string} string Error
-// @Router /project/script_group [get]
-func getScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-
-	guid := r.FormValue("guid")
+// @Router /script_groups/{guid} [get]
+func GetScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
 
 	if guid == "" {
 		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
@@ -46,7 +47,7 @@ func getScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-// GetScriptGroups godoc
+// getScriptGroups godoc
 // @Summary Get All Script Groups
 // @Description gets a list of all script groups
 // @Tags Scripting
@@ -54,8 +55,8 @@ func getScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Security ApiKeyAuth
 // @Success 200 {array} project.ScriptGroup
 // @Failure 500 {string} string Error
-// @Router /project/script_groups [get]
-func GetScriptGroups(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+// @Router /script_groups [get]
+func getScriptGroups(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var scriptGroups []ScriptGroup
 	result := db.Order("script_groups.id").Find(&scriptGroups)
 
@@ -83,10 +84,10 @@ func GetScriptGroups(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param default body project.ScriptGroup true "Script Group details in JSON format"
+// @Param body body project.ScriptGroup true "Script Group details in JSON format"
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
-// @Router /project/script_group [put]
+// @Router /script_groups [post]
 func postScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var paramGroup ScriptGroup
 	err := json.NewDecoder(r.Body).Decode(&paramGroup)
@@ -110,24 +111,26 @@ func postScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write([]byte(group.GUID))
 }
 
-// PutArchiveScriptGroup godoc
+// PatchScriptGroupArchive godoc
 // @Summary Archive Script Group
-// @Description updates the the archived status of a script group
+// @Description updates the archived status of a script group
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param guid formData string true "script group guid"
+// @Param guid path string true "script group guid"
 // @Param archive formData bool true "archive status to set"
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
-// @Router /project/script_group/archive [put]
-func PutArchiveScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	if r.Method != http.MethodPut {
+// @Router /script_groups/{guid}/archive [patch]
+func PatchScriptGroupArchive(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPatch {
 		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
 		return
 	}
 
-	guid := r.FormValue("guid")
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
 	archived := r.FormValue("archive")
 
 	if guid == "" || archived == "" || (archived != "true" && archived != "false") {
@@ -153,10 +156,50 @@ func PutArchiveScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) 
 	w.Write([]byte("OK"))
 }
 
-func HandleScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+// PatchScriptGroupTitle godoc
+// @Summary Set Script Group Title
+// @Description updates the title of a script group
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "script group guid"
+// @Param title formData bool true "title to set"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /script_groups/{guid}/title [patch]
+func PatchScriptGroupTitle(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	title := r.FormValue("title")
+
+	if guid == "" {
+		http.Error(w, "guid must be present", http.StatusInternalServerError)
+		return
+	}
+
+	var script ScriptGroup
+	tx := db.Where("guid = ?", guid).First(&script)
+	if tx.Error != nil {
+		http.Error(w, "Could not find script group: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	script.Title = title
+	script.Record()
+
+	w.Write([]byte("OK"))
+}
+
+func HandleScriptGroups(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	switch r.Method {
 	case http.MethodGet:
-		getScriptGroup(w, r, db)
+		getScriptGroups(w, r, db)
 	case http.MethodPut:
 		postScriptGroup(w, r, db)
 	case http.MethodPost:
