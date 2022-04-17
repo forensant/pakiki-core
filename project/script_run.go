@@ -91,8 +91,8 @@ func ScriptDecrementRequestCount(guid string) {
 
 func ScriptRunFromGUID(guid string) *ScriptRun {
 	var operation ScriptRun
-	tx := readableDatabase.Where("guid = ?", guid).First(&operation)
-	if tx.Error != nil {
+	tx := readableDatabase.Where("guid = ?", guid).Limit(1).Find(&operation)
+	if tx.Error != nil || tx.RowsAffected == 0 {
 		return nil
 	}
 
@@ -115,7 +115,7 @@ func CancelScript(guid string) {
 	if _, ok := runningScripts[guid]; ok {
 		script.TotalRequestCount = runningScripts[guid].Count
 	} else {
-		fmt.Printf("Script progress updated attempted for a script which is not running: %s\n", guid)
+		fmt.Printf("Script cancel attempted for a script which is not running: %s\n", guid)
 	}
 	runningScriptsMutex.Unlock()
 
@@ -189,26 +189,12 @@ func (scriptRun *ScriptRun) RecordOrUpdate() {
 
 	runningScriptsMutex.Lock()
 	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
+		fmt.Printf("Updating underlying script from running script: %+v\n", runningScript)
 		scriptRun.TotalRequestCount = runningScript.Total
 	}
 	runningScriptsMutex.Unlock()
 
 	scriptRun.Record()
-}
-
-func sendScriptProgressUpdate(guid string) {
-	runningScriptsMutex.Lock()
-	if _, ok := runningScripts[guid]; ok {
-		scriptProgressUpdate := ScriptProgressUpdate{
-			GUID:         guid,
-			Count:        runningScripts[guid].Count,
-			Total:        runningScripts[guid].Total,
-			ShouldUpdate: false,
-		}
-
-		scriptProgressUpdate.Record()
-	}
-	runningScriptsMutex.Unlock()
 }
 
 func (scriptRun *ScriptRun) UpdateFromRunningScript() {
@@ -220,8 +206,28 @@ func (scriptRun *ScriptRun) UpdateFromRunningScript() {
 		scriptRun.HtmlOutput = runningScript.HTMLOutput
 	} else if scriptRun.Status == "Running" {
 		scriptRun.Status = "Cancelled"
-	} else if scriptRun.Status == "Completed" || scriptRun.Status == "Archived" || scriptRun.Status == "Unarchived" {
+	}
+
+	if scriptRun.Status != "Running" {
 		scriptRun.RequestsMadeCount = scriptRun.TotalRequestCount
+	}
+	runningScriptsMutex.Unlock()
+}
+
+func (scriptRun *ScriptRun) UpdateRunningScripts() {
+	runningScriptsMutex.Lock()
+	if _, ok := runningScripts[scriptRun.GUID]; ok {
+		if scriptRun.Status != "Running" {
+			scriptRun.TotalRequestCount = runningScripts[scriptRun.GUID].Total
+			delete(runningScripts, scriptRun.GUID)
+		}
+	} else if scriptRun.Status == "Running" {
+		runningScripts[scriptRun.GUID] = &runningScriptDetails{
+			TextOutput: scriptRun.TextOutput,
+			HTMLOutput: scriptRun.HtmlOutput,
+			Count:      scriptRun.RequestsMadeCount,
+			Total:      scriptRun.TotalRequestCount,
+		}
 	}
 	runningScriptsMutex.Unlock()
 }

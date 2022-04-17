@@ -23,8 +23,13 @@ def make_request_to_core(uri, obj = {}):
     property_data = json.dumps(obj).encode('UTF-8')
     method = 'POST'
   elif obj != {} and type(obj) is str:
+    property_data = to_bytes(obj)
+    content_type = 'application/x-www-form-urlencoded'
+    method = 'POST'
+  elif obj != {} and type(obj) is bytes:
     property_data = obj
-    method = 'PATCH'
+    content_type = 'application/x-www-form-urlencoded'
+    method = 'POST'
 
   headers = {
     'X-API-Key': 'PROXIMITY_API_KEY'

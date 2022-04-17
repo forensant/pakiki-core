@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string>
 
+using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
@@ -166,7 +167,7 @@ bool runPythonScript() {
       }
       pythonCode = "";
       filename = "";
-      cout << "PROXIMITY_PYTHON_INTERPRETER_READY" << endl;
+      cerr << "PROXIMITY_PYTHON_INTERPRETER_READY" << endl;
     }
     else {
       pythonCode += line + "\n";
@@ -182,7 +183,7 @@ bool runPythonScript() {
     runDiscreteCode(pythonCode, filename.c_str(), py_dict);
   }
 
-  cout << endl << "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED" << endl;
+  cerr << "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED" << endl;
 
   Py_EndInterpreter(PyThreadState_Get());
   PyThreadState_Swap(globalThreadState);

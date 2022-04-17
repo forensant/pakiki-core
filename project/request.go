@@ -409,7 +409,7 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 	})
 
 	if len(responseBytes) >= int(MaxResponsePacketSize) {
-		go streamLargeRequest(request, startTime, bodyBytes, body, bodyWriter, ctx)
+		go streamLargeRequest(request, startTime, bodyBytes, body, bodyWriter, len(headers), ctx)
 		return false
 	} else {
 		go func() {
@@ -453,11 +453,11 @@ func (request *Request) isResource() bool {
 	return false
 }
 
-func streamLargeRequest(request *Request, startTime time.Time, initialResponse []byte, body io.Reader, bodyWriter io.WriteCloser, ctx *goproxy.ProxyCtx) {
+func streamLargeRequest(request *Request, startTime time.Time, initialResponse []byte, body io.Reader, bodyWriter io.WriteCloser, headerLen int, ctx *goproxy.ProxyCtx) {
 	bodyWriter.Write(initialResponse)
 
 	responseLength := int64(len(initialResponse))
-	offset := responseLength + request.RequestSize
+	offset := responseLength + request.RequestSize + int64(headerLen)
 	request.Record()
 
 	for {

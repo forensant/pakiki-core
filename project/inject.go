@@ -63,6 +63,8 @@ func InjectFromGUID(guid string) *InjectOperation {
 
 	if cached {
 		return injectOperation
+	} else {
+		injectOperation = &InjectOperation{}
 	}
 
 	tx := readableDatabase.Preload(clause.Associations).Where("guid = ?", guid).Limit(1).Find(injectOperation)

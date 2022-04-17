@@ -77,14 +77,17 @@ func printPythonErrors(stderr io.ReadCloser) {
 	}
 }
 
-func readFromBuffer(r io.ReadCloser) (string, error) {
+func readFromBuffer(r io.ReadCloser, waitForNewline bool) (string, error) {
 	readBuf := make([]byte, 4096)
+	output := make([]byte, 0)
 
 	for {
 		bytesRead, err := r.Read(readBuf)
 		if bytesRead != 0 {
-			output := readBuf[:bytesRead]
-			return string(output), nil
+			output = append(output, readBuf[:bytesRead]...)
+			if bytes.Contains(output, []byte("\n")) || !waitForNewline {
+				return string(output), nil
+			}
 		} else {
 			return "", err
 		}
@@ -101,6 +104,7 @@ func recordInProject(scriptRun project.ScriptRun) {
 		scriptRun.TotalRequestCount = databaseScriptRun.TotalRequestCount
 	}
 
+	scriptRun.UpdateRunningScripts()
 	scriptRun.RecordOrUpdate()
 }
 
@@ -112,7 +116,7 @@ func replaceCodeVariables(code string, guid string, port string, apiKey string) 
 	return code
 }
 
-func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCloser, err error) {
+func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCloser, stderr io.ReadCloser, err error) {
 	executableName := "/pythoninterpreter"
 	if runtime.GOOS == "windows" {
 		executableName = "\\pythoninterpreter.exe"
@@ -148,7 +152,7 @@ func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCl
 		return
 	}
 
-	pythonErr, err := pythonCmd.StderrPipe()
+	stderr, err = pythonCmd.StderrPipe()
 	if err != nil {
 		return
 	}
@@ -158,7 +162,7 @@ func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCl
 		return
 	}
 
-	go printPythonErrors(pythonErr)
+	//go printPythonErrors(pythonErr)
 
 	runningScripts[guid] = pythonCmd
 
@@ -171,7 +175,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 		guid = uuid.NewString()
 	}
 
-	pythonIn, pythonOut, err := startPythonInterpreter(guid)
+	pythonIn, pythonOut, pythonErr, err := startPythonInterpreter(guid)
 	if err != nil {
 		return "", err
 	}
@@ -207,7 +211,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 	go func() {
 		for idx, scriptPart := range scriptCode {
 			code := replaceCodeVariables(scriptPart.Code, guid, hostPort, apiKey)
-			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, pythonOut, idx == len(scriptCode)-1)
+			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, pythonErr, idx == len(scriptCode)-1)
 
 			if err != nil {
 				err := "Error running script: " + err.Error()
@@ -243,9 +247,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 				errStr := ""
 				if bytes.Contains(lineRead, []byte("PROXIMITY_PYTHON_INTERPRETER_ERROR")) {
 					errStr = string(stripOutputTags(lineRead))
-				}
-
-				if bytesRead != 0 {
+				} else if bytesRead != 0 {
 					fullOutput = stripOutputTags(append(fullOutput, lineRead...))
 					outputUpdate := project.ScriptOutputUpdate{
 						GUID:       guid,
@@ -280,10 +282,11 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 func stripOutputTags(output []byte) []byte {
 	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED\n"), []byte(""))
 	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_ERROR\n"), []byte(""))
+	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_READY\n"), []byte(""))
 	return output
 }
 
-func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, stdout io.ReadCloser, lastBlock bool) error {
+func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, stderr io.ReadCloser, lastBlock bool) error {
 	_, err := stdin.Write([]byte(filename + "\n"))
 	if err != nil {
 		fmt.Println("Error writing bytes to process: " + err.Error())
@@ -296,16 +299,18 @@ func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, s
 	}
 	stdin.Write([]byte("\n\nPROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
 
-	output, err := readFromBuffer(stdout)
+	output, err := readFromBuffer(stderr, true)
 	if err != nil {
 		return err
 	}
 
-	if strings.TrimSpace(output) != "PROXIMITY_PYTHON_INTERPRETER_READY" {
-		// this should be the stack trace
+	output = strings.TrimSpace(output)
+	if !strings.Contains(output, "PROXIMITY_PYTHON_INTERPRETER_READY") && !strings.Contains(output, "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED") {
 		allOutput := make([]byte, 10240)
-		stdout.Read(allOutput)
-		outputStr := strings.ReplaceAll(string(allOutput), "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED", "")
+		stderr.Read(allOutput)
+		fullOutput := append([]byte(output), allOutput...)
+		fullOutput = stripOutputTags(fullOutput)
+		outputStr := string(fullOutput)
 		outputStr = strings.TrimSpace(outputStr)
 
 		return errors.New("unexpected output running script: " + outputStr)
