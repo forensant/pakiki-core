@@ -61,6 +61,7 @@ func ScriptIncrementTotalRequests(guid string) {
 	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Total += 1
+		sendScriptProgressUpdate(guid, runningScripts[guid])
 	}
 	runningScriptsMutex.Unlock()
 }
@@ -69,6 +70,7 @@ func ScriptDecrementTotalRequests(guid string) {
 	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Total -= 1
+		sendScriptProgressUpdate(guid, runningScripts[guid])
 	}
 	runningScriptsMutex.Unlock()
 }
@@ -77,6 +79,7 @@ func ScriptIncrementRequestCount(guid string) {
 	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Count += 1
+		sendScriptProgressUpdate(guid, runningScripts[guid])
 	}
 	runningScriptsMutex.Unlock()
 }
@@ -85,6 +88,7 @@ func ScriptDecrementRequestCount(guid string) {
 	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {
 		runningScripts[guid].Count -= 1
+		sendScriptProgressUpdate(guid, runningScripts[guid])
 	}
 	runningScriptsMutex.Unlock()
 }
@@ -189,7 +193,6 @@ func (scriptRun *ScriptRun) RecordOrUpdate() {
 
 	runningScriptsMutex.Lock()
 	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
-		fmt.Printf("Updating underlying script from running script: %+v\n", runningScript)
 		scriptRun.TotalRequestCount = runningScript.Total
 	}
 	runningScriptsMutex.Unlock()
@@ -295,13 +298,25 @@ func scriptGroupRunning(scriptGroup string) bool {
 		return false
 	}
 
+	found := false
+
 	runningScriptsMutex.Lock()
 	for _, script := range scripts {
 		if _, ok := runningScripts[script.GUID]; ok {
-			return true
+			found = true
 		}
 	}
 	runningScriptsMutex.Unlock()
 
-	return false
+	return found
+}
+
+func sendScriptProgressUpdate(guid string, u *runningScriptDetails) {
+	update := &ScriptProgressUpdate{
+		GUID:         guid,
+		Count:        u.Count,
+		Total:        u.Total,
+		ShouldUpdate: false,
+	}
+	update.Record()
 }

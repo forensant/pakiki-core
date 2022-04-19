@@ -174,6 +174,7 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 			injectOp.IncrementRequestCount()
 			injectOp.UpdateAndRecord()
 		}
+
 		close(requestFinishedChannel)
 	}()
 

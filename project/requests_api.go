@@ -607,8 +607,10 @@ func PatchRequestNotes(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Failure 500 {string} string Error
 // @Router /requests/{guid}/payloads [patch]
 func PatchRequestPayloads(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	guid := r.FormValue("guid")
 	payloads := r.FormValue("payloads")
+
+	vars := mux.Vars(r)
+	guid := vars["guid"]
 
 	if guid == "" {
 		http.Error(w, "GUID not supplied", http.StatusInternalServerError)

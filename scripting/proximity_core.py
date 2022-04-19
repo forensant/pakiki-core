@@ -7,13 +7,26 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 import urllib.request
 
-def to_bytes(string):
-  if sys.version_info.major == 3:
-    return bytes(string, 'UTF-8')
-  else:
-    return bytes(string)
+def to_bytes(string: str) -> bytes:
+  """Converts the given string to bytes."""
+  return bytes(string, 'UTF-8')
 
-def make_request_to_core(uri, obj = {}):
+
+def make_request_to_core(uri: str, obj = {}) -> bytes:
+  """Makes a request to the core.
+  
+  Sets the appropriate port, headers, etc.
+
+  :param uri: The URI to request (EG: '/requests').
+  :type uri: str
+  :param obj: The object to send to the core.
+      Can be either a Python dict or a string/bytes. If it's a dict,
+      it will be transferred in JSON format. If it's a string/bytes,
+      it will be transferred as a POST request body. In that case,
+      it should be encoded appropriately beforehand.
+  :returns: The response from the core.
+  :rtype: bytes
+  """
   property_data = None
   method = 'GET'
   content_type = 'application/json'
@@ -49,7 +62,8 @@ def make_request_to_core(uri, obj = {}):
     print("Server returned error: " + content.decode('UTF-8'))
     return None
 
-class GeneratedRequest:
+class InjectableGeneratedRequest:
+  # internal class to keep the InjectableRequest class cleaner
   def __init__(self, request):
     self.request = request
     self.request_body = b''
@@ -60,7 +74,7 @@ class GeneratedRequest:
     if self.request_body.find(b'\r\n') == -1:
       self.request_body.replace(b'\n', b'\r\n')
 
-  def make(self, queue=True):
+  def make(self):
     b64request = base64.b64encode(self.request_body)
     request_data = str(b64request, 'UTF-8')
 
@@ -71,8 +85,6 @@ class GeneratedRequest:
     properties['ssl']     = self.request.ssl
 
     url = '/requests/queue'
-    if queue == False:
-      url = '/requests/make'
 
     return make_request_to_core(url, properties)
 
@@ -83,17 +95,25 @@ class GeneratedRequest:
   
     return get_response_for_request(guid)
 
-class Request:
-  def __init__(self, host, ssl, request_parts):
+class InjectableRequest:
+  """A request object which is split into parts which can be replaced with alternative payloads.
+  
+  :param host: The host to make the request to.
+  :type host: str
+  :param ssl: Whether or not to use SSL.
+  :type ssl: bool
+  :param request_parts: A JSON representation of an array of project.InjectOperationRequestParts.
+      Each one contains {inject:bool, requestPart:str}
+      Where the requestPart is a base64 encoded representation of that part of the request.
+  """
+  def __init__(self, host: str, ssl:bool, request_parts: str):
     self.host             = host
     self.ssl              = ssl
     self.request_parts    = json.loads(request_parts)
     self.properties       = {}
 
-  def generate_request(self):
-    return GeneratedRequest(self)
-
-  def injection_point_count(self):
+  def injection_point_count(self) -> int:
+    """Counts the number of injection points"""
     count = 0
     for part in self.request_parts:
       if part['Inject'] == True:
@@ -101,13 +121,12 @@ class Request:
     
     return count
 
-  def make(self):
-    return GeneratedRequest(self).make()
+  def queue(self):
+    """Adds the request to the request queue."""
+    return InjectableGeneratedRequest(self).make()
 
-  def make_get_response(self):
-    return GeneratedRequest(self).get_response()
-
-  def replace_injection_point(self, index, replacement):
+  def replace_injection_point(self, index: int, replacement: str):
+    """Replaces the given injection point with the replacement."""
     i = 0
     orig_request_part = ''
     for part in self.request_parts:
@@ -122,4 +141,5 @@ class Request:
     self.properties['payloads'] = json.dumps({orig_request_part.decode(): replacement})
 
   def set_properties(self, properties):
+    """Sets the properties of the request (which will be passed to the core)."""
     self.properties = properties

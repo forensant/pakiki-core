@@ -214,7 +214,11 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 		if resp.StatusCode == http.StatusUnauthorized {
 			return authError
 		}
-		fmt.Printf("Error code: %d, message: %+v\n", resp.StatusCode, resp.Body)
+
+		b := make([]byte, 10240)
+		r, _ := resp.Body.Read(b)
+		b = b[:r]
+		fmt.Printf("Error code: %d, message: %s\n", resp.StatusCode, string(b))
 		return errors.New("couldn't poll interactions")
 	}
 	response := &server.PollResponse{}

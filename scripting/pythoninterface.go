@@ -29,7 +29,7 @@ import (
 	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
 )
 
-//go:embed common.py
+//go:embed proximity_core.py
 var commonCode string
 
 var runningScripts = make(map[string]*exec.Cmd)
@@ -182,7 +182,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 
 	commonScriptCode := ScriptCode{
 		Code:     commonCode,
-		Filename: "common.py",
+		Filename: "proximity_core.py",
 	}
 
 	scriptCode = append([]ScriptCode{commonScriptCode}, scriptCode...)

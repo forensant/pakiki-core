@@ -21,6 +21,11 @@ func GetSitemap(w http.ResponseWriter, r *http.Request) {
 	parent := r.FormValue("parent")
 	scanId := r.FormValue("scan_id")
 
+	var parentSchemeIdx = strings.Index(parent, "://")
+	if parentSchemeIdx != -1 {
+		parent = parent[parentSchemeIdx+3:]
+	}
+
 	var siteMaps []SiteMapPath
 	readableDatabase.Distinct("site_map_paths.path").Joins("left join requests on site_map_path_id = site_map_paths.id").Where("requests.scan_id = ?", scanId).Find(&siteMaps)
 
