@@ -11,6 +11,7 @@ type ScriptGroup struct {
 	GUID       string
 	Title      string
 	Status     string
+	Expanded   bool
 	ObjectType string `gorm:"-"`
 }
 

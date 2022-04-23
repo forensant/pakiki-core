@@ -3,6 +3,7 @@ package project
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
@@ -151,6 +152,51 @@ func PatchScriptGroupArchive(w http.ResponseWriter, r *http.Request, db *gorm.DB
 	}
 
 	script.Status = status
+	script.Record()
+
+	w.Write([]byte("OK"))
+}
+
+// PatchScriptGroupExpanded godoc
+// @Summary Set Script Group Expanded Status
+// @Description updates whether a script group is expanded (used for the UI)
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "script group guid"
+// @Param expanded formData bool true "expanded state"
+// @Success 200 {string} string Message
+// @Failure 500 {string} string Error
+// @Router /script_groups/{guid}/expanded [patch]
+func PatchScriptGroupExpanded(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Invalid HTTP method", http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	expandedStr := r.FormValue("expanded")
+
+	expanded := false
+	if strings.ToLower(expandedStr) == "true" {
+		expanded = true
+	}
+
+	if guid == "" {
+		http.Error(w, "guid must be present", http.StatusInternalServerError)
+		return
+	}
+
+	var script ScriptGroup
+	tx := db.Where("guid = ?", guid).First(&script)
+	if tx.Error != nil {
+		http.Error(w, "Could not find script group: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	script.Expanded = expanded
 	script.Record()
 
 	w.Write([]byte("OK"))

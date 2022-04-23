@@ -151,6 +151,7 @@ func main() {
 	rtr.HandleFunc("/script_groups", authenticateWithGormDB(project.HandleScriptGroups))
 	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))
 	rtr.HandleFunc("/script_groups/{guid}/archive", authenticateWithGormDB(project.PatchScriptGroupArchive))
+	rtr.HandleFunc("/script_groups/{guid}/expanded", authenticateWithGormDB(project.PatchScriptGroupExpanded))
 	rtr.HandleFunc("/script_groups/{guid}/title", authenticateWithGormDB(project.PatchScriptGroupTitle))
 
 	rtr.HandleFunc("/scripts", authenticateWithGormDB(project.GetScripts))
