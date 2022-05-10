@@ -23,7 +23,7 @@ require (
 	github.com/projectdiscovery/interactsh v0.0.7
 	github.com/projectdiscovery/retryablehttp-go v1.0.2
 	github.com/rs/xid v1.3.0
-	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/sergi/go-diff v1.2.0
 	github.com/shirou/gopsutil v3.21.2+incompatible
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/swaggo/http-swagger v1.0.0

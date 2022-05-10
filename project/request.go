@@ -353,29 +353,47 @@ func (request *Request) GetRequestResponseData(direction string, modified bool) 
 	return req
 }
 
-func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCtx) bool {
-	var body io.Reader
+func closeReaders(body io.ReadCloser, gzipBody *gzip.Reader) {
+	if body != nil {
+		body.Close()
+	}
+
+	if gzipBody != nil {
+		gzipBody.Close()
+	}
+}
+
+func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCtx, copyBody bool) bool {
 	var bodyWriter io.WriteCloser
 	isCompressed := false
+	var originalBody io.ReadCloser
+	var gzipBody *gzip.Reader
+
+	var bodyToRead io.ReadCloser
 
 	if resp.Body != nil {
-		body = resp.Body
+		originalBody = resp.Body
 
-		var pipeReader io.ReadCloser
-		pipeReader, bodyWriter = io.Pipe()
-		resp.Body = pipeReader
+		if copyBody {
+			var pipeReader io.ReadCloser
+			pipeReader, bodyWriter = io.Pipe()
+			resp.Body = pipeReader
+		}
 
 		if resp.Header.Get("Content-Encoding") == "gzip" {
-			gzipBody, err := gzip.NewReader(body)
+			var err error
+			gzipBody, err = gzip.NewReader(originalBody)
 			if err != nil {
 				errStr := "Error occurrred when gunzipping response: " + err.Error()
 				fmt.Println(errStr)
 				request.Error = errStr
-				body = nil
+				bodyToRead = originalBody
 			} else {
 				isCompressed = true
-				body = gzipBody
+				bodyToRead = gzipBody
 			}
+		} else {
+			bodyToRead = originalBody
 		}
 	}
 
@@ -387,8 +405,8 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 
 	bodyBytes := make([]byte, int64(MaxResponsePacketSize))
 
-	if body != nil {
-		n, _ := io.ReadAtLeast(body, bodyBytes, MaxResponsePacketSize-len(headers))
+	if bodyToRead != nil {
+		n, _ := io.ReadAtLeast(bodyToRead, bodyBytes, MaxResponsePacketSize-len(headers))
 		bodyBytes = bodyBytes[:n]
 	}
 
@@ -409,12 +427,18 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 	})
 
 	if len(responseBytes) >= int(MaxResponsePacketSize) {
-		go streamLargeRequest(request, startTime, bodyBytes, body, bodyWriter, len(headers), ctx)
+		go func() {
+			streamLargeRequest(request, startTime, bodyBytes, bodyToRead, bodyWriter, len(headers), ctx)
+			closeReaders(originalBody, gzipBody)
+		}()
 		return false
 	} else {
 		go func() {
-			bodyWriter.Write(bodyBytes)
-			bodyWriter.Close()
+			if copyBody {
+				bodyWriter.Write(bodyBytes)
+				// the caller should close this
+			}
+			closeReaders(originalBody, gzipBody)
 		}()
 		return true
 	}
@@ -453,8 +477,10 @@ func (request *Request) isResource() bool {
 	return false
 }
 
-func streamLargeRequest(request *Request, startTime time.Time, initialResponse []byte, body io.Reader, bodyWriter io.WriteCloser, headerLen int, ctx *goproxy.ProxyCtx) {
-	bodyWriter.Write(initialResponse)
+func streamLargeRequest(request *Request, startTime time.Time, initialResponse []byte, body io.ReadCloser, bodyWriter io.WriteCloser, headerLen int, ctx *goproxy.ProxyCtx) {
+	if bodyWriter != nil {
+		bodyWriter.Write(initialResponse)
+	}
 
 	responseLength := int64(len(initialResponse))
 	offset := responseLength + request.RequestSize + int64(headerLen)
@@ -462,7 +488,6 @@ func streamLargeRequest(request *Request, startTime time.Time, initialResponse [
 
 	for {
 		if ctx != nil && ctx.Error != nil {
-			bodyWriter.Close()
 			return
 		}
 
@@ -489,14 +514,15 @@ func streamLargeRequest(request *Request, startTime time.Time, initialResponse [
 			request.ResponseSize = responseLength
 			request.Record()
 
-			bodyWriter.Write(bodyBytes)
+			if bodyWriter != nil {
+				bodyWriter.Write(bodyBytes)
+			}
 		}
 
 		if err != nil {
 			if err != io.EOF {
 				fmt.Printf("Error occurred while reading: %s\n", err.Error())
 			}
-			bodyWriter.Close()
 			return
 		}
 	}

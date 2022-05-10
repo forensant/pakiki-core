@@ -112,7 +112,7 @@ func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.
 	}
 
 	if request != nil {
-		can_intercept := request.HandleResponse(resp, ctx)
+		can_intercept := request.HandleResponse(resp, ctx, true)
 
 		if can_intercept && (interceptSettings.ServerToBrowser || request.InterceptResponse) {
 			interceptedResponse := interceptRequest(request, "", "server_to_browser", request.GetRequestResponseData("Response", false))
