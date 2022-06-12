@@ -61,6 +61,7 @@ func generateRootPEMs() (caCertificate string, caKey string, err error) {
 			Locality:      []string{""},
 			StreetAddress: []string{""},
 			PostalCode:    []string{""},
+			CommonName:    "Forensant Proximity Root CA",
 		},
 		DNSNames:              []string{"proximity.forensant.com"},
 		NotBefore:             time.Now(),

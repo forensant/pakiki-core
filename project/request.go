@@ -27,25 +27,26 @@ import (
 // Request represents all of the fields required by the GUI to show
 // a request to the user and its properties
 type Request struct {
-	ID                  uint   `json:"-"`
-	URL                 string `gorm:"index:,collate:nocase"`
-	GUID                string `gorm:"index:,collate:nocase"`
-	Time                int64
-	Protocol            string
-	Verb                string
-	Hash                string
-	ObjectType          string `gorm:"-"`
-	ResponseSize        int64
-	ResponseTime        int
-	ResponseStatusCode  int
-	ResponseContentType string `gorm:"index:,collate:nocase"`
-	ScanID              string `gorm:"index:,collate:nocase"`
-	Notes               string
-	Error               string
-	DataPackets         []DataPacket `json:"-"`
-	Payloads            string
-	InterceptResponse   bool `gorm:"-" json:"-"`
-	RequestSize         int64
+	ID                    uint   `json:"-"`
+	URL                   string `gorm:"index:,collate:nocase"`
+	GUID                  string `gorm:"index:,collate:nocase"`
+	Time                  int64
+	Protocol              string
+	Verb                  string
+	Hash                  string
+	ObjectType            string `gorm:"-"`
+	ResponseSize          int64
+	ResponseContentLength int64
+	ResponseTime          int
+	ResponseStatusCode    int
+	ResponseContentType   string `gorm:"index:,collate:nocase"`
+	ScanID                string `gorm:"index:,collate:nocase"`
+	Notes                 string
+	Error                 string
+	DataPackets           []DataPacket `json:"-"`
+	Payloads              string
+	InterceptResponse     bool `gorm:"-" json:"-"`
+	RequestSize           int64
 
 	SiteMapPathID int         `json:"-"`
 	SiteMapPath   SiteMapPath `json:"-"`
@@ -402,11 +403,17 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 	}
 
 	headers, _ := httputil.DumpResponse(resp, false)
+	stream := strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream")
 
 	bodyBytes := make([]byte, int64(MaxResponsePacketSize))
 
 	if bodyToRead != nil {
-		n, _ := io.ReadAtLeast(bodyToRead, bodyBytes, MaxResponsePacketSize-len(headers))
+		var n int
+		if stream {
+			n, _ = bodyToRead.Read(bodyBytes)
+		} else {
+			n, _ = io.ReadAtLeast(bodyToRead, bodyBytes, MaxResponsePacketSize-len(headers))
+		}
 		bodyBytes = bodyBytes[:n]
 	}
 
@@ -418,25 +425,27 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 	request.ResponseContentType = resp.Header.Get("Content-Type")
 	request.ResponseTime = int(time.Since(startTime).Milliseconds())
 	request.ResponseSize = int64(len(responseBytes))
+	request.ResponseContentLength = int64(len(bodyBytes))
 	request.DataPackets = append(request.DataPackets, DataPacket{
 		Data:        responseBytes,
 		Direction:   "Response",
 		Modified:    false,
 		StartOffset: request.RequestSize,
-		EndOffset:   request.RequestSize + request.ResponseSize - 1,
+		EndOffset:   request.RequestSize + int64(len(responseBytes)) - 1,
 	})
 
-	if len(responseBytes) >= int(MaxResponsePacketSize) {
+	if len(responseBytes) >= int(MaxResponsePacketSize) || stream {
 		go func() {
-			streamLargeRequest(request, startTime, bodyBytes, bodyToRead, bodyWriter, len(headers), ctx)
+			streamLargeRequest(request, startTime, bodyBytes, bodyToRead, bodyWriter, len(headers), ctx, stream)
 			closeReaders(originalBody, gzipBody)
+			bodyWriter.Close()
 		}()
 		return false
 	} else {
 		go func() {
 			if copyBody {
 				bodyWriter.Write(bodyBytes)
-				// the caller should close this
+				bodyWriter.Close()
 			}
 			closeReaders(originalBody, gzipBody)
 		}()
@@ -477,13 +486,13 @@ func (request *Request) isResource() bool {
 	return false
 }
 
-func streamLargeRequest(request *Request, startTime time.Time, initialResponse []byte, body io.ReadCloser, bodyWriter io.WriteCloser, headerLen int, ctx *goproxy.ProxyCtx) {
+func streamLargeRequest(request *Request, startTime time.Time, initialResponse []byte, body io.ReadCloser, bodyWriter io.WriteCloser, headerLen int, ctx *goproxy.ProxyCtx, stream bool) {
 	if bodyWriter != nil {
 		bodyWriter.Write(initialResponse)
 	}
 
-	responseLength := int64(len(initialResponse))
-	offset := responseLength + request.RequestSize + int64(headerLen)
+	responseLength := int64(len(initialResponse)) + int64(headerLen)
+	offset := request.RequestSize + responseLength
 	request.Record()
 
 	for {
@@ -492,7 +501,13 @@ func streamLargeRequest(request *Request, startTime time.Time, initialResponse [
 		}
 
 		bodyBytes := make([]byte, MaxResponsePacketSize)
-		n, err := io.ReadAtLeast(body, bodyBytes, MaxResponsePacketSize)
+		var n int
+		var err error
+		if stream {
+			n, err = body.Read(bodyBytes)
+		} else {
+			n, err = io.ReadAtLeast(body, bodyBytes, MaxResponsePacketSize)
+		}
 
 		if n != 0 {
 			bodyBytes = bodyBytes[:n]
@@ -512,6 +527,7 @@ func streamLargeRequest(request *Request, startTime time.Time, initialResponse [
 
 			request.ResponseTime = int(time.Since(startTime).Milliseconds())
 			request.ResponseSize = responseLength
+			request.ResponseContentLength = responseLength - int64(headerLen)
 			request.Record()
 
 			if bodyWriter != nil {

@@ -219,11 +219,18 @@ func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient
 		return nil, err
 	}
 
-	httpRequest.Host = hostname
 	protocol := "https"
 	if !ssl {
 		protocol = "http"
 	}
+	if strings.HasSuffix(hostname, ":443") && protocol == "https" {
+		hostname = strings.Replace(hostname, ":443", "", 1)
+	}
+	if strings.HasSuffix(hostname, ":80") && protocol == "http" {
+		hostname = strings.Replace(hostname, ":80", "", 1)
+	}
+	httpRequest.Host = hostname
+
 	url, err := url.Parse(protocol + "://" + hostname + httpRequest.URL.RequestURI())
 
 	if err != nil {

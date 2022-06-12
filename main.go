@@ -281,7 +281,7 @@ func cleanup() {
 }
 
 func createListener(portParameter int, hostname string) net.Listener {
-	listener, err := net.Listen("tcp", hostname+":"+strconv.Itoa(portParameter))
+	listener, err := net.Listen("tcp4", hostname+":"+strconv.Itoa(portParameter))
 	if err != nil {
 		if strings.Contains(err.Error(), "address already in use") {
 			fmt.Printf("Error: Port %d is already in use, could not use it for the UI. Using a random one.\n", portParameter)
