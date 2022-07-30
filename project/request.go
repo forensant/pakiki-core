@@ -438,7 +438,9 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 		go func() {
 			streamLargeRequest(request, startTime, bodyBytes, bodyToRead, bodyWriter, len(headers), ctx, stream)
 			closeReaders(originalBody, gzipBody)
-			bodyWriter.Close()
+			if bodyWriter != nil {
+				bodyWriter.Close()
+			}
 		}()
 		return false
 	} else {

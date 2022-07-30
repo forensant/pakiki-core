@@ -126,6 +126,8 @@ definitions:
         type: string
       requestSize:
         type: integer
+      responseContentLength:
+        type: integer
       responseContentType:
         type: string
       responseSize:
@@ -203,6 +205,8 @@ definitions:
     type: object
   project.ScriptGroup:
     properties:
+      expanded:
+        type: boolean
       guid:
         type: string
       objectType:
@@ -293,6 +297,10 @@ definitions:
     type: object
   proxy.MakeRequestParameters:
     properties:
+      client_cert:
+        type: string
+      client_cert_key:
+        type: string
       host:
         type: string
       request:
@@ -783,6 +791,10 @@ paths:
         in: query
         name: sort_dir
         type: string
+      - description: Limit to the last n requests (sorted by time)
+        in: query
+        name: last
+        type: integer
       produces:
       - application/json
       responses:
@@ -1162,6 +1174,36 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Archive Script Group
+      tags:
+      - Scripting
+  /script_groups/{guid}/expanded:
+    patch:
+      description: updates whether a script group is expanded (used for the UI)
+      parameters:
+      - description: script group guid
+        in: path
+        name: guid
+        required: true
+        type: string
+      - description: expanded state
+        in: formData
+        name: expanded
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Set Script Group Expanded Status
       tags:
       - Scripting
   /script_groups/{guid}/title:

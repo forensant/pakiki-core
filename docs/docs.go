@@ -685,6 +685,12 @@ var doc = `{
                         "description": "Column direction to sort by (default asc)",
                         "name": "sort_dir",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit to the last n requests (sorted by time)",
+                        "name": "last",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1279,6 +1285,53 @@ var doc = `{
                 }
             }
         },
+        "/script_groups/{guid}/expanded": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "updates whether a script group is expanded (used for the UI)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Scripting"
+                ],
+                "summary": "Set Script Group Expanded Status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "script group guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "expanded state",
+                        "name": "expanded",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/script_groups/{guid}/title": {
             "patch": {
                 "security": [
@@ -1817,6 +1870,9 @@ var doc = `{
                 "requestSize": {
                     "type": "integer"
                 },
+                "responseContentLength": {
+                    "type": "integer"
+                },
                 "responseContentType": {
                     "type": "string"
                 },
@@ -1934,6 +1990,9 @@ var doc = `{
         "project.ScriptGroup": {
             "type": "object",
             "properties": {
+                "expanded": {
+                    "type": "boolean"
+                },
                 "guid": {
                     "type": "string"
                 },
@@ -2070,6 +2129,12 @@ var doc = `{
         "proxy.MakeRequestParameters": {
             "type": "object",
             "properties": {
+                "client_cert": {
+                    "type": "string"
+                },
+                "client_cert_key": {
+                    "type": "string"
+                },
                 "host": {
                     "type": "string"
                 },

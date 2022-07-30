@@ -28,6 +28,8 @@ type MakeRequestParameters struct {
 	Host          string `json:"host"`
 	SSL           bool   `json:"ssl"`
 	ScanID        string `json:"scan_id"`
+	ClientCert    string `json:"client_cert"`
+	ClientCertKey string `json:"client_cert_key"`
 }
 
 // Request returns the base64 decoded request
@@ -77,7 +79,18 @@ func MakeRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpClient := &http.Client{}
-	updateConnectionPool(httpClient)
+
+	if params.ClientCert != "" && params.ClientCertKey != "" {
+		cert, err := tls.X509KeyPair([]byte(params.ClientCert), []byte(params.ClientCertKey))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		updateConnectionPool(httpClient, &cert)
+	} else {
+		updateConnectionPool(httpClient, nil)
+	}
 
 	request, err := makeRequestToSite(params.SSL, params.hostWithPort(), params.Request(), httpClient, nil)
 	if err != nil {
@@ -98,7 +111,6 @@ func MakeRequest(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-// TODO: These are the same as the parameters above
 type AddRequestToQueueParameters struct {
 	Request  string `json:"request" example:"<base64 encoded request>"`
 	Host     string `json:"host"`
@@ -206,7 +218,7 @@ func initConnectionPool() {
 		},
 	}
 
-	updateConnectionPool(defaultConnectionPool)
+	updateConnectionPool(defaultConnectionPool, nil)
 }
 
 func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient *http.Client, httpContext context.Context) (*project.Request, error) {
@@ -268,7 +280,7 @@ func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient
 	return request, nil
 }
 
-func updateConnectionPool(connectionPool *http.Client) {
+func updateConnectionPool(connectionPool *http.Client, clientCert *tls.Certificate) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConns = 100
 	transport.MaxConnsPerHost = 2
@@ -286,10 +298,15 @@ func updateConnectionPool(connectionPool *http.Client) {
 			fmt.Printf("Error parsing proxy address: %s\n", err.Error())
 			return
 		}
-
 		transport.Proxy = http.ProxyURL(proxyUrl)
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+
+	tlsConfig := &tls.Config{InsecureSkipVerify: true}
+	if clientCert != nil {
+		tlsConfig.Certificates = []tls.Certificate{*clientCert}
+	}
+
+	transport.TLSClientConfig = tlsConfig
 
 	if settings.MaxConnectionsPerHost == 0 {
 		settings.MaxConnectionsPerHost = 2

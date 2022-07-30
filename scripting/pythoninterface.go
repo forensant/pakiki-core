@@ -287,7 +287,7 @@ func stripOutputTags(output []byte) []byte {
 }
 
 func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, stderr io.ReadCloser, lastBlock bool) error {
-	_, err := stdin.Write([]byte(filename + "\n"))
+	_, err = stdin.Write([]byte(filename + "\n"))
 	if err != nil {
 		fmt.Println("Error writing bytes to process: " + err.Error())
 		return err

@@ -116,7 +116,7 @@ func setProxySettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateConnectionPool(defaultConnectionPool)
+	updateConnectionPool(defaultConnectionPool, nil)
 }
 
 func HandleSettingsRequest(w http.ResponseWriter, r *http.Request) {

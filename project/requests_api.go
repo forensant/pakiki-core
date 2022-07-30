@@ -128,6 +128,35 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(responseToWrite)
 }
 
+func formatResponse(resp []byte, ctype string) []byte {
+	headerSep := []byte("\r\n\r\n")
+
+	if strings.Contains(ctype, "application/json") {
+		components := bytes.SplitN(resp, headerSep, 2)
+		if len(components) != 2 {
+			return resp
+		}
+
+		body := components[1]
+		var iJson bytes.Buffer
+		err := json.Indent(&iJson, body, "", "  ")
+
+		if err != nil {
+			fmt.Printf("Couldn't parse JSON for indentation: %s\n", err)
+			return resp
+		}
+
+		newResp := make([]byte, 0)
+		newResp = append(newResp, components[0]...)
+		newResp = append(newResp, headerSep...)
+		newResp = append(newResp, iJson.Bytes()...)
+
+		return newResp
+	}
+
+	return resp
+}
+
 // GetRequestPartialData godoc
 // @Summary Get Request/Response Data
 // @Description gets part of the request/response. will attempt to return at least 5MB of data to cache
@@ -315,10 +344,12 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm
 			}
 		}
 
+		contentType := httpRequest.ResponseContentType
+
 		requestResponse.Request = base64.StdEncoding.EncodeToString(origReq)
-		requestResponse.Response = base64.StdEncoding.EncodeToString(origResp)
+		requestResponse.Response = base64.StdEncoding.EncodeToString(formatResponse(origResp, contentType))
 		requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
-		requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(modResp)
+		requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(formatResponse(modResp, contentType))
 
 	}
 
@@ -397,6 +428,7 @@ func isInSlice(slice []string, val string) bool {
 // @Param url_filter query string false "Only show requests which contain the given string in the URL"
 // @Param sort_col query string false "Column to sort by (default time)"
 // @Param sort_dir query string false "Column direction to sort by (default asc)"
+// @Param last query int false "Limit to the last n requests (sorted by time)"
 // @Security ApiKeyAuth
 // @Success 200 {array} project.Request
 // @Failure 500 {string} string Error
