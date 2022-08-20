@@ -96,7 +96,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Web frontend is available at: http://localhost:%s/\n", port)
+	fmt.Printf("Web frontend is available at: http://%s/\n", listener.Addr().String())
 	frontendSubdirectory, err := fs.Sub(frontendDir, "html_frontend/dist")
 	if err != nil {
 		log.Fatal("Could not open the subdirectory for the frontend: " + err.Error())
@@ -147,6 +147,7 @@ func main() {
 	rtr.HandleFunc("/requests/{guid}/notes", authenticateWithGormDB(project.PatchRequestNotes))
 	rtr.HandleFunc("/requests/{guid}/partial_data", authenticateWithGormDB(project.GetRequestPartialData))
 	rtr.HandleFunc("/requests/{guid}/payloads", authenticateWithGormDB(project.PatchRequestPayloads))
+	rtr.HandleFunc("/requests/{guid}/search", authenticateWithGormDB(project.RequestDataSearch))
 
 	rtr.HandleFunc("/script_groups", authenticateWithGormDB(project.HandleScriptGroups))
 	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))

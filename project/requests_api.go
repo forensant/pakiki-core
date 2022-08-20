@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -47,6 +48,12 @@ type PartialRequestResponseData struct {
 type RequestDifference struct {
 	Text    string
 	Request int // 1 for request number one, 2 for request number two, 0 for both
+}
+
+// RequestSearchResult contains the result from a search across a request/response
+type RequestSearchResult struct {
+	StartOffset uint64
+	EndOffset   uint64
 }
 
 // CompareRequests godoc
@@ -669,4 +676,96 @@ func PatchRequestPayloads(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	httpRequest.Record()
 
 	w.Write([]byte("OK"))
+}
+
+// RequestDataSearch godoc
+// @Summary Search Request/Response Data
+// @Description
+// @Tags Requests
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "Request guid"
+// @Param query query string true "Base64 encoded bytes to search for"
+// @Success 200 {array} project.RequestSearchResults
+// @Failure 500 {string} string Error
+// @Router /requests/{guid}/search [get]
+func RequestDataSearch(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	queryStr := r.FormValue("query")
+
+	searchQry, err := base64.StdEncoding.DecodeString(queryStr)
+	if err != nil {
+		http.Error(w, "Error decoding Base64: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	searchHex := hex.EncodeToString(searchQry)
+
+	var httpRequest Request
+	result := db.First(&httpRequest, "guid = ?", guid)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	modified := false
+	res := db.Where("request_id = ? AND direction = 'Request' AND modified = true", httpRequest.ID).Find(&DataPacket{})
+	if res.RowsAffected > 0 {
+		modified = true
+	}
+
+	if guid == "" {
+		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
+		return
+	}
+
+	query := "request_id = ? AND hexdata LIKE ?"
+	if modified {
+		// working under the assumption that we can't modify large responses
+		query = "request_id = ? AND hexdata LIKE ? AND ((direction = 'Request' AND modified = true) OR (direction = 'Response' AND modified = false))"
+	}
+
+	hexFilter := "%" + searchHex + "%"
+
+	var packets []DataPacket
+	result = db.Select("hex(data) as hexdata, *").Where(query, httpRequest.ID, hexFilter).Find(&packets)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	searchResults := make([]RequestSearchResult, 0)
+	for _, pkt := range packets {
+		offset := 0
+		data := pkt.Data
+
+		for {
+			i := bytes.Index(data, searchQry)
+			if i == -1 {
+				break
+			}
+
+			startOffset := uint64(i) + uint64(offset) + uint64(pkt.StartOffset)
+
+			searchResults = append(searchResults, RequestSearchResult{
+				StartOffset: startOffset,
+				EndOffset:   startOffset + uint64(len(searchQry)) - 1,
+			})
+
+			data = data[i+len(searchQry):]
+			offset += i + len(searchQry)
+		}
+	}
+
+	responseToWrite, err := json.Marshal(searchResults)
+	if err != nil {
+		http.Error(w, "Error marshalling response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(responseToWrite)
 }
