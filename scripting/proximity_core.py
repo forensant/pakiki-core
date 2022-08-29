@@ -112,6 +112,18 @@ class InjectableRequest:
     self.request_parts    = json.loads(request_parts)
     self.properties       = {}
 
+  def injection_point(self, index: int) -> bytes:
+    """Get the content of the given injection point."""
+    i = 0
+    for part in self.request_parts:
+      if part['Inject'] == True:
+        if i == index:
+          return base64.standard_b64decode(part['RequestPart'])
+
+        i += 1
+    
+    return b''
+
   def injection_point_count(self) -> int:
     """Counts the number of injection points"""
     count = 0
