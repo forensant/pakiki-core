@@ -140,14 +140,9 @@ jobs:
           rm python-embedded.zip
 
       - name: Install golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: '1.16' # The Go version to download (if necessary) and use.
-
-      - name: Run swaggo
-        run: |
-          go get -u github.com/swaggo/swag/cmd/swag
-          swag init
+          go-version: '1.19' # The Go version to download (if necessary) and use.
 
       - name: Build
         run: go build -o build/proximitycore.exe
