@@ -37,7 +37,7 @@ You can then cd into the html_frontend directory and run ```./build.sh``` to bui
 
 Then to build the main core, from the root directory of the project run ```./scripts/build.sh```
 
-If you're going to be running a development build, then will also need to copy the pythoninterpreter executable and the python39 dependency directory (generated as part of the build script) into the working directory.
+If you're going to be running a development build, then will also need to copy the pythoninterpreter executable and the python310 dependency directory (generated as part of the build script) into the working directory.
 
 ### General Dependencies:
   * golang (above 1.16) https://golang.org/doc/install
@@ -49,7 +49,7 @@ If you're going to be running a development build, then will also need to copy t
 
 #### Homebrew:
 
-HomeBrew will need to be installed with python3.9, with both x86_64 and arm64 support:
+HomeBrew will need to be installed with python3.10, with both x86_64 and arm64 support:
 
 For arm64 on an M1 Mac, run:
 ```
