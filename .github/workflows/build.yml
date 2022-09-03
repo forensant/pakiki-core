@@ -65,7 +65,7 @@ jobs:
       - name: Install golang
         uses: actions/setup-go@v3
         with:
-          go-version: '1.19' # The Go version to download (if necessary) and use.
+          go-version: '1.18.5' # The Go version to download (if necessary) and use.
         
       - name: Build golang executable
         run: |
@@ -91,6 +91,9 @@ jobs:
       - name: Upload code coverage
         working-directory: build
         run: bash <(curl -s https://codecov.io/bash)
+
+      - name: Remove coverage
+        run: rm build/coverage.txt
   
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3
@@ -194,6 +197,9 @@ jobs:
       - name: Run tests
         working-directory: build
         run: ../scripts/test.sh
+
+      - name: Remove coverage
+        run: rm build/coverage.txt
   
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3
