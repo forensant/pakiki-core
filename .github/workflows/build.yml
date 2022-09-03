@@ -63,7 +63,7 @@ jobs:
         run: sudo apt install build-essential
 
       - name: Install golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: '1.19' # The Go version to download (if necessary) and use.
         
@@ -137,7 +137,7 @@ jobs:
           rm python-embedded.zip
 
       - name: Install golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: '1.19' # The Go version to download (if necessary) and use.
 
@@ -179,7 +179,7 @@ jobs:
           path: html_frontend/dist/
       
       - name: Install golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: '1.19' # The Go version to download (if necessary) and use.
         

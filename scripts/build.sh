@@ -29,8 +29,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     rm -rf build/PythonInterpreter_*
 
     echo "# Building Proximity Core"
-    CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o build/ProximityCore_x86_64
-    CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o build/ProximityCore_arm64
+    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o build/ProximityCore_x86_64
+    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o build/ProximityCore_arm64 
     lipo -create -output build/proximitycore build/ProximityCore_x86_64 build/ProximityCore_arm64
     rm build/ProximityCore_*
 else
