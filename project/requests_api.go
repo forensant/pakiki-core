@@ -686,7 +686,7 @@ func PatchRequestPayloads(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Security ApiKeyAuth
 // @Param guid path string true "Request guid"
 // @Param query query string true "Base64 encoded bytes to search for"
-// @Success 200 {array} project.RequestSearchResults
+// @Success 200 {array} project.RequestSearchResult
 // @Failure 500 {string} string Error
 // @Router /requests/{guid}/search [get]
 func RequestDataSearch(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
