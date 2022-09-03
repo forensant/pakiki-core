@@ -1124,6 +1124,55 @@ var doc = `{
                 }
             }
         },
+        "/requests/{guid}/search": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Search Request/Response Data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request guid",
+                        "name": "guid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Base64 encoded bytes to search for",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/project.RequestSearchResult"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/script_groups": {
             "get": {
                 "security": [
@@ -1949,6 +1998,17 @@ var doc = `{
                 },
                 "url": {
                     "type": "string"
+                }
+            }
+        },
+        "project.RequestSearchResult": {
+            "type": "object",
+            "properties": {
+                "endOffset": {
+                    "type": "integer"
+                },
+                "startOffset": {
+                    "type": "integer"
                 }
             }
         },

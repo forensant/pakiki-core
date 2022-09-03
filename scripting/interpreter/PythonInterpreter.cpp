@@ -88,9 +88,9 @@ char* concatenateDir(const char* path) {
 
 char* getDir() {
 #ifdef _WIN32
-  char* dir = concatenateDir("\\python39");
+  char* dir = concatenateDir("\\python310");
 #elif defined(__linux__)
-  const char* pythonSubdir = "/python39";
+  const char* pythonSubdir = "/python310";
 
   // identify the current path of the executable - so that we can run cleanly under flatpak
   std::filesystem::path path = std::filesystem::canonical("/proc/self/exe").parent_path();
@@ -102,11 +102,11 @@ char* getDir() {
 
 #else
 
-  char* dir = concatenateDir("/python39");
+  char* dir = concatenateDir("/python310");
   int fd = open(dir, O_RDONLY);
   if(fd == -1) {
     free(dir);
-    dir = concatenateDir("/Razor.app/Contents/MacOS/python39");
+    dir = concatenateDir("/Razor.app/Contents/MacOS/python310");
     fd = open(dir, O_RDONLY);
 
     if(fd == -1)

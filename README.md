@@ -37,7 +37,7 @@ You can then cd into the html_frontend directory and run ```./build.sh``` to bui
 
 Then to build the main core, from the root directory of the project run ```./scripts/build.sh```
 
-If you're going to be running a development build, then will also need to copy the pythoninterpreter executable and the python39 dependency directory (generated as part of the build script) into the working directory.
+If you're going to be running a development build, then will also need to copy the pythoninterpreter executable and the python310 dependency directory (generated as part of the build script) into the working directory.
 
 ### General Dependencies:
   * golang (above 1.16) https://golang.org/doc/install
@@ -49,18 +49,18 @@ If you're going to be running a development build, then will also need to copy t
 
 #### Homebrew:
 
-HomeBrew will need to be installed with python3.9, with both x86_64 and arm64 support:
+HomeBrew will need to be installed with python3.10, with both x86_64 and arm64 support:
 
 For arm64 on an M1 Mac, run:
 ```
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-brew install python@3.9
+brew install python@3.10
 ```
 
 For x86_64 support, run:
 ```
 arch --x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-arch --x86_64 /usr/local/bin/brew install python@3.9
+arch --x86_64 /usr/local/bin/brew install python@3.10
 ```
 
 *At this point, Python is only compiled with x86_64 support, so that we're only bundling one set of libraries*
@@ -70,13 +70,13 @@ arch --x86_64 /usr/local/bin/brew install python@3.9
 Linux requires the following dependencies to build Proximity:
 
   * A C/C++ Compiler
-  * Python3.9
+  * Python3.10
 
 The installation will depend on your particular distribution.
 
 #### Debian-based distributions (including Ubuntu)
 
-```sudo apt install build-essential python3.9-dev```
+```sudo apt install build-essential python3.10-dev```
 
 ### Launching for development
 To launch the development version, from the root of the project run: ```go run main.go -project sample_project```

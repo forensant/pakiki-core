@@ -180,6 +180,13 @@ definitions:
       url:
         type: string
     type: object
+  project.RequestSearchResult:
+    properties:
+      endOffset:
+        type: integer
+      startOffset:
+        type: integer
+    type: object
   project.RequestSummary:
     properties:
       guid:
@@ -986,6 +993,37 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Set Request Payloads
+      tags:
+      - Requests
+  /requests/{guid}/search:
+    get:
+      parameters:
+      - description: Request guid
+        in: path
+        name: guid
+        required: true
+        type: string
+      - description: Base64 encoded bytes to search for
+        in: query
+        name: query
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/project.RequestSearchResult'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Search Request/Response Data
       tags:
       - Requests
   /requests/make:
