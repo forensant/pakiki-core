@@ -69,7 +69,7 @@ jobs:
         
       - name: Build golang executable
         run: |
-          go get -u github.com/swaggo/swag/cmd/swag
+          go install github.com/swaggo/swag/cmd/swag
           ./scripts/build.sh
 
       - name: Install Ruby
@@ -144,6 +144,11 @@ jobs:
         with:
           go-version: '1.19' # The Go version to download (if necessary) and use.
 
+      - name: Run swaggo
+        run: |
+          go install github.com/swaggo/swag/cmd/swag
+          swag init
+
       - name: Build
         run: go build -o build/proximitycore.exe
 
@@ -183,7 +188,7 @@ jobs:
         
       - name: Build golang executable
         run: |
-          go get -u github.com/swaggo/swag/cmd/swag
+          go install github.com/swaggo/swag/cmd/swag
           ./scripts/build.sh
 
       - name: Set permissions

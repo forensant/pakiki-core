@@ -394,7 +394,7 @@
                 "summary": "Healthcheck",
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK"
                     }
                 }
             }
@@ -481,7 +481,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK"
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -551,7 +551,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK"
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -613,7 +613,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK"
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -772,7 +772,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK"
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -1699,7 +1699,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": ""
+                        "description": "OK"
                     },
                     "500": {
                         "description": "Internal Server Error",

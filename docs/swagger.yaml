@@ -628,7 +628,7 @@ paths:
       description: returns a simple request to indicate that the service is up
       responses:
         "200":
-          description: ""
+          description: OK
       security:
       - ApiKeyAuth: []
       summary: Healthcheck
@@ -681,7 +681,7 @@ paths:
           $ref: '#/definitions/proxy.InterceptSettings'
       responses:
         "200":
-          description: ""
+          description: OK
         "500":
           description: Internal Server Error
           schema:
@@ -725,7 +725,7 @@ paths:
           $ref: '#/definitions/proxy.InterceptedRequestResponse'
       responses:
         "200":
-          description: ""
+          description: OK
         "500":
           description: Internal Server Error
           schema:
@@ -763,7 +763,7 @@ paths:
           $ref: '#/definitions/proxy.ProxySettings'
       responses:
         "200":
-          description: ""
+          description: OK
         "500":
           description: Internal Server Error
           schema:
@@ -1070,7 +1070,7 @@ paths:
           $ref: '#/definitions/proxy.AddRequestToQueueParameters'
       responses:
         "200":
-          description: ""
+          description: OK
         "500":
           description: Internal Server Error
           schema:
@@ -1425,7 +1425,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: ""
+          description: OK
         "500":
           description: Internal Server Error
           schema:

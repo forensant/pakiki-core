@@ -41,7 +41,7 @@ If you're going to be running a development build, then will also need to copy t
 
 ### General Dependencies:
   * golang (above 1.16) https://golang.org/doc/install
-  * swaggo (```go get -u github.com/swaggo/swag/cmd/swag```)
+  * swaggo (```go install github.com/swaggo/swag/cmd/swag```)
       > You may need to ensure that the go bin directory is in your path. On Unix, you can add ```export PATH=$PATH:~/go/bin``` to your .bashrc or similar.
   * npm for the HTML frontend https://www.npmjs.com/get-npm
 
