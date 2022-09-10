@@ -102,11 +102,11 @@ char* getDir() {
 
 #else
 
-  char* dir = concatenateDir("/python39");
+  char* dir = concatenateDir("/python310");
   int fd = open(dir, O_RDONLY);
   if(fd == -1) {
     free(dir);
-    dir = concatenateDir("/Razor.app/Contents/MacOS/python39");
+    dir = concatenateDir("/Razor.app/Contents/MacOS/python310");
     fd = open(dir, O_RDONLY);
 
     if(fd == -1)
