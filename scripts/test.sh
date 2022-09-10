@@ -6,7 +6,12 @@ set -e
 echo "" > coverage.txt
 
 for d in $(go list ../... | grep -v vendor); do
-    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin go test -coverprofile=profile.out -coverpkg=dev.forensant.com/pipeline/razor/proximitycore,dev.forensant.com/pipeline/razor/proximitycore/ca,dev.forensant.com/pipeline/razor/proximitycore/docs,dev.forensant.com/pipeline/razor/proximitycore/project,dev.forensant.com/pipeline/razor/proximitycore/proxy,dev.forensant.com/pipeline/razor/proximitycore/proxy/interactsh,dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue,dev.forensant.com/pipeline/razor/proximitycore/scripting $d
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin go test -coverprofile=profile.out -coverpkg=dev.forensant.com/pipeline/razor/proximitycore,dev.forensant.com/pipeline/razor/proximitycore/ca,dev.forensant.com/pipeline/razor/proximitycore/docs,dev.forensant.com/pipeline/razor/proximitycore/project,dev.forensant.com/pipeline/razor/proximitycore/proxy,dev.forensant.com/pipeline/razor/proximitycore/proxy/interactsh,dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue,dev.forensant.com/pipeline/razor/proximitycore/scripting $d
+    else
+        go test -coverprofile=profile.out -coverpkg=dev.forensant.com/pipeline/razor/proximitycore,dev.forensant.com/pipeline/razor/proximitycore/ca,dev.forensant.com/pipeline/razor/proximitycore/docs,dev.forensant.com/pipeline/razor/proximitycore/project,dev.forensant.com/pipeline/razor/proximitycore/proxy,dev.forensant.com/pipeline/razor/proximitycore/proxy/interactsh,dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue,dev.forensant.com/pipeline/razor/proximitycore/scripting $d
+    fi
+    
     if [ -f profile.out ]; then
         cat profile.out >> coverage.txt
         rm profile.out
