@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
 	"github.com/pipeline/goproxy"
 )
@@ -47,14 +46,14 @@ func onPreviewProxyRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*h
 }
 
 func StartHttpPreviewProxy(listener net.Listener) error {
-	certificateRecord, err := ca.CertificateForDomain("CA Root")
+	certificateRecord, err := getRootCertificate()
 
 	if err != nil {
 		fmt.Printf("Error getting root certificate: %s\n", err.Error())
 		return err
 	}
 
-	setCA([]byte(certificateRecord.CertificatePEM), certificateRecord.PrivateKey)
+	setCA(certificateRecord.CertificatePEM, certificateRecord.PrivateKey)
 	proxy := goproxy.NewProxyHttpServer()
 
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)

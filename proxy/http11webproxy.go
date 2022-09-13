@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 	"dev.forensant.com/pipeline/razor/proximitycore/project"
 	"github.com/google/uuid"
 	"github.com/pipeline/goproxy"
@@ -235,14 +234,14 @@ func setCA(caCert, caKey []byte) error {
 }
 
 func startHttp11BrowserProxy(wg *sync.WaitGroup, settings *ProxySettings) (*http.Server, error) {
-	certificateRecord, err := ca.CertificateForDomain("CA Root")
+	certificateRecord, err := getRootCertificate()
 
 	if err != nil {
 		fmt.Printf("Error getting root certificate: %s\n", err.Error())
 		return nil, err
 	}
 
-	setCA([]byte(certificateRecord.CertificatePEM), certificateRecord.PrivateKey)
+	setCA(certificateRecord.CertificatePEM, certificateRecord.PrivateKey)
 	proxy := goproxy.NewProxyHttpServer()
 
 	if settings.Http11UpstreamProxyAddr != "" {

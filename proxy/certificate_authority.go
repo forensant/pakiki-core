@@ -1,10 +1,4 @@
-// ca implements a certificate authority for generating certificates to be used for interception.
-// goproxy handles all of its own certificates, so much of this functionality is not used, but
-// will probably be required as other functionality is added.
-
-// TODO: Ensure the CA is regenerated within 30 years
-
-package ca
+package proxy
 
 import (
 	"bytes"
@@ -14,36 +8,28 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"math/big"
 	"time"
+
+	"github.com/zalando/go-keyring"
 )
 
-func clearExistingCADatabase() error {
-	db, err := getDatabase()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
+const keyringService = "Proximity"
+const caKeyChainKeyName = "Certificate Private Key"
+const rootCAPKKeyChainKeyName = "Root CA Private Key"
+const rootCAPubCertKeyChainKeyName = "Root CA Cert"
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec("DELETE FROM certificates")
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
+// CertificateRecord contains the data required to present a valid certificate to
+// browsers, and encrypt intercepted traffic
+type CertificateRecord struct {
+	CertificatePEM []byte
+	PrivateKey     []byte
 }
 
-func generate256BitEncryptionKey() ([]byte, error) {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
+func generateSerialNumber() (*big.Int, error) {
+	var serialNumberMax, e = big.NewInt(2), big.NewInt(159)
+	serialNumberMax = serialNumberMax.Exp(serialNumberMax, e, nil)
+	return rand.Int(rand.Reader, serialNumberMax)
 }
 
 func generateRootPEMs() (caCertificate string, caKey string, err error) {
@@ -102,56 +88,60 @@ func generateRootPEMs() (caCertificate string, caKey string, err error) {
 	return caPEM.String(), caPrivKeyPEM.String(), nil
 }
 
-func generateRootCertificate() (*CertificateRecord, error) {
+func generateRootCertificateIfRequired() error {
+	_, rootPKerr := keyring.Get(keyringService, rootCAPKKeyChainKeyName)
+	_, rootCerterr := keyring.Get(keyringService, rootCAPubCertKeyChainKeyName)
+
+	if rootPKerr == nil && rootCerterr == nil {
+		return nil
+	}
+
 	caPubCert, caPrivKeyPEM, err := generateRootPEMs()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = clearExistingCADatabase()
+	err = keyring.Set(keyringService, rootCAPKKeyChainKeyName, caPrivKeyPEM)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// in this case, we'll regenerate the encryption key for the CA
-	storageKey, err := generate256BitEncryptionKey()
+	err = keyring.Set(keyringService, rootCAPubCertKeyChainKeyName, caPubCert)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = storeSymmetricEncryptionKey(storageKey)
-	if err != nil {
-		return nil, err
-	}
-
-	err = saveCertificateToDatabase("CA Root", caPubCert, caPrivKeyPEM)
-	if err != nil {
-		return nil, err
-	}
-
-	record := &CertificateRecord{
-		Domain:         "CA Root",
-		CertificatePEM: caPubCert,
-		PrivateKey:     []byte(caPrivKeyPEM),
-	}
-
-	return record, err
+	return nil
 }
 
 func getRootPrivateKey() ([]byte, error) {
-	certificateRecord, err := CertificateForDomain("CA Root")
+	err := generateRootCertificateIfRequired()
 	if err != nil {
 		return nil, err
 	}
-	return certificateRecord.PrivateKey, nil
+
+	key, err := keyring.Get(keyringService, rootCAPKKeyChainKeyName)
+	return []byte(key), nil
 }
 
-// RootCertificate returns a PEM encoded string containing the root certificate
-// used to sign all other certificates
-func RootCertificate() (string, error) {
-	certificateRecord, err := CertificateForDomain("CA Root")
+func getRootCertificate() (*CertificateRecord, error) {
+	err := generateRootCertificateIfRequired()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return certificateRecord.CertificatePEM, nil
+
+	pk, err := keyring.Get(keyringService, rootCAPKKeyChainKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	ca, err := keyring.Get(keyringService, rootCAPubCertKeyChainKeyName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CertificateRecord{
+		PrivateKey:     []byte(pk),
+		CertificatePEM: []byte(ca),
+	}, nil
 }

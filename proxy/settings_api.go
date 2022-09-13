@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"dev.forensant.com/pipeline/razor/proximitycore/ca"
 )
 
 var interceptSettings = &InterceptSettings{
@@ -24,12 +22,12 @@ var interceptSettings = &InterceptSettings{
 // @Failure 500 {string} string Error
 // @Router /proxy/ca_certificate.pem [get]
 func CACertificate(w http.ResponseWriter, r *http.Request) {
-	certificateRecord, err := ca.CertificateForDomain("CA Root")
+	certificateRecord, err := getRootCertificate()
 	if err != nil {
 		http.Error(w, "Could not get certificate: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	pem := []byte(certificateRecord.CertificatePEM)
+	pem := certificateRecord.CertificatePEM
 
 	w.Header().Set("Content-Type", "application/x-x509-ca-cert")
 	w.Write(pem)
