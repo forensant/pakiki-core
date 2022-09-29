@@ -40,6 +40,8 @@ else
     
     cp -r $(python3.9-config --prefix)/lib/python3.9 build/python39/lib
 
+    scripts/copy_lib_linux.rb build/
+
     cp run.sh build/
 
     echo "# Building Proximity Core"

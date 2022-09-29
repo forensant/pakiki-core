@@ -2,6 +2,7 @@
 
 copy_to = ARGV.shift
 Dir.chdir(copy_to)
+
 copied_files = true
 while copied_files == true do
   puts "----------------"
@@ -15,15 +16,17 @@ while copied_files == true do
     required_libs.each_line do |lib|
       file_path = lib.split[2]
 
-      if file_path == nil || file_path.index('/lib/') == 0 then
-	next
+      next if file_path == nil
+      
+      if !file_path.include?('libpython') && file_path.index('/lib/') == 0
+        next
       end
 
       filename = file_path.split('/').last
-      next if File.exist?(copy_to + filename) || !File.exist?(file_path)
+      next if File.exist?("./" + filename) || !File.exist?(file_path)
       
       puts "Copying #{file_path} to #{copy_to}"
-      `cp -L #{file_path} #{copy_to}`
+      `cp -L #{file_path} ./`
       copied_files = true
     end
   end
