@@ -7,6 +7,8 @@ It takes the philosophy of do one thing, and do it well. The intent is not to pa
 
 This repository contains the core which proxies traffic, and exposes an API to interact with the captured traffic and perform other key functions. When compiled, it includes a web interface. The web interface is intended to be used for forward deployments, quick testing, or where the desktop interfaces won't otherwise run. It's not as polished as or as featureful as the dedicated desktop interface(s).
 
+**While this is tested periodically on Windows and MacOS, the majority of building/testing takes place on Kali. Builds are provided as part of the GUI release and can be downloaded at https://github.com/pipeline/proximity-frontend-gtk/releases**
+
 <img src="docs/resources/screenshot.png" />
 
 One of the reasons for developing this is to give back to the community. I want to help people who are new to pentesting, while still having 99% of what experienced pentesters need day to day.
@@ -14,13 +16,6 @@ One of the reasons for developing this is to give back to the community. I want 
 Please only use this against applications that you have permission to test.
 
 Feedback would be greatly appreciated.
-
-## Installation
-Download from the latest release from [https://github.com/pipeline/proximity-core/releases](https://github.com/pipeline/proximity-core/releases)
-
-The Linux releases will require that you set the build to be executable from the directory: `chmod +x *`
-
-For Linux then run `./run.sh -project PROJECT_FILENAME` for other platforms run: `./proximitycore -project PROJECT_FILENAME`
 
 ## Development/build instructions
 
