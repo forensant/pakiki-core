@@ -98,16 +98,20 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 }
 
 func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.Response {
-	if resp == nil || resp.Body == nil {
-		return resp
-	}
-
 	var errorToReport = ctx.Error
 
 	request, typecastOK := ctx.UserData.(*project.Request)
 	if !typecastOK {
 		fmt.Printf("Could not convert the response's user context to a request\n")
 		errorToReport = errors.New("could not convert the response's user context to a request")
+	}
+
+	if resp == nil || resp.Body == nil {
+		if errorToReport != nil && request != nil {
+			request.Error = errorToReport.Error()
+			request.Record()
+		}
+		return resp
 	}
 
 	if request != nil {

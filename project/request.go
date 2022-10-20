@@ -421,6 +421,11 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 
 	startTime := time.Unix(request.Time, 0)
 
+	if ctx.Error != nil {
+		request.Error = ctx.Error.Error()
+		fmt.Printf("Response received: %s", ctx.Error.Error())
+	}
+
 	request.ResponseStatusCode = resp.StatusCode
 	request.ResponseContentType = resp.Header.Get("Content-Type")
 	request.ResponseTime = int(time.Since(startTime).Milliseconds())

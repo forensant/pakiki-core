@@ -202,13 +202,15 @@ func main() {
 	<-done
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	shutdownErr := srv.Shutdown(ctx)
+
 	defer func() {
 		cleanup()
 		cancel()
 	}()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server Shutdown Failed:%+v", err)
+	if shutdownErr != nil {
+		log.Fatalf("Server Shutdown Failed:%+v", shutdownErr)
 	}
 }
 

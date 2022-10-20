@@ -15,7 +15,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
 	github.com/mattn/go-sqlite3 v1.14.6
-	github.com/pipeline/goproxy v0.0.0-20220325203806-0f35eb8d399c
+	github.com/pipeline/goproxy v0.0.0-20221020070820-8b67b5dbeb93
 	github.com/pkg/errors v0.9.1
 	github.com/projectdiscovery/gologger v1.1.4
 	github.com/projectdiscovery/interactsh v0.0.7
