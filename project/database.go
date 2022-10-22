@@ -42,7 +42,14 @@ func compressDatabase(src *gorm.DB, dstPath string) error {
 
 	// move once the compression has completed, to minimise the chance of data corruption
 	// rather than compressing in place (which would minimise disk usage)
-	os.Rename(tempcompressedPath, dstPath)
+	err = os.Rename(tempcompressedPath, dstPath)
+	if err != nil {
+		fmt.Printf("Failed moving file: %s, trying manual move instead\n", err.Error())
+		err = moveFile(tempcompressedPath, dstPath)
+		if err != nil {
+			return err
+		}
+	}
 	fmt.Printf("Project successfully copied to: %s\n", dstPath)
 
 	return nil
@@ -169,6 +176,46 @@ func initDatabase(db *gorm.DB) {
 	migrateTables(db)
 	injectOperationCache = make(map[string]*InjectOperation)
 	loadSitemap(db)
+}
+
+func moveFile(src, dst string) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(destination, source)
+	if err != nil {
+		return err
+	}
+
+	if err = source.Close(); err != nil {
+		return err
+	}
+
+	if err = destination.Close(); err != nil {
+		return err
+	}
+
+	if err = os.Remove(src); err != nil {
+		return err
+	}
+
+	return err
 }
 
 func migrateTables(db *gorm.DB) {
