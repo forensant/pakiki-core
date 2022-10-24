@@ -404,6 +404,8 @@ func getProjectPath(requested string) (projectPath string, tempFilePath string, 
 	if input == "y" {
 		projectPath = settings.OpenFile
 		tempFilePath = settings.OpenTempFile
+	} else if input == "n" {
+		os.Remove(settings.OpenTempFile)
 	}
 
 	return

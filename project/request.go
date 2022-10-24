@@ -35,7 +35,7 @@ type Request struct {
 	Verb                  string
 	Hash                  string
 	ObjectType            string `gorm:"-"`
-	ResponseSize          int64
+	ResponseSize          int64  `gorm:"index:"`
 	ResponseContentLength int64
 	ResponseTime          int
 	ResponseStatusCode    int
@@ -45,8 +45,8 @@ type Request struct {
 	Error                 string
 	DataPackets           []DataPacket `json:"-"`
 	Payloads              string
-	InterceptResponse     bool `gorm:"-" json:"-"`
-	RequestSize           int64
+	InterceptResponse     bool  `gorm:"-" json:"-"`
+	RequestSize           int64 `gorm:"index:"`
 
 	SiteMapPathID int         `json:"-"`
 	SiteMapPath   SiteMapPath `json:"-"`
@@ -421,7 +421,7 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 
 	startTime := time.Unix(request.Time, 0)
 
-	if ctx.Error != nil {
+	if ctx != nil && ctx.Error != nil {
 		request.Error = ctx.Error.Error()
 		fmt.Printf("Response received: %s", ctx.Error.Error())
 	}

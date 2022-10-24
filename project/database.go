@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -82,51 +81,7 @@ func compressFile(src string, dst string) error {
 }
 
 func copyDB(src *gorm.DB, dst string) error {
-	db, err := gorm.Open(sqlite.Open(dst))
-	if err != nil {
-		return err
-	}
-	migrateTables(db)
-
-	udb, err := db.DB()
-	if err != nil {
-		return err
-	}
-	if err = udb.Close(); err != nil {
-		return err
-	}
-
-	return src.Transaction(func(tx *gorm.DB) error {
-		res := src.Exec("ATTACH DATABASE ? AS dst;", dst)
-		defer func() {
-			res = src.Exec("DETACH DATABASE dst;")
-			if res.Error != nil {
-				err = res.Error
-			}
-		}()
-
-		if res.Error != nil {
-			return res.Error
-		}
-
-		var tbls []string
-		res = src.Raw("SELECT tbl_name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").Scan(&tbls)
-		if res.Error != nil {
-			return res.Error
-		}
-
-		for _, tbl := range tbls {
-			res = src.Exec("INSERT INTO dst." + tbl + " SELECT * FROM " + tbl)
-			if res.Error != nil {
-				return res.Error
-			}
-		}
-
-		// it may be set in the event of an error by the deferred close function
-		err = nil
-
-		return err
-	})
+	return src.Exec("VACUUM INTO ?", dst).Error
 }
 
 func decompressDatabase(src string) (string, error) {

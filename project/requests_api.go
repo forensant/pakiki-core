@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-const RequestFilterSQL = "url LIKE ? OR id IN (SELECT request_id FROM data_packets GROUP BY request_id HAVING GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)"
+const RequestFilterSQL = "url LIKE ? OR id IN (SELECT request_id FROM data_packets WHERE request_id NOT IN (SELECT id FROM requests WHERE response_size > 10485760 OR request_size > 10485760) GROUP BY request_id HAVING GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)"
 
 // Ensure that the code-based check is also updated in this scenario
 const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND response_content_type NOT LIKE 'image/%' AND response_content_type NOT LIKE 'javascript/%' AND response_content_type NOT LIKE 'text/css%' AND url NOT LIKE '%.jpg%' AND url NOT LIKE '%.gif%' AND url NOT LIKE '%.png%' AND url NOT LIKE '%.svg' AND url NOT LIKE '%.woff2%' AND url NOT LIKE '%.css%' AND url NOT LIKE '%.js%')"
@@ -95,12 +95,13 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	req1, large1, err := getRequestResponseString(db, baseRequest)
+	maxSize := int64(50 * 1024)
+	req1, large1, err := getRequestResponseString(db, baseRequest, maxSize)
 	if err != nil {
 		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
-	req2, large2, err := getRequestResponseString(db, compareRequest)
+	req2, large2, err := getRequestResponseString(db, compareRequest, maxSize)
 	if err != nil {
 		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
@@ -377,8 +378,8 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm
 	w.Write(responseToWrite)
 }
 
-func getRequestResponseString(db *gorm.DB, r Request) (string, bool, error) {
-	if r.RequestSize > int64(MaxResponsePacketSize) || r.ResponseSize > int64(MaxResponsePacketSize) {
+func getRequestResponseString(db *gorm.DB, r Request, maxSize int64) (string, bool, error) {
+	if r.RequestSize > maxSize || r.ResponseSize > maxSize {
 		return "", true, nil
 	}
 
