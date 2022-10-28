@@ -434,6 +434,7 @@ func isInSlice(slice []string, val string) bool {
 // @Param scanid query string false "Scan ID, can be multiple separated by semi-colons"
 // @Param filter query string false "Only show requests which contain the filter string in the url, request, response, etc"
 // @Param url_filter query string false "Only show requests which contain the given string in the URL"
+// @Param verb query string false "Filter by specific verbs"
 // @Param sort_col query string false "Column to sort by (default time)"
 // @Param sort_dir query string false "Column direction to sort by (default asc)"
 // @Param last query int false "Limit to the last n requests (sorted by time)"
@@ -468,6 +469,11 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	protocol := r.FormValue("protocol")
 	if protocol != "" {
 		tx = tx.Where("protocol = ?", protocol)
+	}
+
+	verb := r.FormValue("verb")
+	if verb != "" {
+		tx = tx.Where("verb = ?", verb)
 	}
 
 	last := r.FormValue("last")
