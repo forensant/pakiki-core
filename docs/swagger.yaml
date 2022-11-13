@@ -790,6 +790,10 @@ paths:
         in: query
         name: url_filter
         type: string
+      - description: Filter by specific verbs
+        in: query
+        name: verb
+        type: string
       - description: Column to sort by (default time)
         in: query
         name: sort_col

@@ -668,6 +668,12 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Filter by specific verbs",
+                        "name": "verb",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Column to sort by (default time)",
                         "name": "sort_col",
                         "in": "query"

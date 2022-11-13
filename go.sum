@@ -454,6 +454,8 @@ github.com/pipeline/goproxy v0.0.0-20220325203806-0f35eb8d399c h1:N2yIGDvvNP6/cv
 github.com/pipeline/goproxy v0.0.0-20220325203806-0f35eb8d399c/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
 github.com/pipeline/goproxy v0.0.0-20221020070820-8b67b5dbeb93 h1:92lgYhJeVbUocXhqsvCUkn0yWF/uz8e6pZlsqy68phw=
 github.com/pipeline/goproxy v0.0.0-20221020070820-8b67b5dbeb93/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
+github.com/pipeline/goproxy v0.0.0-20221105234639-037273096ec3 h1:3S+3fXcCS7taZPJilTZE/ymeFchK/Vebcm4sFa8u8No=
+github.com/pipeline/goproxy v0.0.0-20221105234639-037273096ec3/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
