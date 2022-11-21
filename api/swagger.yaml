@@ -628,7 +628,7 @@ paths:
       description: returns a simple request to indicate that the service is up
       responses:
         "200":
-          description: OK
+          description: ""
       security:
       - ApiKeyAuth: []
       summary: Healthcheck
@@ -681,7 +681,7 @@ paths:
           $ref: '#/definitions/proxy.InterceptSettings'
       responses:
         "200":
-          description: OK
+          description: ""
         "500":
           description: Internal Server Error
           schema:
@@ -725,7 +725,7 @@ paths:
           $ref: '#/definitions/proxy.InterceptedRequestResponse'
       responses:
         "200":
-          description: OK
+          description: ""
         "500":
           description: Internal Server Error
           schema:
@@ -763,7 +763,7 @@ paths:
           $ref: '#/definitions/proxy.ProxySettings'
       responses:
         "200":
-          description: OK
+          description: ""
         "500":
           description: Internal Server Error
           schema:
@@ -789,6 +789,10 @@ paths:
       - description: Only show requests which contain the given string in the URL
         in: query
         name: url_filter
+        type: string
+      - description: Filter by specific verbs
+        in: query
+        name: verb
         type: string
       - description: Column to sort by (default time)
         in: query
@@ -1070,7 +1074,7 @@ paths:
           $ref: '#/definitions/proxy.AddRequestToQueueParameters'
       responses:
         "200":
-          description: OK
+          description: ""
         "500":
           description: Internal Server Error
           schema:
@@ -1425,7 +1429,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: ""
         "500":
           description: Internal Server Error
           schema:

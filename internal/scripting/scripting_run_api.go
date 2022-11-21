@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
 	"github.com/gorilla/mux"
+	"github.com/pipeline/proximity-core/internal/request_queue"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call

@@ -1,4 +1,4 @@
-<img src="docs/resources/Banner.svg" width="50%" />
+<img src="assets/Banner.svg" width="50%" />
 
 ## Overview
 Proximity is an intercepting proxy, allowing you to view and manipulate network requests between your web browser and the servers its communicating with. It is designed for web application penetration testing, but could be used for general debugging of applications, etc. It is similar in principle to mitmproxy or OWASP ZAP.
@@ -9,7 +9,7 @@ This repository contains the core which proxies traffic, and exposes an API to i
 
 **While this is tested periodically on Windows and MacOS, the majority of building/testing takes place on Kali. Builds are provided as part of the GUI release and can be downloaded at https://github.com/pipeline/proximity-frontend-gtk/releases**
 
-<img src="docs/resources/screenshot.png" />
+<img src="assets/screenshot.png" />
 
 One of the reasons for developing this is to give back to the community. I want to help people who are new to pentesting, while still having 99% of what experienced pentesters need day to day.
 
@@ -28,7 +28,7 @@ git submodule init
 git submodule update
 ```
 
-You can then cd into the html_frontend directory and run ```./build.sh``` to build the frontend.
+You can then cd into the www directory and run ```./build.sh``` to build the frontend.
 
 Then to build the main core, from the root directory of the project run ```./scripts/build.sh```
 

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/rand"
-	"embed"
 	"encoding/hex"
 	"errors"
 	"flag"
@@ -26,20 +25,21 @@ import (
 	"github.com/gorilla/mux"
 	process "github.com/shirou/gopsutil/process"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"dev.forensant.com/pipeline/razor/proximitycore/proxy"
-	"dev.forensant.com/pipeline/razor/proximitycore/scripting"
+	assets "github.com/pipeline/proximity-core"
+	"github.com/pipeline/proximity-core/internal/proxy"
+	"github.com/pipeline/proximity-core/internal/scripting"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 var apiToken, port string
 var gormDB *gorm.DB
 var shouldCleanupProjectSettings bool
 
-//go:embed html_frontend/dist/*
+/*go:embed www/dist/*
 var frontendDir embed.FS
 
-//go:embed docs/swagger.json
-var swaggerJson string
+//go:embed api/swagger.json
+var swaggerJson string*/
 
 type commandLineParameters struct {
 	APIKey           string
@@ -97,7 +97,7 @@ func main() {
 	}
 
 	fmt.Printf("Web frontend is available at: http://%s/\n", listener.Addr().String())
-	frontendSubdirectory, err := fs.Sub(frontendDir, "html_frontend/dist")
+	frontendSubdirectory, err := fs.Sub(assets.HTMLFrontendDir, "www/dist")
 	if err != nil {
 		log.Fatal("Could not open the subdirectory for the frontend: " + err.Error())
 		return
@@ -422,7 +422,7 @@ func handleAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSwaggerJSON(w http.ResponseWriter, r *http.Request) {
-	data := strings.ReplaceAll(swaggerJson, "\"host\": \"localhost\",", "\"host\": \"localhost:"+port+"\",")
+	data := strings.ReplaceAll(assets.SwaggerJSON, "\"host\": \"localhost\",", "\"host\": \"localhost:"+port+"\",")
 
 	w.Write([]byte(data))
 }

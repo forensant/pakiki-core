@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 //go:embed resources/fuzzdb
