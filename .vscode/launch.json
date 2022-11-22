@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "main.go",
+            "program": "cmd/proximitycore/main.go",
             "cwd": "${workspaceFolder}/build",
             "args": ["-project", "abc2"],
         }
