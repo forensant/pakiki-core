@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/pipeline/proximity-core/pkg/project"
 )
@@ -100,7 +101,13 @@ func GetFuzzdbPayload(w http.ResponseWriter, r *http.Request) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		text := scanner.Text()
+		text := strings.ToValidUTF8(scanner.Text(), "")
+		text = strings.Map(func(r rune) rune {
+			if unicode.IsGraphic(r) {
+				return r
+			}
+			return -1
+		}, scanner.Text())
 		payloads = append(payloads, text)
 	}
 
