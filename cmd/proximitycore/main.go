@@ -35,12 +35,6 @@ var apiToken, port string
 var gormDB *gorm.DB
 var shouldCleanupProjectSettings bool
 
-/*go:embed www/dist/*
-var frontendDir embed.FS
-
-//go:embed api/swagger.json
-var swaggerJson string*/
-
 type commandLineParameters struct {
 	APIKey           string
 	BindAddress      string
