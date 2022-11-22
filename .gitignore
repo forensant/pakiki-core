@@ -1,3 +1,4 @@
+api/*
 build/*
 .DS_Store
 *.prx

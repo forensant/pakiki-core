@@ -2,7 +2,7 @@
 
 # generate dependencies and tidy the project
 echo "# Generating Swagger documents"
-swag init -o api
+swag init -o api -g cmd/proximitycore/main.go --parseInternal
 
 #go mod tidy
 

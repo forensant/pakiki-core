@@ -147,7 +147,7 @@ jobs:
       - name: Run swaggo
         run: |
           go install github.com/swaggo/swag/cmd/swag
-          swag init
+          swag init -o api -g cmd/proximitycore/main.go --parseInternal
 
       - name: Build
         run: go build -o build/proximitycore.exe cmd/proximitycore/main.go
