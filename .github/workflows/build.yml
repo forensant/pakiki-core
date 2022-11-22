@@ -150,7 +150,7 @@ jobs:
           swag init
 
       - name: Build
-        run: go build -o build/proximitycore.exe
+        run: go build -o build/proximitycore.exe cmd/proximitycore/main.go
 
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3
