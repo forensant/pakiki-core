@@ -1,9 +1,10 @@
-module dev.forensant.com/pipeline/razor/proximitycore
+module github.com/pipeline/proximity-core
 
 go 1.16
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/elazarl/goproxy v0.0.0-20211114080932-d06c3be7c11b // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect

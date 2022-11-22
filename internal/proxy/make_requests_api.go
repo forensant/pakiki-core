@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
+	"github.com/pipeline/proximity-core/internal/request_queue"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 var defaultConnectionPool *http.Client

@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"unicode/utf8"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"dev.forensant.com/pipeline/razor/proximitycore/scripting"
+	"github.com/pipeline/proximity-core/internal/scripting"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 //go:embed inject_python.py

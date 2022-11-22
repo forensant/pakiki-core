@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 type InterceptSettings struct {

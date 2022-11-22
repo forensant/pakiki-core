@@ -25,8 +25,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
+	"github.com/pipeline/proximity-core/internal/request_queue"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 //go:embed proximity_core.py
@@ -58,23 +58,6 @@ func CancelScriptInternal(guid string) error {
 	project.CancelScript(guid)
 
 	return nil
-}
-
-func printPythonErrors(stderr io.ReadCloser) {
-	readBuf := make([]byte, 10240)
-
-	for {
-		bytesRead, err := stderr.Read(readBuf)
-		if bytesRead != 0 {
-			fmt.Printf("Error from Python process: %s\n", readBuf)
-		}
-		if err != nil {
-			if err != io.EOF {
-				fmt.Printf("Error reading Python stderr: %s\n", err.Error())
-			}
-			return
-		}
-	}
 }
 
 func readFromBuffer(r io.ReadCloser, waitForNewline bool) (string, error) {
@@ -161,8 +144,6 @@ func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCl
 	if err != nil {
 		return
 	}
-
-	//go printPythonErrors(pythonErr)
 
 	runningScripts[guid] = pythonCmd
 

@@ -1,4 +1,6 @@
+api/*
 build/*
 .DS_Store
 *.prx
 tmp/*
+coverage.txt

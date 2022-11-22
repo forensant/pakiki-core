@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
-	"dev.forensant.com/pipeline/razor/proximitycore/proxy/interactsh"
+	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/pipeline/proximity-core/third_party/interactsh"
 	"github.com/projectdiscovery/interactsh/pkg/server"
 )
 

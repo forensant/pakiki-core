@@ -2,7 +2,6 @@
 // https://github.com/elazarl/goproxy
 
 // At some point, we may need to refactor this so that H2 will work, but the library does support websockets
-// I'm also not sure how/if it handles streaming
 //
 // Basically, it works well enough for now, but at some point we may need to make significant contributions or a fork
 // to the goproxy library in order to support everything we need - including more robust error handling which is exposed to the
@@ -27,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/project"
 	"github.com/google/uuid"
 	"github.com/pipeline/goproxy"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync"
 
-	"dev.forensant.com/pipeline/razor/proximitycore/proxy/request_queue"
+	"github.com/pipeline/proximity-core/internal/request_queue"
 )
 
 var listenerWaitGroup sync.WaitGroup
