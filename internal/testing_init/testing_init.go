@@ -7,6 +7,8 @@ import (
 	"path"
 	"runtime"
 
+	"github.com/pipeline/proximity-core/internal/request_queue"
+	"github.com/pipeline/proximity-core/pkg/project"
 	"github.com/zalando/go-keyring"
 )
 
@@ -19,4 +21,10 @@ func init() {
 	}
 
 	keyring.MockInit()
+	request_queue.Init()
+
+	pf, _ := os.CreateTemp("", "proximity-testprojdb-*")
+	tf, _ := os.CreateTemp("", "proximity-testtmpdb-*")
+	ioHub := project.NewIOHub()
+	ioHub.Run(pf.Name(), tf.Name())
 }

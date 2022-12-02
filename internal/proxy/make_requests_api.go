@@ -129,6 +129,10 @@ type AddRequestToQueueParameters struct {
 // @Failure 500 {string} string Error
 // @Router /requests/queue [post]
 func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
+	if defaultConnectionPool == nil {
+		initConnectionPool()
+	}
+
 	var params AddRequestToQueueParameters
 	err := json.NewDecoder(r.Body).Decode(&params)
 	if err != nil {
