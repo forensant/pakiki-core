@@ -107,7 +107,7 @@ func TestRunInjectScan(t *testing.T) {
 
 	proximityServerMux := http.NewServeMux()
 	proximityServerMux.HandleFunc("/inject_operation/run", RunInjection)
-	proximityServerMux.HandleFunc("/requests/queue", AddRequestToQueue)
+	proximityServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
 	s := httptest.NewServer(proximityServerMux)
 	defer s.Close()
 
@@ -148,11 +148,9 @@ func TestRunInjectScan(t *testing.T) {
 				observedReqCount += 1
 				if observedReqCount >= len(test.responses) {
 					stop = true
-					break
 				}
 			case <-time.After(5 * time.Second):
 				stop = true
-				break
 			}
 
 			if stop {
@@ -175,3 +173,5 @@ func TestRunInjectScan(t *testing.T) {
 		}
 	}
 }
+
+// TODO: Test cancelling

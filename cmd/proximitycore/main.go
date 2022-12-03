@@ -132,6 +132,7 @@ func main() {
 	rtr.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
 
 	rtr.HandleFunc("/requests", authenticateWithGormDB(project.GetRequests))
+	rtr.HandleFunc("/requests/bulk_queue", authenticate(proxy.BulkRequestQueue))
 	rtr.HandleFunc("/requests/make", authenticate(proxy.MakeRequest))
 	rtr.HandleFunc("/requests/queue", authenticate(proxy.AddRequestToQueue))
 	rtr.HandleFunc("/requests/sitemap", authenticate(project.GetSitemap))

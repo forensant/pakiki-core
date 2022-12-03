@@ -77,6 +77,14 @@ func InjectFromGUID(guid string) *InjectOperation {
 	return injectOperation
 }
 
+func (injectOperation *InjectOperation) Broadcast() {
+	prevValue := injectOperation.DoNotRecord
+	injectOperation.updatePercentCompleted(false)
+	injectOperation.DoNotRecord = true
+	injectOperation.Record()
+	injectOperation.DoNotRecord = prevValue
+}
+
 func CancelInjectOperation(guid string, err string) {
 	injectOperation := InjectFromGUID(guid)
 	if injectOperation == nil {

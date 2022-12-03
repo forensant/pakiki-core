@@ -101,8 +101,7 @@ func GetFuzzdbPayload(w http.ResponseWriter, r *http.Request) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		text := strings.ToValidUTF8(scanner.Text(), "")
-		text = strings.Map(func(r rune) rune {
+		text := strings.Map(func(r rune) rune {
 			if unicode.IsGraphic(r) {
 				return r
 			}
