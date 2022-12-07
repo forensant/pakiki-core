@@ -237,7 +237,7 @@ func bulkRequestWorker(ssl bool, hostname string, scanId string, requestParts []
 			if part.Inject {
 				payload, _ := base64.StdEncoding.DecodeString(payloadList[injectI])
 				if part.RequestPart != payloadList[injectI] {
-					differingPayloads[strconv.Itoa(len(differingPayloads))] = string(payload)
+					differingPayloads[strconv.Itoa(injectI)] = string(payload)
 				}
 
 				requestData = append(requestData, payload...)
