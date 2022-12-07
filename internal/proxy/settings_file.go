@@ -52,6 +52,10 @@ func GetSettings() (*ProxySettings, error) {
 		decoder.Decode(settings)
 	}
 
+	if settings.MaxConnectionsPerHost <= 0 {
+		settings.MaxConnectionsPerHost = 2
+	}
+
 	return settings, nil
 }
 

@@ -88,13 +88,6 @@ class InjectableGeneratedRequest:
 
     return make_request_to_core(url, properties)
 
-  def get_response(self):
-    make_req_response = self.make(False)
-    json_response = json.loads(make_req_response)
-    guid = json_response['GUID']
-  
-    return get_response_for_request(guid)
-
 class InjectableRequest:
   """A request object which is split into parts which can be replaced with alternative payloads.
   
@@ -113,16 +106,16 @@ class InjectableRequest:
     self.properties       = {}
 
   def injection_point(self, index: int) -> bytes:
-    """Get the content of the given injection point."""
+    """Get the content of the given injection point (in base64)."""
     i = 0
     for part in self.request_parts:
       if part['Inject'] == True:
         if i == index:
-          return base64.standard_b64decode(part['RequestPart'])
+          return part['RequestPart']
 
         i += 1
     
-    return b''
+    return ''
 
   def injection_point_count(self) -> int:
     """Counts the number of injection points"""
@@ -136,6 +129,23 @@ class InjectableRequest:
   def queue(self):
     """Adds the request to the request queue."""
     return InjectableGeneratedRequest(self).make()
+
+  def bulk_queue(self, replacements):
+    """Queue all of the replacements at once
+    
+    :param replacements: an array of replacements to make, each element of the array should be a secondary array with a string for each injection point (each one should be base64 encoded)
+    :type replacements: array
+    """
+    properties = {
+      'request': self.request_parts,
+      'host': self.host,
+      'ssl': self.ssl,
+      'replacements': replacements
+    }
+
+    url = '/requests/bulk_queue'
+
+    return make_request_to_core(url, properties)
 
   def replace_injection_point(self, index: int, replacement: str):
     """Replaces the given injection point with the replacement."""

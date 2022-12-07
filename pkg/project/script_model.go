@@ -66,6 +66,15 @@ func ScriptIncrementTotalRequests(guid string) {
 	runningScriptsMutex.Unlock()
 }
 
+func ScriptIncrementTotalRequestsBy(guid string, amount int) {
+	runningScriptsMutex.Lock()
+	if _, ok := runningScripts[guid]; ok {
+		runningScripts[guid].Total += amount
+		sendScriptProgressUpdate(guid, runningScripts[guid])
+	}
+	runningScriptsMutex.Unlock()
+}
+
 func ScriptDecrementTotalRequests(guid string) {
 	runningScriptsMutex.Lock()
 	if _, ok := runningScripts[guid]; ok {

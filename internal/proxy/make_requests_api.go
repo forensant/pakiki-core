@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
+	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pipeline/proximity-core/internal/request_queue"
@@ -20,9 +20,8 @@ import (
 )
 
 var defaultConnectionPool *http.Client
-var updateInjectOperationMutex sync.Mutex
 
-// MakeRequestParameters contains the parameters which are parsed to the Make Request API call
+// MakeRequestParameters contains the parameters which are passed to the Make Request API call
 type MakeRequestParameters struct {
 	RequestBase64 string `json:"request" example:"<base64 encoded request>"`
 	Host          string `json:"host"`
@@ -30,6 +29,15 @@ type MakeRequestParameters struct {
 	ScanID        string `json:"scan_id"`
 	ClientCert    string `json:"client_cert"`
 	ClientCertKey string `json:"client_cert_key"`
+}
+
+// BulkRequestQueueParameters contains the parameters which are passed to the Bulk Request API call
+type BulkRequestQueueParameters struct {
+	Host         string                               `json:"host"`
+	SSL          bool                                 `json:"ssl"`
+	ScanID       string                               `json:"scan_id"`
+	Replacements [][]string                           `json:"replacements"`
+	Request      []project.InjectOperationRequestPart `json:"request"`
 }
 
 // Request returns the base64 decoded request
@@ -161,16 +169,7 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			errorStr := "Error making request to the site: " + err.Error()
 
-			updateInjectOperationMutex.Lock()
-			injectOp := project.InjectFromGUID(params.ScanID)
-
-			if injectOp != nil {
-				injectOp.TotalRequestCount -= 1
-				injectOp.UpdateAndRecord()
-			}
 			project.ScriptDecrementTotalRequests(params.ScanID)
-
-			updateInjectOperationMutex.Unlock()
 
 			if request != nil {
 				request.Error = errorStr
@@ -182,13 +181,6 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 			request.ScanID = params.ScanID
 			request.Payloads = params.Payloads
 			request.Record()
-		}
-
-		injectOp := project.InjectFromGUID(params.ScanID)
-
-		if injectOp != nil {
-			injectOp.IncrementRequestCount()
-			injectOp.UpdateAndRecord()
 		}
 
 		close(requestFinishedChannel)
@@ -208,6 +200,149 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 				project.ScriptDecrementRequestCount(params.ScanID)
 				cancel()
 			}
+		}
+	}()
+
+	w.Header().Set("Content-Type", "text/text")
+	w.Write([]byte("OK"))
+}
+
+func bulkRequestWorker(ssl bool, hostname string, scanId string, requestParts []project.InjectOperationRequestPart, payloads <-chan []string, done chan<- bool, httpClient *http.Client) {
+	for payloadList := range payloads {
+		// check if the scan has been cancelled
+		if !request_queue.Contains(scanId) {
+			done <- true
+			return
+		}
+
+		requestData := make([]byte, 0)
+		injectI := 0
+		differingPayloads := make(map[string]string)
+
+		injectionPointCount := 0
+		for _, part := range requestParts {
+			if part.Inject {
+				injectionPointCount += 1
+			}
+		}
+
+		if injectionPointCount != len(payloadList) {
+			fmt.Printf("Injection point parameter list didn't have the same number of injection points as the request - skipping\n")
+			request_queue.Decrement(scanId)
+			project.ScriptDecrementTotalRequests(scanId)
+			continue
+		}
+
+		for _, part := range requestParts {
+			if part.Inject {
+				payload, _ := base64.StdEncoding.DecodeString(payloadList[injectI])
+				if part.RequestPart != payloadList[injectI] {
+					differingPayloads[strconv.Itoa(injectI)] = string(payload)
+				}
+
+				requestData = append(requestData, payload...)
+				injectI += 1
+			} else {
+				reqData, _ := base64.StdEncoding.DecodeString(part.RequestPart)
+				requestData = append(requestData, reqData...)
+			}
+		}
+		req, err := makeRequestToSite(ssl, hostname, requestData, httpClient, nil)
+
+		if err != nil {
+			fmt.Println("Error making request: " + err.Error())
+		} else {
+			req.ScanID = scanId
+
+			if len(differingPayloads) != 0 {
+				jsonPayloads, _ := json.Marshal(differingPayloads)
+				req.Payloads = string(jsonPayloads)
+			} else {
+				req.Notes = "Base request"
+			}
+
+			req.Record()
+		}
+
+		request_queue.Decrement(scanId)
+		project.ScriptDecrementTotalRequests(scanId)
+	}
+	done <- true
+}
+
+// BulkRequestQueue godoc
+// @Summary Add Multiple Requests to the Qeueue
+// @Description add multiple requests to the queue for scanning sites
+// @Tags Requests
+// @Security ApiKeyAuth
+// @Param body body proxy.BulkRequestQueueParameters true "Request and Injection Details"
+// @Success 200
+// @Failure 500 {string} string Error
+// @Router /requests/bulk_queue [post]
+func BulkRequestQueue(w http.ResponseWriter, r *http.Request) {
+	if defaultConnectionPool == nil {
+		initConnectionPool()
+	}
+
+	var params BulkRequestQueueParameters
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		fmt.Println("Error decoding JSON: " + err.Error())
+		http.Error(w, "Error decoding JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	settings, err := GetSettings()
+	if err != nil {
+		fmt.Printf("Could not get settings: " + err.Error())
+		http.Error(w, "Could not get settings: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	injectScan := project.InjectFromGUID(params.ScanID)
+	script := project.ScriptRunFromGUID(params.ScanID)
+	if injectScan == nil && script == nil {
+		fmt.Printf("Inject scan or script doesn't exist: %s", params.ScanID)
+		http.Error(w, "Could not find inject scan or script: "+params.ScanID, http.StatusBadRequest)
+		return
+	}
+
+	if injectScan != nil {
+		request_queue.Add(injectScan)
+	} else if script != nil {
+		request_queue.IncrementBy(params.ScanID, len(params.Replacements)+1)
+		project.ScriptIncrementTotalRequestsBy(params.ScanID, len(params.Replacements)+1)
+	}
+
+	go func() {
+		// now create workers to actually send the requests
+		payloads := make(chan []string, len(params.Replacements)+1)
+		complete := make(chan bool, settings.MaxConnectionsPerHost)
+		for i := 0; i < settings.MaxConnectionsPerHost; i++ {
+			go bulkRequestWorker(params.SSL, params.Host, params.ScanID, params.Request, payloads, complete, defaultConnectionPool)
+		}
+
+		baseReqReplacements := make([]string, 0)
+		for _, part := range params.Request {
+			if part.Inject {
+				baseReqReplacements = append(baseReqReplacements, part.RequestPart)
+			}
+		}
+		payloads <- baseReqReplacements
+
+		for _, payload := range params.Replacements {
+			payloads <- payload
+		}
+
+		close(payloads)
+
+		// wait for the workers to finish
+		for i := 0; i < settings.MaxConnectionsPerHost; i++ {
+			<-complete
+		}
+
+		if injectScan != nil {
+			injectScan.Record()
 		}
 	}()
 
@@ -311,9 +446,5 @@ func updateConnectionPool(connectionPool *http.Client, clientCert *tls.Certifica
 	}
 
 	transport.TLSClientConfig = tlsConfig
-
-	if settings.MaxConnectionsPerHost == 0 {
-		settings.MaxConnectionsPerHost = 2
-	}
 	transport.MaxConnsPerHost = settings.MaxConnectionsPerHost
 }

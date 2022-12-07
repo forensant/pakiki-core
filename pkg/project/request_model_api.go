@@ -442,7 +442,7 @@ func isInSlice(slice []string, val string) bool {
 // @Success 200 {array} project.Request
 // @Failure 500 {string} string Error
 // @Router /requests [get]
-func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func GetRequests(w http.ResponseWriter, r *http.Request) {
 	var requests []Request
 	var result *gorm.DB
 
@@ -451,9 +451,9 @@ func GetRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	scanId := r.FormValue("scanid")
 	var tx *gorm.DB
 	if scanId == "" {
-		tx = db.Where("scan_id = ''")
+		tx = readableDatabase.Where("scan_id = ''")
 	} else {
-		tx = db.Where("scan_id IN ?", strings.Split(scanId, ":"))
+		tx = readableDatabase.Where("scan_id IN ?", strings.Split(scanId, ":"))
 	}
 
 	filter := r.FormValue("filter")

@@ -2,17 +2,66 @@ package request_queue
 
 import (
 	"sync"
+
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 var requestQueueMutex sync.Mutex
 var requestQueueCount map[string]int
+var requestQueueInjectOperations map[string]*project.InjectOperation
 var requestQueueChannels map[string](chan bool)
 
 func Init() {
 	requestQueueMutex.Lock()
 	requestQueueCount = make(map[string]int)
 	requestQueueChannels = make(map[string](chan bool))
+	requestQueueInjectOperations = make(map[string]*project.InjectOperation)
 	requestQueueMutex.Unlock()
+}
+
+func Add(op *project.InjectOperation) {
+	requestQueueMutex.Lock()
+	requestQueueInjectOperations[op.GUID] = op
+	requestQueueMutex.Unlock()
+}
+
+func CancelRequests(guid string) {
+	requestQueueMutex.Lock()
+
+	delete(requestQueueCount, guid)
+	delete(requestQueueInjectOperations, guid)
+	if _, exists := requestQueueChannels[guid]; exists {
+		close(requestQueueChannels[guid])
+	}
+	delete(requestQueueChannels, guid)
+
+	requestQueueMutex.Unlock()
+}
+
+func Channel(guid string) chan bool {
+	requestQueueMutex.Lock()
+	if _, existing := requestQueueChannels[guid]; !existing {
+		requestQueueChannels[guid] = make(chan bool)
+	}
+
+	c := requestQueueChannels[guid]
+	requestQueueMutex.Unlock()
+	return c
+}
+
+func Contains(guid string) bool {
+	exists := false
+	requestQueueMutex.Lock()
+	if _, existing := requestQueueCount[guid]; existing {
+		exists = true
+	}
+
+	if _, existing := requestQueueInjectOperations[guid]; existing {
+		exists = true
+	}
+	requestQueueMutex.Unlock()
+
+	return exists
 }
 
 func Close() {
@@ -39,33 +88,15 @@ func CloseQueueIfEmpty(guid string) {
 	requestQueueMutex.Unlock()
 }
 
-func CancelRequests(guid string) {
-	requestQueueMutex.Lock()
-
-	delete(requestQueueCount, guid)
-	if _, exists := requestQueueChannels[guid]; exists {
-		close(requestQueueChannels[guid])
-	}
-	delete(requestQueueChannels, guid)
-
-	requestQueueMutex.Unlock()
-}
-
-func Channel(guid string) chan bool {
-	requestQueueMutex.Lock()
-	if _, existing := requestQueueChannels[guid]; !existing {
-		requestQueueChannels[guid] = make(chan bool)
-	}
-
-	c := requestQueueChannels[guid]
-	requestQueueMutex.Unlock()
-	return c
-}
-
 func Decrement(guid string) {
 	requestQueueMutex.Lock()
 	if _, existing := requestQueueCount[guid]; existing {
 		requestQueueCount[guid] -= 1
+	}
+
+	if _, existing := requestQueueInjectOperations[guid]; existing {
+		requestQueueInjectOperations[guid].RequestsMadeCount += 1
+		requestQueueInjectOperations[guid].Broadcast()
 	}
 
 	requestQueueMutex.Unlock()
@@ -80,5 +111,15 @@ func Increment(guid string) {
 	}
 
 	requestQueueCount[guid] += 1
+	requestQueueMutex.Unlock()
+}
+
+func IncrementBy(guid string, amount int) {
+	requestQueueMutex.Lock()
+	if _, existing := requestQueueCount[guid]; !existing {
+		requestQueueCount[guid] = 0
+	}
+
+	requestQueueCount[guid] += amount
 	requestQueueMutex.Unlock()
 }
