@@ -51,7 +51,7 @@ func GetInjectOperations(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Success 200 {object} project.InjectOperation
 // @Failure 500 {string} string Error
 // @Router /inject_operations/{path} [get]
-func GetInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func GetInjectOperation(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	guid := vars["guid"]
 
@@ -61,7 +61,7 @@ func GetInjectOperation(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	var operation InjectOperation
-	result := db.Preload(clause.Associations).First(&operation, "guid = ?", guid)
+	result := readableDatabase.Preload(clause.Associations).First(&operation, "guid = ?", guid)
 
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)

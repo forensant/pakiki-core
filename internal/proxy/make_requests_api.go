@@ -251,10 +251,14 @@ func bulkRequestWorker(ssl bool, hostname string, scanId string, requestParts []
 		if err != nil {
 			fmt.Println("Error making request: " + err.Error())
 		} else {
-			jsonPayloads, _ := json.Marshal(differingPayloads)
-
 			req.ScanID = scanId
-			req.Payloads = string(jsonPayloads)
+
+			if len(differingPayloads) != 0 {
+				jsonPayloads, _ := json.Marshal(differingPayloads)
+				req.Payloads = string(jsonPayloads)
+			} else {
+				req.Notes = "Base request"
+			}
 
 			req.Record()
 		}
@@ -270,7 +274,7 @@ func bulkRequestWorker(ssl bool, hostname string, scanId string, requestParts []
 // @Description add multiple requests to the queue for scanning sites
 // @Tags Requests
 // @Security ApiKeyAuth
-// @Param body body proxy.BulkRequestQueueParameters true "Request Details"
+// @Param body body proxy.BulkRequestQueueParameters true "Request and Injection Details"
 // @Success 200
 // @Failure 500 {string} string Error
 // @Router /requests/bulk_queue [post]
@@ -310,28 +314,20 @@ func BulkRequestQueue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		// make the base request
-		baseReq := make([]byte, 0)
-		for _, part := range params.Request {
-			reqData, _ := base64.StdEncoding.DecodeString(part.RequestPart)
-			baseReq = append(baseReq, reqData...)
-		}
-		req, err := makeRequestToSite(params.SSL, params.Host, baseReq, defaultConnectionPool, nil)
-
-		if err != nil {
-			fmt.Println("Error making request: " + err.Error())
-		} else {
-			req.ScanID = params.ScanID
-			req.Record()
-			request_queue.Decrement(params.ScanID)
-		}
-
 		// now create workers to actually send the requests
-		payloads := make(chan []string, len(params.Replacements))
+		payloads := make(chan []string, len(params.Replacements)+1)
 		complete := make(chan bool, settings.MaxConnectionsPerHost)
 		for i := 0; i < settings.MaxConnectionsPerHost; i++ {
 			go bulkRequestWorker(params.SSL, params.Host, params.ScanID, params.Request, payloads, complete, defaultConnectionPool)
 		}
+
+		baseReqReplacements := make([]string, 0)
+		for _, part := range params.Request {
+			if part.Inject {
+				baseReqReplacements = append(baseReqReplacements, part.RequestPart)
+			}
+		}
+		payloads <- baseReqReplacements
 
 		for _, payload := range params.Replacements {
 			payloads <- payload

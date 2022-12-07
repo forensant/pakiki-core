@@ -119,7 +119,7 @@ func main() {
 	rtr.HandleFunc("/inject_operations/fuzzdb_payload", authenticate(proxy.GetFuzzdbPayload))
 	rtr.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
 	rtr.HandleFunc("/inject_operations/run", authenticate(proxy.RunInjection))
-	rtr.HandleFunc("/inject_operations/{guid}", authenticateWithGormDB(project.GetInjectOperation))
+	rtr.HandleFunc("/inject_operations/{guid}", authenticate(project.GetInjectOperation))
 	rtr.HandleFunc("/inject_operations/{guid}/archive", authenticateWithGormDB(project.PatchInjectOperationArchive))
 	rtr.HandleFunc("/inject_operations/{guid}/title", authenticateWithGormDB(project.PatchInjectOperationTitle))
 
@@ -131,7 +131,7 @@ func main() {
 	rtr.HandleFunc("/proxy/set_intercepted_response", authenticate(proxy.SetInterceptedResponse))
 	rtr.HandleFunc("/proxy/settings", authenticate(proxy.HandleSettingsRequest))
 
-	rtr.HandleFunc("/requests", authenticateWithGormDB(project.GetRequests))
+	rtr.HandleFunc("/requests", authenticate(project.GetRequests))
 	rtr.HandleFunc("/requests/bulk_queue", authenticate(proxy.BulkRequestQueue))
 	rtr.HandleFunc("/requests/make", authenticate(proxy.MakeRequest))
 	rtr.HandleFunc("/requests/queue", authenticate(proxy.AddRequestToQueue))

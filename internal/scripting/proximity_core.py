@@ -133,7 +133,7 @@ class InjectableRequest:
   def bulk_queue(self, replacements):
     """Queue all of the replacements at once
     
-    :param replacements: an array of replacements to make, each element of the array should be a secondary array with a string for each injection point
+    :param replacements: an array of replacements to make, each element of the array should be a secondary array with a string for each injection point (each one should be base64 encoded)
     :type replacements: array
     """
     properties = {
