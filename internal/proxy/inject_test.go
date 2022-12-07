@@ -45,6 +45,25 @@ var getRequestWithURLInject = []project.InjectOperationRequestPart{
 	},
 }
 
+var getRequestWithURLAndBodyInject = []project.InjectOperationRequestPart{
+	{
+		RequestPart: base64.StdEncoding.EncodeToString([]byte("POST /")),
+		Inject:      false,
+	},
+	{
+		RequestPart: base64.StdEncoding.EncodeToString([]byte("0")),
+		Inject:      true,
+	},
+	{
+		RequestPart: base64.StdEncoding.EncodeToString([]byte(" HTTP/1.1\r\nHost: HOST\r\nUser-Agent: Golang\r\n\r\n")),
+		Inject:      false,
+	},
+	{
+		RequestPart: base64.StdEncoding.EncodeToString([]byte("a")),
+		Inject:      true,
+	},
+}
+
 func checkRequestExists(testCase *injectTestCase, t *testing.T, w http.ResponseWriter, r *http.Request) {
 	found := false
 	b, _ := ioutil.ReadAll(r.Body)
@@ -104,6 +123,20 @@ func TestRunInjectScan(t *testing.T) {
 				{"/1", "", 0},
 				{"/test", "", 0},
 				{"/abc", "", 0},
+			},
+		},
+		{
+			project.InjectOperation{
+				Request:     getRequestWithURLAndBodyInject,
+				IterateFrom: 1,
+				IterateTo:   3,
+			},
+			[]expectedRequestResponse{
+				{"/0", "a", 0}, // base request
+				{"/1", "a", 0},
+				{"/2", "a", 0},
+				{"/0", "1", 0},
+				{"/0", "2", 0},
 			},
 		},
 	}

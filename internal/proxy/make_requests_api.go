@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -235,12 +236,12 @@ func bulkRequestWorker(ssl bool, hostname string, scanId string, requestParts []
 		for _, part := range requestParts {
 			if part.Inject {
 				payload, _ := base64.StdEncoding.DecodeString(payloadList[injectI])
-				origPart, _ := base64.StdEncoding.DecodeString(part.RequestPart)
 				if part.RequestPart != payloadList[injectI] {
-					differingPayloads[string(origPart)] = string(payload)
+					differingPayloads[strconv.Itoa(len(differingPayloads))] = string(payload)
 				}
 
 				requestData = append(requestData, payload...)
+				injectI += 1
 			} else {
 				reqData, _ := base64.StdEncoding.DecodeString(part.RequestPart)
 				requestData = append(requestData, reqData...)
