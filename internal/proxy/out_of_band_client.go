@@ -16,6 +16,7 @@ import (
 
 var oob_client *interactsh.Client = nil
 var generation_chan chan bool = nil
+var interactDomain string = "interact.proximityhq.com"
 
 func generateOOBClient() error {
 	var err error
@@ -23,7 +24,7 @@ func generateOOBClient() error {
 	defer close(generation_chan)
 	fmt.Printf("Generating new interactsh client, this may take a while...\n")
 	oob_client, err = interactsh.New(&interactsh.Options{
-		ServerURL:         "https://interact.proximityhq.com",
+		ServerURL:         "https://" + interactDomain,
 		PersistentSession: true,
 	})
 
@@ -78,7 +79,7 @@ func getOOBClient() (*interactsh.Client, error) {
 
 func oobStartPolling() {
 	oob_client.StartPolling(time.Duration(5)*time.Second, func(interaction *server.Interaction) {
-		url := interaction.Protocol + "://" + interaction.FullId + ".interact.sh"
+		url := interaction.Protocol + "://" + interaction.FullId + "." + interactDomain
 		verb := ""
 
 		if interaction.Protocol == "http" {
@@ -88,7 +89,7 @@ func oobStartPolling() {
 
 			if err == nil {
 				request.URL.Scheme = interaction.Protocol
-				request.URL.Host = interaction.FullId + ".interact.sh"
+				request.URL.Host = interaction.FullId + "." + interactDomain
 				url = request.URL.String()
 				verb = request.Method
 			}
