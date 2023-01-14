@@ -12,6 +12,7 @@ type InterceptedRequest struct {
 	ObjectType    string
 	RecordAction  string `example:"Either add or delete"`
 	RequestAction string `json:"-" example:"One of forward, forward_and_intercept_response or drop"`
+	IsUTF8        bool
 }
 
 const (

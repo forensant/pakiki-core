@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gorilla/mux"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -34,7 +35,9 @@ type RequestResponseContents struct {
 	MimeType              string
 	DataPackets           []DataPacket
 	LargeResponse         bool
+	IsUTF8                bool
 	CombinedContentLength int64
+	Error                 string
 }
 
 // PartialRequestResponseData contains a slice of the request/response from a given request
@@ -277,7 +280,7 @@ func GetRequestPartialData(w http.ResponseWriter, r *http.Request, db *gorm.DB) 
 // @Success 200 {object} project.RequestResponseContents
 // @Failure 500 {string} string Error
 // @Router /requests/{guid}/contents [get]
-func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	guid := vars["guid"]
 
@@ -287,7 +290,7 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm
 	}
 
 	var httpRequest Request
-	result := db.First(&httpRequest, "guid = ?", guid)
+	result := readableDatabase.First(&httpRequest, "guid = ?", guid)
 
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
@@ -308,7 +311,7 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm
 	if requestResponse.LargeResponse {
 		qry += " AND direction = 'Request'"
 	}
-	result = db.Order(dataPacketOrder).Where(qry, httpRequest.ID).Find(&dataPackets)
+	result = readableDatabase.Order(dataPacketOrder).Where(qry, httpRequest.ID).Find(&dataPackets)
 
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
@@ -318,8 +321,12 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm
 	if httpRequest.Protocol == "Websocket" || httpRequest.Protocol == "Out of Band" {
 		requestResponse.DataPackets = dataPackets
 
-		res := db.Where("request_id = ? AND modified = true", httpRequest.ID).Find(&DataPacket{})
+		res := readableDatabase.Where("request_id = ? AND modified = true", httpRequest.ID).Find(&DataPacket{})
 		requestResponse.Modified = (res.RowsAffected > 0)
+
+		for idx, dpkt := range requestResponse.DataPackets {
+			requestResponse.DataPackets[idx].IsUTF8 = utf8.Valid(dpkt.Data)
+		}
 
 	} else {
 		var origReq []byte
@@ -359,10 +366,12 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request, db *gorm
 		requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
 		requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(formatResponse(modResp, contentType))
 
+		requestResponse.IsUTF8 = (utf8.Valid(origReq) && utf8.Valid(origResp) && utf8.Valid(modReq) && utf8.Valid(modResp))
 	}
 
 	requestResponse.URL = httpRequest.URL
 	requestResponse.MimeType = httpRequest.ResponseContentType
+	requestResponse.Error = httpRequest.Error
 
 	semicolonPos := strings.Index(requestResponse.MimeType, ";")
 	if semicolonPos != -1 {
@@ -618,7 +627,7 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Success 200 {string} string message
 // @Failure 500 {string} string Error
 // @Router /requests/{guid}/notes [patch]
-func PatchRequestNotes(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func PatchRequestNotes(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	guid := vars["guid"]
 
@@ -628,7 +637,7 @@ func PatchRequestNotes(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	var httpRequest Request
-	result := db.First(&httpRequest, "guid = ?", guid)
+	result := readableDatabase.First(&httpRequest, "guid = ?", guid)
 
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)

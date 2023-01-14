@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/pipeline/proximity-core/pkg/project"
 )
@@ -19,7 +20,6 @@ type InterceptSettings struct {
 type InterceptedRequestResponse struct {
 	RequestGUID    string
 	DataPacketGUID string
-	ID             uint
 	Body           string `example:"<base64 encoded body>"`
 	Direction      string `example:"Either browser_to_server or server_to_browser"`
 	RequestAction  string `example:"One of: forward, forward_and_intercept_response or drop"`
@@ -35,6 +35,7 @@ func interceptRequest(request *project.Request, guid string, direction string, r
 		Body:          base64.StdEncoding.EncodeToString(requestData),
 		Direction:     direction,
 		ResponseReady: make(chan bool),
+		IsUTF8:        utf8.Valid(requestData),
 	}
 
 	interceptedRequest.Record(project.RecordActionAdd)

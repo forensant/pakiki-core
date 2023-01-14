@@ -78,6 +78,7 @@ type DataPacket struct {
 	DisplayData string
 	StartOffset int64 `gorm:"index:idx_req_start"`
 	EndOffset   int64
+	IsUTF8      bool `gorm:"-"`
 }
 
 // 2 MB is the maximum size of a single "packet" for a request
