@@ -27,8 +27,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     rm -rf build/PythonInterpreter_*
 
     echo "# Building Proximity Core"
-    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o build/ProximityCore_x86_64 cmd/proximitycore/main.go
-    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o build/ProximityCore_arm64 cmd/proximitycore/main.go
+    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o build/ProximityCore_x86_64 cmd/proximitycore/main.go
+    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o build/ProximityCore_arm64 cmd/proximitycore/main.go
     lipo -create -output build/proximitycore build/ProximityCore_x86_64 build/ProximityCore_arm64
     rm build/ProximityCore_*
 else
@@ -43,7 +43,7 @@ else
     scripts/copy_lib_linux.rb build/
 
     echo "# Building Proximity Core"
-    go build -o build/proximitycore cmd/proximitycore/main.go
+    go build -ldflags "-s -w" -o build/proximitycore cmd/proximitycore/main.go
 fi
 
 echo ""
