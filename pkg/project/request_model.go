@@ -587,9 +587,16 @@ func (request *Request) ShouldFilter(filter string) bool {
 	excludeResources := false
 	if strings.Index(filter, "exclude_resources:true") == 0 {
 		filter = strings.Replace(filter, "exclude_resources:true", "", 1)
-		filter = strings.TrimLeft(filter, " ")
 		excludeResources = true
 	}
+
+	negativeFilter := false
+	if strings.Index(filter, "negative_filter:true") != -1 {
+		filter = strings.Replace(filter, "negative_filter:true", "", 1)
+		negativeFilter = true
+	}
+
+	filter = strings.TrimLeft(filter, " ")
 
 	if excludeResources && filter == "" {
 		return request.isResource()
@@ -598,11 +605,19 @@ func (request *Request) ShouldFilter(filter string) bool {
 	var requests []Request
 	tx := readableDatabase.Where("id = ?", request.ID)
 
-	tx = tx.Where(
-		"url LIKE ? OR id IN (SELECT request_id FROM data_packets GROUP BY request_id HAVING request_id = ? AND GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)",
-		"%"+filter+"%",
-		request.ID,
-		"%"+filter+"%")
+	if negativeFilter {
+		tx = tx.Where(
+			"url NOT LIKE ? AND id NOT IN (SELECT request_id FROM data_packets GROUP BY request_id HAVING request_id = ? AND GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)",
+			"%"+filter+"%",
+			request.ID,
+			"%"+filter+"%")
+	} else {
+		tx = tx.Where(
+			"url LIKE ? OR id IN (SELECT request_id FROM data_packets GROUP BY request_id HAVING request_id = ? AND GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)",
+			"%"+filter+"%",
+			request.ID,
+			"%"+filter+"%")
+	}
 
 	if excludeResources {
 		tx = tx.Where(FilterResourcesSQL)

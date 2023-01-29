@@ -48,7 +48,7 @@ type PayloadOptions struct {
 // @Param body body project.InjectOperation true "Injection details in JSON format (not all fields can be set)"
 // @Success 200 {string} string GUID
 // @Failure 500 {string} string Error
-// @Router /inject_operation/run [post]
+// @Router /inject_operations/run [post]
 func RunInjection(w http.ResponseWriter, r *http.Request) {
 	var operation project.InjectOperation
 
