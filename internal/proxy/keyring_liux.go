@@ -1,3 +1,5 @@
+//go:build linux
+
 /* I'm not really happy with this, but Kali doesn't have the gnome-keychain
 enabled and running by default. This makes secret management difficult
 without asking the user to jump through hoops to install the keychain.
