@@ -32,7 +32,7 @@ jobs:
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3
         with:
-          name: www/html_frontend
+          name: www
           # A file, directory or wildcard pattern that describes what to upload
           path: www/html_frontend/dist
       
@@ -55,7 +55,7 @@ jobs:
       - name: Download frontend
         uses: actions/download-artifact@v2
         with:
-          name: www/html_frontend
+          name: www
           path: www/html_frontend/dist/
             
         
@@ -121,7 +121,7 @@ jobs:
       - name: Download frontend
         uses: actions/download-artifact@v2
         with:
-          name: www/html_frontend
+          name: www
           path: www/html_frontend/dist/
           
       - name: Create build directories
@@ -178,7 +178,7 @@ jobs:
       - name: Download frontend
         uses: actions/download-artifact@v2
         with:
-          name: www/html_frontend
+          name: www
           path: www/html_frontend/dist/
       
       - name: Install golang
