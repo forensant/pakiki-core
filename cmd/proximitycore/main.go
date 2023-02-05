@@ -91,12 +91,19 @@ func main() {
 	}
 
 	fmt.Printf("Web frontend is available at: http://%s/\n", listener.Addr().String())
-	frontendSubdirectory, err := fs.Sub(assets.HTMLFrontendDir, "www/dist")
+	frontendSubdirectory, err := fs.Sub(assets.HTMLFrontendDir, "www/html_frontend/dist")
 	if err != nil {
 		log.Fatal("Could not open the subdirectory for the frontend: " + err.Error())
 		return
 	}
 	frontendFilesystem := http.FileServer(http.FS(frontendSubdirectory))
+
+	browserHomeSubdir, err := fs.Sub(assets.BrowserHomepageDir, "www/browser_home")
+	if err != nil {
+		log.Fatal("Could not open the subdirectory for the browser homepage: " + err.Error())
+		return
+	}
+	browserHomeFilesystem := http.FileServer(http.FS(browserHomeSubdir))
 
 	err = proxy.StartListeners()
 	if err != nil {
@@ -175,6 +182,7 @@ func main() {
 		httpSwagger.DomID("#swagger-ui"),
 	))
 
+	rtr.PathPrefix("/browser_home/").Handler(http.StripPrefix("/browser_home/", browserHomeFilesystem))
 	rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
 
 	http.Handle("/", rtr)

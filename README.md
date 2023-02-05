@@ -28,7 +28,7 @@ git submodule init
 git submodule update
 ```
 
-You can then cd into the www directory and run ```./build.sh``` to build the frontend.
+You can then cd into the www/html_frontend/ directory and run ```./build.sh``` to build the frontend.
 
 Then to build the main core, from the root directory of the project run ```./scripts/build.sh```
 
