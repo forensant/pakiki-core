@@ -5,7 +5,6 @@
       <style>
         body {
           margin-top: 100px;
-          background-color: #f5f5f5;
           font-family: sans-serif;
         }
   
@@ -15,17 +14,44 @@
         }
   
         .product-inner {
-          border: 1px solid #ccc;
           padding: 10px;
           text-align: justify;
-          background-color: #fff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+          body {
+            background-color: #111;
+            color: #c8c8c8;
+          }
+
+          .product-inner {
+            border: 1px solid #666;
+            background-color: #333;
+            color: #c8c8c8;
+          }
+        }
+
+        @media (prefers-color-scheme: light) {
+          body {
+            background-color: #f5f5f5;
+          }
+
+          .product-inner {
+            border: 1px solid #ccc;
+            background-color: #fff;
+          }
         }
       </style>
     </head>
     <body>
       <div class="product-outer">
           <div class="product-inner">
-              <a href="https://proximityhq.com/"><img src="Banner.svg"></a>
+              <a href="https://proximityhq.com/">
+                <picture>
+                  <source media="(prefers-color-scheme: dark)" srcset="Banner-Dark.svg">
+                  <img alt="Logo" src="Banner-Light.svg">
+                </picture>                
+              </a>
           </div>
       </div>
 

@@ -155,6 +155,7 @@ func main() {
 	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))
 	rtr.HandleFunc("/script_groups/{guid}/archive", authenticateWithGormDB(project.PatchScriptGroupArchive))
 	rtr.HandleFunc("/script_groups/{guid}/expanded", authenticateWithGormDB(project.PatchScriptGroupExpanded))
+	rtr.HandleFunc("/script_groups/{guid}/export", authenticateWithGormDB(project.ExportScriptGroup))
 	rtr.HandleFunc("/script_groups/{guid}/title", authenticateWithGormDB(project.PatchScriptGroupTitle))
 
 	rtr.HandleFunc("/scripts", authenticateWithGormDB(project.GetScripts))
@@ -163,6 +164,7 @@ func main() {
 	rtr.HandleFunc("/scripts/{guid}/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
 	rtr.HandleFunc("/scripts/{guid}/archive", authenticateWithGormDB(project.PatchArchiveScript))
 	rtr.HandleFunc("/scripts/{guid}/cancel", authenticate(scripting.CancelScript))
+	rtr.HandleFunc("/scripts/{guid}/export", authenticateWithGormDB(project.ExportScriptResults))
 	rtr.HandleFunc("/scripts/{guid}/update_progress", authenticate(scripting.UpdateProgress))
 
 	rtr.HandleFunc("/ping", ping)

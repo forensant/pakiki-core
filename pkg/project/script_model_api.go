@@ -1,12 +1,19 @@
 package project
 
 import (
+	"bytes"
 	"encoding/json"
+	"html/template"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
+
+	_ "embed"
 )
+
+//go:embed resources/exportSingleScript.html
+var exportSingleScriptTemplate string
 
 // GetScript godoc
 // @Summary Get A Script
@@ -75,6 +82,42 @@ func GetScripts(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.Write(response)
+}
+
+// ExportScriptResults godoc
+// @Summary HTML Export of a script result
+// @Description export a script result
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "script guid"
+// @Success 200 {string} string HTML Output
+// @Failure 500 {string} string Error
+// @Router /scripts/{guid}/export [get]
+func ExportScriptResults(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	var script ScriptRun
+	tx := db.Where("guid = ?", guid).First(&script)
+	if tx.Error != nil {
+		http.Error(w, "Could not find script: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tmpl, err := template.New("script_export").Parse(exportSingleScriptTemplate)
+	if err != nil {
+		http.Error(w, "Could not generate template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var b bytes.Buffer
+	if err = tmpl.Execute(&b, script); err != nil {
+		http.Error(w, "Could not generate template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(b.Bytes())
 }
 
 // PatchArchiveScript godoc
