@@ -91,12 +91,19 @@ func main() {
 	}
 
 	fmt.Printf("Web frontend is available at: http://%s/\n", listener.Addr().String())
-	frontendSubdirectory, err := fs.Sub(assets.HTMLFrontendDir, "www/dist")
+	frontendSubdirectory, err := fs.Sub(assets.HTMLFrontendDir, "www/html_frontend/dist")
 	if err != nil {
 		log.Fatal("Could not open the subdirectory for the frontend: " + err.Error())
 		return
 	}
 	frontendFilesystem := http.FileServer(http.FS(frontendSubdirectory))
+
+	browserHomeSubdir, err := fs.Sub(assets.BrowserHomepageDir, "www/browser_home")
+	if err != nil {
+		log.Fatal("Could not open the subdirectory for the browser homepage: " + err.Error())
+		return
+	}
+	browserHomeFilesystem := http.FileServer(http.FS(browserHomeSubdir))
 
 	err = proxy.StartListeners()
 	if err != nil {
@@ -148,6 +155,7 @@ func main() {
 	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))
 	rtr.HandleFunc("/script_groups/{guid}/archive", authenticateWithGormDB(project.PatchScriptGroupArchive))
 	rtr.HandleFunc("/script_groups/{guid}/expanded", authenticateWithGormDB(project.PatchScriptGroupExpanded))
+	rtr.HandleFunc("/script_groups/{guid}/export", authenticateWithGormDB(project.ExportScriptGroup))
 	rtr.HandleFunc("/script_groups/{guid}/title", authenticateWithGormDB(project.PatchScriptGroupTitle))
 
 	rtr.HandleFunc("/scripts", authenticateWithGormDB(project.GetScripts))
@@ -156,6 +164,7 @@ func main() {
 	rtr.HandleFunc("/scripts/{guid}/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
 	rtr.HandleFunc("/scripts/{guid}/archive", authenticateWithGormDB(project.PatchArchiveScript))
 	rtr.HandleFunc("/scripts/{guid}/cancel", authenticate(scripting.CancelScript))
+	rtr.HandleFunc("/scripts/{guid}/export", authenticateWithGormDB(project.ExportScriptResults))
 	rtr.HandleFunc("/scripts/{guid}/update_progress", authenticate(scripting.UpdateProgress))
 
 	rtr.HandleFunc("/ping", ping)
@@ -175,6 +184,7 @@ func main() {
 		httpSwagger.DomID("#swagger-ui"),
 	))
 
+	rtr.PathPrefix("/browser_home/").Handler(http.StripPrefix("/browser_home/", browserHomeFilesystem))
 	rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
 
 	http.Handle("/", rtr)

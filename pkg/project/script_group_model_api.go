@@ -1,14 +1,26 @@
 package project
 
 import (
+	"bytes"
 	"encoding/json"
+	"html/template"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	_ "embed"
 )
+
+//go:embed resources/exportScriptGroup.html
+var exportScriptGroupTemplate string
+
+type ScriptGroupExport struct {
+	Title   string
+	Scripts []ScriptRun
+}
 
 // GetScriptGroup godoc
 // @Summary Get Script Group
@@ -77,6 +89,54 @@ func getScriptGroups(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.Write(response)
+}
+
+// ExportScriptResults godoc
+// @Summary HTML Export of a script result
+// @Description export a script result
+// @Tags Scripting
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param guid path string true "script guid"
+// @Success 200 {string} string HTML Output
+// @Failure 500 {string} string Error
+// @Router /script_groups/{guid}/export [get]
+func ExportScriptGroup(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+	guid := vars["guid"]
+
+	var scriptGroup ScriptGroup
+	tx := db.Where("guid = ?", guid).First(&scriptGroup)
+	if tx.Error != nil {
+		http.Error(w, "Could not find script group: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var scripts []ScriptRun
+	tx = db.Where("script_group = ?", guid).Find(&scripts)
+	if tx.Error != nil {
+		http.Error(w, "Could not find scripts: "+tx.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	export := ScriptGroupExport{
+		Title:   scriptGroup.Title,
+		Scripts: scripts,
+	}
+
+	tmpl, err := template.New("script_group_export").Parse(exportScriptGroupTemplate)
+	if err != nil {
+		http.Error(w, "Could not generate template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var b bytes.Buffer
+	if err = tmpl.Execute(&b, export); err != nil {
+		http.Error(w, "Could not generate template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(b.Bytes())
 }
 
 // PostScriptGroup godoc

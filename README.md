@@ -1,4 +1,7 @@
-<img src="assets/Banner.svg" width="50%" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/Banner-Dark.svg">
+  <img alt="Logo" src="assets/Banner-Light.svg" width="50%">
+</picture>
 
 ## Overview
 Proximity is an intercepting proxy, allowing you to view and manipulate network requests between your web browser and the servers its communicating with. It is designed for web application penetration testing, but could be used for general debugging of applications, etc. It is similar in principle to mitmproxy or OWASP ZAP.
@@ -28,7 +31,7 @@ git submodule init
 git submodule update
 ```
 
-You can then cd into the www directory and run ```./build.sh``` to build the frontend.
+You can then cd into the www/html_frontend/ directory and run ```./build.sh``` to build the frontend.
 
 Then to build the main core, from the root directory of the project run ```./scripts/build.sh```
 
