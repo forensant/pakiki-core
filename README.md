@@ -69,15 +69,18 @@ Linux requires the following dependencies to build Proximity:
 
   * A C/C++ Compiler
   * Python3.10
+  * Ruby for the dependency compilation script
 
 The installation will depend on your particular distribution.
 
 #### Debian-based distributions (including Ubuntu)
 
-```sudo apt install build-essential python3.10-dev```
+```sudo apt install build-essential python3.10-dev ruby```
 
 ### Launching for development
-To launch the development version, from the root of the project run: ```go run main.go -project sample_project```
+Ensure you have built the project using the build script at least once to create the necessary dependencies.
+
+To launch the development version, from the build directory run: ```go run ../cmd/proximitycore/main.go -project sample_project.prx```
 To run the HTML frontend go into that directory and run ```npm run serve```
 
 ## 🤝 Contributing

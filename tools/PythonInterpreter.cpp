@@ -90,7 +90,7 @@ char* getDir() {
 #ifdef _WIN32
   char* dir = concatenateDir("\\python39");
 #elif defined(__linux__)
-  const char* pythonSubdir = "/python39";
+  const char* pythonSubdir = "/python310";
 
   // identify the current path of the executable - so that we can run cleanly under flatpak
   std::filesystem::path path = std::filesystem::canonical("/proc/self/exe").parent_path();
@@ -115,6 +115,10 @@ char* getDir() {
 
   close(fd);
 #endif
+  if(!std::filesystem::exists(dir)) {
+    return NULL;
+  }
+
   return dir;
 }
 
@@ -200,7 +204,9 @@ int main(int /*argc*/, char *argv[]) {
   Py_SetProgramName(program);  /* optional but recommended */
   char* currDir = getDir();
 
-  Py_SetPythonHome(GetWC(currDir));
+  if(currDir != NULL) {
+    Py_SetPythonHome(GetWC(currDir));
+  }
 
   Py_UnbufferedStdioFlag = 1;
 
