@@ -3,6 +3,7 @@
 #include <frameobject.h>
 #include <stdio.h>
 #include <string>
+#include <sys/stat.h>
 
 using std::cerr;
 using std::cout;
@@ -100,23 +101,28 @@ char* getDir() {
   memcpy(dir, pathStr, strlen(pathStr));
   memcpy(dir + strlen(pathStr), pythonSubdir, strlen(pythonSubdir) + 1);
 
-#else
+  if(!std::filesystem::exists(dir)) {
+    return NULL;
+  }
 
+#else
   char* dir = concatenateDir("/python310");
   int fd = open(dir, O_RDONLY);
   if(fd == -1) {
     free(dir);
-    dir = concatenateDir("/Razor.app/Contents/MacOS/python310");
+    dir = concatenateDir("/Proximity.app/Contents/MacOS/python310");
     fd = open(dir, O_RDONLY);
 
     if(fd == -1)
       return nullptr;
   }
-
+  
   close(fd);
 #endif
-  if(!std::filesystem::exists(dir)) {
-    return NULL;
+  
+  struct stat sb;
+  if(stat(dir, &sb) != 0 || !S_ISDIR(sb.st_mode)) {
+    return nullptr;
   }
 
   return dir;
