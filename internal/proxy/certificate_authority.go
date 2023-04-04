@@ -10,12 +10,8 @@ import (
 	"encoding/pem"
 	"math/big"
 	"time"
-
-	"github.com/zalando/go-keyring"
 )
 
-const keyringService = "Proximity"
-const caKeyChainKeyName = "Certificate Private Key"
 const rootCAPKKeyChainKeyName = "Root CA Private Key"
 const rootCAPubCertKeyChainKeyName = "Root CA Cert"
 
@@ -89,8 +85,8 @@ func generateRootPEMs() (caCertificate string, caKey string, err error) {
 }
 
 func generateRootCertificateIfRequired() error {
-	_, rootPKerr := keyring.Get(keyringService, rootCAPKKeyChainKeyName)
-	_, rootCerterr := keyring.Get(keyringService, rootCAPubCertKeyChainKeyName)
+	_, rootPKerr := keyringGet(rootCAPKKeyChainKeyName)
+	_, rootCerterr := keyringGet(rootCAPubCertKeyChainKeyName)
 
 	if rootPKerr == nil && rootCerterr == nil {
 		return nil
@@ -101,12 +97,12 @@ func generateRootCertificateIfRequired() error {
 		return err
 	}
 
-	err = keyring.Set(keyringService, rootCAPKKeyChainKeyName, caPrivKeyPEM)
+	err = keyringSet(rootCAPKKeyChainKeyName, caPrivKeyPEM)
 	if err != nil {
 		return err
 	}
 
-	err = keyring.Set(keyringService, rootCAPubCertKeyChainKeyName, caPubCert)
+	err = keyringSet(rootCAPubCertKeyChainKeyName, caPubCert)
 	if err != nil {
 		return err
 	}
@@ -120,7 +116,7 @@ func getRootPrivateKey() ([]byte, error) {
 		return nil, err
 	}
 
-	key, err := keyring.Get(keyringService, rootCAPKKeyChainKeyName)
+	key, err := keyringGet(rootCAPKKeyChainKeyName)
 	return []byte(key), nil
 }
 
@@ -130,12 +126,12 @@ func getRootCertificate() (*CertificateRecord, error) {
 		return nil, err
 	}
 
-	pk, err := keyring.Get(keyringService, rootCAPKKeyChainKeyName)
+	pk, err := keyringGet(rootCAPKKeyChainKeyName)
 	if err != nil {
 		return nil, err
 	}
 
-	ca, err := keyring.Get(keyringService, rootCAPubCertKeyChainKeyName)
+	ca, err := keyringGet(rootCAPubCertKeyChainKeyName)
 	if err != nil {
 		return nil, err
 	}

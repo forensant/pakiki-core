@@ -100,9 +100,9 @@ func replaceCodeVariables(code string, guid string, port string, apiKey string) 
 }
 
 func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCloser, stderr io.ReadCloser, err error) {
-	executableName := "/pythoninterpreter"
+	executableName := "/proximitypythoninterpreter"
 	if runtime.GOOS == "windows" {
-		executableName = "\\pythoninterpreter.exe"
+		executableName = "\\proximitypythoninterpreter.exe"
 	}
 
 	executablePath, err := os.Executable()

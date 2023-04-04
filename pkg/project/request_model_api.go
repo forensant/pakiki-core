@@ -19,6 +19,7 @@ import (
 )
 
 const RequestFilterSQL = "url LIKE ? OR id IN (SELECT request_id FROM data_packets WHERE request_id NOT IN (SELECT id FROM requests WHERE response_size > 10485760 OR request_size > 10485760) GROUP BY request_id HAVING GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)"
+const RequestNegativeFilterSQL = "url NOT LIKE ? AND id IN (SELECT request_id FROM data_packets WHERE request_id NOT IN (SELECT id FROM requests WHERE response_size > 10485760 OR request_size > 10485760) GROUP BY request_id HAVING GROUP_CONCAT(data) NOT LIKE ? ORDER BY direction ASC, id ASC)"
 
 // Ensure that the code-based check is also updated in this scenario
 const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND response_content_type NOT LIKE 'image/%' AND response_content_type NOT LIKE 'javascript/%' AND response_content_type NOT LIKE 'text/css%' AND url NOT LIKE '%.jpg%' AND url NOT LIKE '%.gif%' AND url NOT LIKE '%.png%' AND url NOT LIKE '%.svg' AND url NOT LIKE '%.woff2%' AND url NOT LIKE '%.css%' AND url NOT LIKE '%.js%')"
@@ -557,7 +558,8 @@ func isInSlice(slice []string, val string) bool {
 // @Tags Requests
 // @Produce  json
 // @Param scanid query string false "Scan ID, can be multiple separated by semi-colons"
-// @Param filter query string false "Only show requests which contain the filter string in the url, request, response, etc"
+// @Param filter query string false "Only show requests which contain the filter string in the url, request, or response"
+// @Param negative_filter query bool false "Reverse the filter to show requests which do not contain the given text in the url, request, or response"
 // @Param url_filter query string false "Only show requests which contain the given string in the URL"
 // @Param verb query string false "Filter by specific verbs"
 // @Param sort_col query string false "Column to sort by (default time)"
@@ -581,9 +583,14 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		tx = readableDatabase.Where("scan_id IN ?", strings.Split(scanId, ":"))
 	}
 
+	negativeFilterStr := r.FormValue("negative_filter")
 	filter := r.FormValue("filter")
 	if filter != "" {
-		tx = tx.Where(RequestFilterSQL, "%"+filter+"%", "%"+filter+"%")
+		filterSQL := RequestFilterSQL
+		if negativeFilterStr != "" && strings.ToLower(negativeFilterStr) == "true" {
+			filterSQL = RequestNegativeFilterSQL
+		}
+		tx = tx.Where(filterSQL, "%"+filter+"%", "%"+filter+"%")
 	}
 
 	urlFilter := r.FormValue("url_filter")

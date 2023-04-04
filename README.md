@@ -1,4 +1,7 @@
-<img src="assets/Banner.svg" width="50%" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/Banner-Dark.svg">
+  <img alt="Logo" src="assets/Banner-Light.svg" width="50%">
+</picture>
 
 ## Overview
 Proximity is an intercepting proxy, allowing you to view and manipulate network requests between your web browser and the servers its communicating with. It is designed for web application penetration testing, but could be used for general debugging of applications, etc. It is similar in principle to mitmproxy or OWASP ZAP.
@@ -28,7 +31,7 @@ git submodule init
 git submodule update
 ```
 
-You can then cd into the www directory and run ```./build.sh``` to build the frontend.
+You can then cd into the www/html_frontend/ directory and run ```./build.sh``` to build the frontend.
 
 Then to build the main core, from the root directory of the project run ```./scripts/build.sh```
 
@@ -66,15 +69,18 @@ Linux requires the following dependencies to build Proximity:
 
   * A C/C++ Compiler
   * Python3.10
+  * Ruby for the dependency compilation script
 
 The installation will depend on your particular distribution.
 
 #### Debian-based distributions (including Ubuntu)
 
-```sudo apt install build-essential python3.10-dev```
+```sudo apt install build-essential python3.10-dev ruby```
 
 ### Launching for development
-To launch the development version, from the root of the project run: ```go run main.go -project sample_project```
+Ensure you have built the project using the build script at least once to create the necessary dependencies.
+
+To launch the development version, from the build directory run: ```go run ../cmd/proximitycore/main.go -project sample_project.prx```
 To run the HTML frontend go into that directory and run ```npm run serve```
 
 ## 🤝 Contributing
