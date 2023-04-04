@@ -137,6 +137,7 @@ func main() {
 	rtr.HandleFunc("/requests/queue", authenticate(proxy.AddRequestToQueue))
 	rtr.HandleFunc("/requests/sitemap", authenticate(project.GetSitemap))
 	rtr.HandleFunc("/requests/{base_guid}/compare/{compare_guid}", authenticateWithGormDB(project.CompareRequests))
+	rtr.HandleFunc("/requests/{base_guid}/compare_by_block/{compare_guid}", authenticateWithGormDB(project.CompareRequestsByBlock))
 	rtr.HandleFunc("/requests/{guid}", authenticateWithGormDB(project.GetRequest))
 	rtr.HandleFunc("/requests/{guid}/contents", authenticate(project.GetRequestResponseContents))
 	rtr.HandleFunc("/requests/{guid}/notes", authenticate(project.PatchRequestNotes))

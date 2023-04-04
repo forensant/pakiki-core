@@ -53,6 +53,12 @@ type RequestDifference struct {
 	Request int // 1 for request number one, 2 for request number two, 0 for both
 }
 
+// RequestDifferenceBlock contains a site of RequestDifferences, along with the name representing what part of the request they are (EG: Request Body)
+type RequestDifferenceBlock struct {
+	Name        string
+	Differences []RequestDifference
+}
+
 // RequestSearchResult contains the result from a search across a request/response
 type RequestSearchResult struct {
 	StartOffset uint64
@@ -99,12 +105,12 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	maxSize := int64(50 * 1024)
-	req1, large1, err := getRequestResponseString(db, baseRequest, maxSize)
+	req1, resp1, large1, err := getRequestResponseString(db, baseRequest, maxSize)
 	if err != nil {
 		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
-	req2, large2, err := getRequestResponseString(db, compareRequest, maxSize)
+	req2, resp2, large2, err := getRequestResponseString(db, compareRequest, maxSize)
 	if err != nil {
 		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
@@ -115,8 +121,116 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
+	separator := "\x0D\x0A\x0D\x0A"
+
+	fullReq1 := req1 + separator + resp1
+	fullReq2 := req2 + separator + resp2
+
+	rDiffs := diffsFromStrings(fullReq1, fullReq2)
+
+	responseToWrite, err := json.Marshal(rDiffs)
+	if err != nil {
+		http.Error(w, "Error marshalling response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(responseToWrite)
+}
+
+// CompareRequestsByBlock godoc
+// @Summary Compare Two Requests Split By Headers and Bodies
+// @Description compares two requests and returns the differences, with each header and body being compared differently
+// @Tags Requests
+// @Produce  text/text
+// @Security ApiKeyAuth
+// @Param base_guid path string true "Base Request guid"
+// @Param compare_guid path string true "Request to Compare guid"
+// @Success 200 {array} RequestDifferenceBlock
+// @Failure 500 {string} string Error
+// @Router /requests/{base_guid}/compare_by_block/{compare_guid} [get]
+func CompareRequestsByBlock(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	vars := mux.Vars(r)
+
+	var baseRequest Request
+	var compareRequest Request
+
+	result := db.First(&baseRequest, "guid = ?", vars["base_guid"])
+	if result.Error != nil {
+		http.Error(w, "Error retrieving base request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	result = db.First(&compareRequest, "guid = ?", vars["compare_guid"])
+	if result.Error != nil {
+		http.Error(w, "Error retrieving comparison request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if baseRequest.GUID == compareRequest.GUID {
+		http.Error(w, "Cannot compare a request to itself", http.StatusBadRequest)
+		return
+	}
+
+	if baseRequest.Protocol != "HTTP/1.1" || compareRequest.Protocol != "HTTP/1.1" {
+		http.Error(w, "Only HTTP requests can be compared.", http.StatusBadRequest)
+		return
+	}
+
+	maxSize := int64(1 * 1024 * 1024)
+	req1, resp1, large1, err := getRequestResponseString(db, baseRequest, maxSize)
+	if err != nil {
+		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+	req2, resp2, large2, err := getRequestResponseString(db, compareRequest, maxSize)
+	if err != nil {
+		http.Error(w, "Error retrieving request/response from the database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if large1 || large2 {
+		http.Error(w, "One or both of the requests/responses are too large to compare.", http.StatusInternalServerError)
+		return
+	}
+
+	separator := "\x0D\x0A\x0D\x0A"
+
+	req1Blocks := strings.SplitN(req1, separator, 2)
+	req2Blocks := strings.SplitN(req2, separator, 2)
+	resp1Blocks := strings.SplitN(resp1, separator, 2)
+	resp2Blocks := strings.SplitN(resp2, separator, 2)
+
+	rDiffs := []RequestDifferenceBlock{
+		{
+			Name:        "Request Headers",
+			Differences: diffsFromStrings(req1Blocks[0], req2Blocks[0]),
+		},
+		{
+			Name:        "Request Bodies",
+			Differences: diffsFromStrings(getBody(req1Blocks), getBody(req2Blocks)),
+		},
+		{
+			Name:        "Response Headers",
+			Differences: diffsFromStrings(resp1Blocks[0], resp2Blocks[0]),
+		},
+		{
+			Name:        "Response Bodies",
+			Differences: diffsFromStrings(getBody(resp1Blocks), getBody(resp2Blocks)),
+		},
+	}
+
+	responseToWrite, err := json.Marshal(rDiffs)
+	if err != nil {
+		http.Error(w, "Error marshalling response: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(responseToWrite)
+}
+
+func diffsFromStrings(str1 string, str2 string) []RequestDifference {
 	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(req1, req2, false)
+	diffs := dmp.DiffMain(str1, str2, false)
 
 	rDiffs := make([]RequestDifference, 0)
 	for _, d := range diffs {
@@ -130,13 +244,7 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		rDiffs = append(rDiffs, RequestDifference{Text: d.Text, Request: r})
 	}
 
-	responseToWrite, err := json.Marshal(rDiffs)
-	if err != nil {
-		http.Error(w, "Error marshalling response: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(responseToWrite)
+	return rDiffs
 }
 
 func formatResponse(resp []byte, ctype string) []byte {
@@ -166,6 +274,14 @@ func formatResponse(resp []byte, ctype string) []byte {
 	}
 
 	return resp
+}
+
+func getBody(reqBlock []string) string {
+	if len(reqBlock) >= 2 {
+		return reqBlock[1]
+	}
+
+	return ""
 }
 
 // GetRequestPartialData godoc
@@ -387,20 +503,19 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseToWrite)
 }
 
-func getRequestResponseString(db *gorm.DB, r Request, maxSize int64) (string, bool, error) {
+func getRequestResponseString(db *gorm.DB, r Request, maxSize int64) (reqData string, respData string, large bool, err error) {
 	if r.RequestSize > maxSize || r.ResponseSize > maxSize {
-		return "", true, nil
+		large = true
+		return
 	}
-
-	reqData := ""
-	respData := ""
 
 	dataPackets := make([]DataPacket, 0)
 	db.Where("request_id = ? AND direction = 'Request' AND modified = true", r.ID).Order("id").Find(&dataPackets)
 	if len(dataPackets) == 0 {
 		res := db.Where("request_id = ? AND direction = 'Request' AND modified = false", r.ID).Order("id").Find(&dataPackets)
 		if res.Error != nil {
-			return "", false, res.Error
+			err = res.Error
+			return
 		}
 
 		for _, pkt := range dataPackets {
@@ -413,7 +528,8 @@ func getRequestResponseString(db *gorm.DB, r Request, maxSize int64) (string, bo
 	if len(dataPackets) == 0 {
 		res := db.Where("request_id = ? AND direction = 'Response' AND modified = false", r.ID).Order("id").Find(&dataPackets)
 		if res.Error != nil {
-			return "", false, res.Error
+			err = res.Error
+			return
 		}
 
 		for _, pkt := range dataPackets {
@@ -421,7 +537,7 @@ func getRequestResponseString(db *gorm.DB, r Request, maxSize int64) (string, bo
 		}
 	}
 
-	return reqData + "\x0A\x0D\x0A\x0D" + respData, false, nil
+	return
 }
 
 // isInSlice takes a slice and looks for an element in it. If found it will
