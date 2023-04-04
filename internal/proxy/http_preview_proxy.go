@@ -17,7 +17,9 @@ import (
 func onPreviewProxyRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 	var url_string = req.URL.Scheme + "://" + req.URL.Hostname()
 	if (req.URL.Port() != "443" && req.URL.Scheme == "https") || (req.URL.Port() != "80" && req.URL.Scheme == "http") {
-		url_string += ":" + req.URL.Port()
+		if req.URL.Port() != "" {
+			url_string += ":" + req.URL.Port()
+		}
 	}
 	url_string += req.URL.Path
 	if req.URL.RawQuery != "" {
