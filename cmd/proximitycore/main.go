@@ -39,6 +39,7 @@ type commandLineParameters struct {
 	APIKey           string
 	BindAddress      string
 	ProjectPath      string
+	TempProjectPath  string
 	ParentPID        int32
 	APIPort          int
 	PreviewProxyPort int
@@ -73,7 +74,7 @@ func main() {
 
 	apiToken = parameters.APIKey
 
-	projectPath, tempDBPath, shouldSave := getProjectPath(parameters.ProjectPath)
+	projectPath, tempDBPath, shouldSave := getProjectPath(parameters.ProjectPath, parameters.TempProjectPath)
 	shouldCleanupProjectSettings = shouldSave
 
 	ioHub := project.NewIOHub()
@@ -348,7 +349,7 @@ func generateAPIKey() (string, error) {
 	return key, nil
 }
 
-func getProjectPath(requested string) (projectPath string, tempFilePath string, shouldSave bool) {
+func getProjectPath(requested string, requestedTempPath string) (projectPath string, tempFilePath string, shouldSave bool) {
 	settings, err := proxy.GetSettings()
 	projectPath = requested
 	shouldSave = false
@@ -360,6 +361,13 @@ func getProjectPath(requested string) (projectPath string, tempFilePath string, 
 	projectPath, err = filepath.Abs(requested) // default case
 	if err != nil {
 		log.Printf("Error getting absolute path: %v\n", err.Error())
+		return
+	}
+
+	if requestedTempPath != "" {
+		// effectively the GUI will be managing the temp files
+		tempFilePath = requestedTempPath
+		shouldSave = false
 		return
 	}
 	shouldSave = true
@@ -463,6 +471,7 @@ func parseCommandLineFlags() commandLineParameters {
 	bindAddressPtr := flag.String("bind-address", "localhost", "The address to bind the API and UI to")
 	parentPIDInt := flag.Int("parentpid", 0, "The process id (PID) of the proxy parent process")
 	projectPathPtr := flag.String("project", "", "The path to the project to open")
+	tempProjectPathPtr := flag.String("temp-project", "", "The path to the temporary project file to open")
 	apiPortPtr := flag.Int("api-port", 10101, "The port for the API and UI to listen on (set to 0 for a random available port)")
 	previewProxyPortPtr := flag.Int("preview-proxy-port", 10111, "The port for the preview proxy to listen on (set to 0 for a random available port)")
 
@@ -478,6 +487,7 @@ func parseCommandLineFlags() commandLineParameters {
 		*apiKeyPtr,
 		*bindAddressPtr,
 		*projectPathPtr,
+		*tempProjectPathPtr,
 		parentPID,
 		*apiPortPtr,
 		*previewProxyPortPtr,

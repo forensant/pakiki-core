@@ -205,10 +205,10 @@ func (h *IOHub) Run(p string, tempPath string) (*gorm.DB, string) {
 	var err error
 	projectPath = p
 
-	if tempPath != "" {
+	if tempPath != "" && fileExists(tempPath) {
 		decompressedDBPath = tempPath
 	} else {
-		decompressedDBPath, err = decompressDatabase(projectPath)
+		decompressedDBPath, err = decompressDatabase(projectPath, tempPath)
 		if err != nil {
 			log.Fatal("Error when decompressing the project: ", err.Error())
 		}

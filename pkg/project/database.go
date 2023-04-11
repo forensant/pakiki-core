@@ -84,8 +84,14 @@ func copyDB(src *gorm.DB, dst string) error {
 	return src.Exec("VACUUM INTO ?", dst).Error
 }
 
-func decompressDatabase(src string) (string, error) {
-	tempdbpath, err := tempFilename()
+func decompressDatabase(src string, path string) (string, error) {
+	var tempdbpath = path
+	var err error
+
+	if tempdbpath == "" {
+		tempdbpath, err = tempFilename()
+	}
+
 	if err != nil {
 		return "", err
 	}
@@ -125,6 +131,11 @@ func decompressDatabase(src string) (string, error) {
 	}
 
 	return tempdbpath, nil
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 func initDatabase(db *gorm.DB) {
