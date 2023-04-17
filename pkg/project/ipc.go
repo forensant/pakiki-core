@@ -230,6 +230,7 @@ func (h *IOHub) Run(p string, tempPath string) (*gorm.DB, string) {
 	}
 
 	autosaveTimer = time.AfterFunc(time.Minute*5, autosave)
+	go refreshScope()
 
 	go func() {
 		for {

@@ -21,6 +21,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var scope []ScopeEntry
+
 // Some fields which we had in the original, which are not pushed through, are:
 // hash, flag, injectPayloads, baseRequest, showInDiscovery
 
@@ -579,6 +581,34 @@ func (request *Request) Record() {
 	ioHub.broadcast <- request
 }
 
+func urlMatchesScope(urlStr string) bool {
+	if len(scope) == 0 {
+		return true
+	}
+
+	for _, entry := range scope {
+		urlInScope, err := entry.URLInScope(urlStr)
+		if err != nil {
+			fmt.Printf("Error checking if URL is in scope: %s\n", err.Error())
+			return false
+		}
+
+		if !urlInScope {
+			continue
+		}
+
+		if entry.IncludeInScope {
+			return true
+		}
+
+		if !entry.IncludeInScope {
+			return false
+		}
+	}
+
+	return false
+}
+
 func (request *Request) ShouldFilter(filter string) bool {
 	if filter == "" {
 		return false
@@ -591,9 +621,16 @@ func (request *Request) ShouldFilter(filter string) bool {
 	}
 
 	negativeFilter := false
-	if strings.Index(filter, "negative_filter:true") != -1 {
+	if strings.Contains(filter, "negative_filter:true") {
 		filter = strings.Replace(filter, "negative_filter:true", "", 1)
 		negativeFilter = true
+	}
+
+	if strings.Contains(filter, "inscope:true") {
+		filter = strings.Replace(filter, "inscope:true", "", 1)
+		if !urlMatchesScope(request.URL) {
+			return true
+		}
 	}
 
 	filter = strings.TrimLeft(filter, " ")

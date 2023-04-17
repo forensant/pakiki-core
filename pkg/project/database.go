@@ -191,6 +191,7 @@ func migrateTables(db *gorm.DB) {
 	db.AutoMigrate(&DataPacket{})
 	db.AutoMigrate(&ScriptRun{})
 	db.AutoMigrate(&ScriptGroup{})
+	db.AutoMigrate(&ScopeEntry{})
 	db.AutoMigrate(&SiteMapPath{})
 	db.AutoMigrate(&Setting{})
 }

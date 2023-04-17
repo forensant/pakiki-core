@@ -78,3 +78,90 @@ func TestInjectPointIdentification(t *testing.T) {
 		})
 	}
 }
+
+func TestURLScoping(t *testing.T) {
+	scopes := []struct {
+		name           string
+		entries        []ScopeEntry
+		urlsInScope    []string
+		urlsOutOfScope []string
+	}{
+		{
+			"No entries",
+			[]ScopeEntry{},
+			[]string{"https://example.com", "https://example.com/test", "https://test.com/test?abc=123"},
+			[]string{},
+		},
+		{
+			"Single entry",
+			[]ScopeEntry{
+				{
+					Prefix:         "https://example.com",
+					IncludeInScope: true,
+				},
+			},
+			[]string{"https://example.com", "https://example.com/test", "https://example.com/test?abc=123"},
+			[]string{"https://test.com", "https://test.com/test", "https://test.com/test?abc=123"},
+		},
+		{
+			"Single entry, host only",
+			[]ScopeEntry{
+				{
+					HostRegex:      "^example\\.com$",
+					IncludeInScope: true,
+				},
+			},
+			[]string{"https://example.com", "https://example.com/test", "https://example.com/test?abc=123"},
+			[]string{"https://test.com", "https://test.com/test", "https://test.com/test?abc=123"},
+		},
+		{
+			"Mixed entries, only includes",
+			[]ScopeEntry{
+				{
+					Prefix:         "https://example.com",
+					IncludeInScope: true,
+				},
+				{
+					HostRegex:      "^test\\.com$",
+					PortRegex:      "^443$",
+					IncludeInScope: true,
+				},
+			},
+			[]string{"https://example.com", "https://example.com/test", "https://example.com/test?abc=123", "https://test.com", "https://test.com/test", "https://test.com/test?abc=123"},
+			[]string{"https://test.com:8080", "https://test.com:8080/test", "https://test.com:8080/test?abc=123", "http://anotherdomain.com"},
+		},
+		{
+			"Mixed entries",
+			[]ScopeEntry{
+				{
+					Prefix:         "https://example.com/abc/def",
+					IncludeInScope: false,
+				},
+				{
+					HostRegex:      "^example\\.com$",
+					IncludeInScope: true,
+				},
+			},
+			[]string{"https://example.com", "https://example.com/test", "https://example.com/test?abc=123"},
+			[]string{"https://example.com/abc/def", "https://example.com/abc/def/test", "https://example.com/abc/def/test?abc=123", "https://test.com", "https://test.com/test", "https://test.com/test?abc=123"},
+		},
+	}
+
+	for _, s := range scopes {
+		t.Run(s.name, func(t *testing.T) {
+			scope = s.entries
+
+			for _, url := range s.urlsInScope {
+				if !urlMatchesScope(url) {
+					t.Errorf("Expected URL '%s' to be in scope", url)
+				}
+			}
+
+			for _, url := range s.urlsOutOfScope {
+				if urlMatchesScope(url) {
+					t.Errorf("Expected URL '%s' to be out of scope", url)
+				}
+			}
+		})
+	}
+}

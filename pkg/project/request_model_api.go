@@ -561,6 +561,7 @@ func isInSlice(slice []string, val string) bool {
 // @Param filter query string false "Only show requests which contain the filter string in the url, request, or response"
 // @Param negative_filter query bool false "Reverse the filter to show requests which do not contain the given text in the url, request, or response"
 // @Param url_filter query string false "Only show requests which contain the given string in the URL"
+// @Param in_scope query string false "Only show requests which are in scope"
 // @Param verb query string false "Filter by specific verbs"
 // @Param sort_col query string false "Column to sort by (default time)"
 // @Param sort_dir query string false "Column direction to sort by (default asc)"
@@ -642,6 +643,16 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	if r.FormValue("in_scope") == "true" {
+		var inScopeRequests []Request
+		for _, request := range requests {
+			if urlMatchesScope(request.URL) {
+				inScopeRequests = append(inScopeRequests, request)
+			}
+		}
+		requests = inScopeRequests
 	}
 
 	response, err := json.Marshal(requests)

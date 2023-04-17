@@ -153,6 +153,12 @@ func main() {
 	rtr.HandleFunc("/requests/{guid}/payloads", authenticateWithGormDB(project.PatchRequestPayloads))
 	rtr.HandleFunc("/requests/{guid}/search", authenticateWithGormDB(project.RequestDataSearch))
 
+	rtr.HandleFunc("/scope/entries", authenticate(project.GetScopeEntries))
+	rtr.HandleFunc("/scope/entry/{guid}", authenticate(project.DeleteScopeEntry))
+	rtr.HandleFunc("/scope/entry", authenticate(project.PostScopeEntry))
+	rtr.HandleFunc("/scope/import", authenticate(project.ImportScope))
+	rtr.HandleFunc("/scope/order", authenticate(project.OrderScopeEntries))
+
 	rtr.HandleFunc("/script_groups", authenticateWithGormDB(project.HandleScriptGroups))
 	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))
 	rtr.HandleFunc("/script_groups/{guid}/archive", authenticateWithGormDB(project.PatchScriptGroupArchive))
