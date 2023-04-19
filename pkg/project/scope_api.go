@@ -47,7 +47,6 @@ type ScopeEntryImportJSON struct {
 }
 
 type Scope struct {
-	// TODO: Check that it is advanced, as only advanced will be supported
 	Advanced bool                   `json:"advanced_mode"`
 	Exclude  []ScopeEntryImportJSON `json:"exclude"`
 	Include  []ScopeEntryImportJSON `json:"include"`
@@ -190,7 +189,7 @@ func PostScopeEntry(w http.ResponseWriter, r *http.Request) {
 		// Create, so set the order to be the last order
 		var scopeEntries []ScopeEntry
 		result := readableDatabase.Find(&scopeEntries)
-		if result.Error != nil {
+		if result.Error == nil {
 			se.SortOrder = len(scopeEntries)
 		}
 	}
