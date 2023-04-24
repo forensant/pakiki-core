@@ -247,22 +247,22 @@ func bulkRequestWorker(ssl bool, hostname string, scanId string, requestParts []
 				requestData = append(requestData, reqData...)
 			}
 		}
+
 		req, err := makeRequestToSite(ssl, hostname, requestData, httpClient, nil)
+		req.ScanID = scanId
 
 		if err != nil {
-			fmt.Println("Error making request: " + err.Error())
+			req.Error = "Error making request: " + err.Error()
 		} else {
-			req.ScanID = scanId
-
 			if len(differingPayloads) != 0 {
 				jsonPayloads, _ := json.Marshal(differingPayloads)
 				req.Payloads = string(jsonPayloads)
 			} else {
 				req.Notes = "Base request"
 			}
-
-			req.Record()
 		}
+
+		req.Record()
 
 		request_queue.Decrement(scanId)
 		project.ScriptDecrementTotalRequests(scanId)
@@ -294,7 +294,6 @@ func BulkRequestQueue(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := GetSettings()
 	if err != nil {
-		fmt.Printf("Could not get settings: " + err.Error())
 		http.Error(w, "Could not get settings: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -302,7 +301,6 @@ func BulkRequestQueue(w http.ResponseWriter, r *http.Request) {
 	injectScan := project.InjectFromGUID(params.ScanID)
 	script := project.ScriptRunFromGUID(params.ScanID)
 	if injectScan == nil && script == nil {
-		fmt.Printf("Inject scan or script doesn't exist: %s", params.ScanID)
 		http.Error(w, "Could not find inject scan or script: "+params.ScanID, http.StatusBadRequest)
 		return
 	}
@@ -361,13 +359,20 @@ func initConnectionPool() {
 }
 
 func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient *http.Client, httpContext context.Context) (*project.Request, error) {
+	blankReq := &project.Request{
+		URL:         "",
+		Protocol:    "http",
+		Verb:        "",
+		DataPackets: []project.DataPacket{{Data: requestData, Direction: "Request", StartOffset: 0, EndOffset: int64(len(requestData) - 1)}},
+		RequestSize: int64(len(requestData)),
+	}
 	requestData = project.CorrectLengthHeaders(requestData)
 
 	b := bytes.NewReader(requestData)
 	httpRequest, err := http.ReadRequest(bufio.NewReader(b))
 
 	if err != nil {
-		return nil, err
+		return blankReq, err
 	}
 
 	protocol := "https"
@@ -385,7 +390,7 @@ func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient
 	url, err := url.Parse(protocol + "://" + hostname + httpRequest.URL.RequestURI())
 
 	if err != nil {
-		return nil, err
+		return blankReq, err
 	}
 
 	httpRequest.URL = url
@@ -393,7 +398,7 @@ func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient
 
 	request, err := project.NewRequestFromHttpWithoutBytes(httpRequest)
 	if err != nil {
-		return nil, err
+		return blankReq, err
 	}
 
 	if httpContext != nil {

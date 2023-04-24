@@ -621,7 +621,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		tx = tx.Where(FilterResourcesSQL)
 	}
 
-	validColumns := []string{"url", "time", "protocol", "verb", "response_size", "response_time", "response_status_code", "response_content_type", "payloads", "notes", "error"}
+	validColumns := []string{"url", "time", "protocol", "verb", "response_size", "response_content_length", "response_time", "response_status_code", "response_content_type", "payloads", "notes", "error"}
 	validDirections := []string{"asc", "desc"}
 
 	sortColumn := "time"
