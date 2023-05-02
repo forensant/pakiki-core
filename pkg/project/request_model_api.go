@@ -646,7 +646,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.FormValue("in_scope") == "true" {
-		var inScopeRequests []Request
+		inScopeRequests := make([]Request, 0)
 		for _, request := range requests {
 			if urlMatchesScope(request.URL) {
 				inScopeRequests = append(inScopeRequests, request)
