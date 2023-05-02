@@ -9,20 +9,19 @@ swag init -o api -g cmd/proximitycore/main.go --parseInternal
 # now do the actual build
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # MacOS is handled separately, so that it can be compiled for both arm64 and amd64 architectures
-    mkdir -p build/python310/lib
+    mkdir -p build/python310_arm64/lib
+    mkdir -p build/python310_x64/lib
 
     echo "# Building Python interpreter"
-    gcc $(arch --x86_64 /usr/local/bin/python3.10-config --cflags) $(arch --x86_64 /usr/local/bin/python3.10-config --ldflags) $(arch --x86_64 /usr/local/bin/python3.10-config --libs) -lpython3.10 -lstdc++ -std=c++17 tools/PythonInterpreter.cpp -target x86_64-apple-macos10.12 -o build/PythonInterpreter_x86_64
-    cp build/PythonInterpreter_x86_64 build/proximitypythoninterpreter
-    ln -s $(arch --x86_64 /usr/local/bin/python3.10 -c "import sys; print(sys.base_prefix + '/lib/python3.10/')") build/python310/lib/
+    gcc -std=c++17 $(arch --x86_64 /usr/local/bin/python3.10-config --cflags) $(arch --x86_64 /usr/local/bin/python3.10-config --ldflags) $(arch --x86_64 /usr/local/bin/python3.10-config --libs) -lpython3.10 -lstdc++ -std=c++17 tools/PythonInterpreter.cpp -target x86_64-apple-macos10.15 -o build/PythonInterpreter_x86_64
+    ln -s $(arch --x86_64 /usr/local/bin/python3.10 -c "import sys; print(sys.base_prefix + '/lib/python3.10/')") build/python310_x64/lib/
 
     # For ARM compilation for Python, uncomment the following lines, and comment out the corresponding ones above
-    #gcc $(python3.10-config --cflags) $(python3.10-config --ldflags) $(python3.10-config --libs) -lpython3.10 -lstdc++ tools/PythonInterpreter.cpp -o build/PythonInterpreter_arm64
-    #ln -s $(python3.10 -c "import sys; print(sys.base_prefix + '/lib/python3.10/')") build/python310/lib/
-    #cp build/PythonInterpreter_arm64 build/proximitypythoninterpreter
+    MACOSX_DEPLOYMENT_TARGET=10.15 gcc -std=c++17 -mmacosx-version-min=10.15 $(python3.10-config --cflags) $(python3.10-config --ldflags) $(python3.10-config --libs) -lpython3.10 -lstdc++ tools/PythonInterpreter.cpp -o build/PythonInterpreter_arm64
+    ln -s $(python3.10 -c "import sys; print(sys.base_prefix + '/lib/python3.10/')") build/python310_arm64/lib/
 
     # For compiling both architectures into one executable (this is not currently done, as we'd need to bundle two sets of dependencies): 
-    #lipo -create -output build/pythoninterpreter build/PythonInterpreter_arm64 build/PythonInterpreter_x86_64
+    lipo -create -output build/proximitypythoninterpreter build/PythonInterpreter_arm64 build/PythonInterpreter_x86_64
 
     rm -rf build/PythonInterpreter_*
 
