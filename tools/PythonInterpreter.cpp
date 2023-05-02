@@ -11,13 +11,27 @@ using std::endl;
 using std::string;
 using std::wcout;
 
-#if defined(__linux__)
-#include <filesystem>
+#if defined(__x86_64__) || defined(_M_X64)
+#define ARCH "_x64"
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define ARCH "_arm64"
+#else
+#define ARCH "_undefined"
 #endif
 
-#ifdef _WIN32
+#if defined(__linux__)
+// all includes are defined below
+#elif _WIN32
 #include <direct.h>
 #else
+// MacOS
+#include <mach-o/dyld.h>
+#include <limits.h>
+#include <fcntl.h>
+#endif
+
+#ifndef _WIN32
+#include <filesystem>
 #include <fcntl.h>
 #endif
 
@@ -106,11 +120,27 @@ char* getDir() {
   }
 
 #else
-  char* dir = concatenateDir("/python310");
+  char* dir = concatenateDir("/python310" ARCH);
   int fd = open(dir, O_RDONLY);
   if(fd == -1) {
     free(dir);
-    dir = concatenateDir("/Proximity.app/Contents/MacOS/python310");
+
+    char exePath [PATH_MAX];
+    uint32_t bufsize = PATH_MAX;
+    if(_NSGetExecutablePath(exePath, &bufsize)) {
+      return nullptr;
+    }
+
+    const char* pythonSubdir = ("/python310" ARCH);
+
+    // identify the current path of the executable - so that we can run cleanly in app bundles
+    std::filesystem::path path = std::filesystem::canonical(exePath).parent_path();
+    const char* pathStr = path.c_str();
+
+    dir = (char*)malloc(strlen(pathStr) + strlen(pythonSubdir) + 1);
+    memcpy(dir, pathStr, strlen(pathStr));
+    memcpy(dir + strlen(pathStr), pythonSubdir, strlen(pythonSubdir) + 1);
+
     fd = open(dir, O_RDONLY);
 
     if(fd == -1)
@@ -121,7 +151,8 @@ char* getDir() {
 #endif
   
   struct stat sb;
-  if(stat(dir, &sb) != 0 || !S_ISDIR(sb.st_mode)) {
+  int statResult = stat(dir, &sb);
+  if(statResult != 0 || !S_ISDIR(sb.st_mode)) {
     return nullptr;
   }
 
