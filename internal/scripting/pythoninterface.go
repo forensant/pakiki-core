@@ -125,7 +125,10 @@ func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCl
 		return
 	}
 
+	fmt.Printf("Starting Python interpreter at %s\n", pythonPath)
+	fmt.Printf("Core Environment: %+v\n", os.Environ())
 	pythonCmd := exec.Command(pythonPath)
+	fmt.Printf("Interpreter Environment: %+v\n", pythonCmd.Environ())
 	stdin, err = pythonCmd.StdinPipe()
 	if err != nil {
 		return

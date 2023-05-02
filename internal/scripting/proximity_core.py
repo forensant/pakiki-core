@@ -59,8 +59,7 @@ def make_request_to_core(uri: str, obj = {}) -> bytes:
       return response
   except HTTPError as e:
     content = e.read()
-    print("Server returned error: " + content.decode('UTF-8'))
-    return None
+    raise Exception("Server returned error: " + content.decode('UTF-8'))
 
 class InjectableGeneratedRequest:
   # internal class to keep the InjectableRequest class cleaner
