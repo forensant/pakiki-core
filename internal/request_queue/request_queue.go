@@ -2,26 +2,30 @@ package request_queue
 
 import (
 	"sync"
-
-	"github.com/pipeline/proximity-core/pkg/project"
 )
+
+type QueueableOperation interface {
+	GetGUID() string
+	IncrementRequestCount()
+	Broadcast()
+}
 
 var requestQueueMutex sync.Mutex
 var requestQueueCount map[string]int
-var requestQueueInjectOperations map[string]*project.InjectOperation
+var requestQueueInjectOperations map[string]QueueableOperation
 var requestQueueChannels map[string](chan bool)
 
 func Init() {
 	requestQueueMutex.Lock()
 	requestQueueCount = make(map[string]int)
 	requestQueueChannels = make(map[string](chan bool))
-	requestQueueInjectOperations = make(map[string]*project.InjectOperation)
+	requestQueueInjectOperations = make(map[string]QueueableOperation)
 	requestQueueMutex.Unlock()
 }
 
-func Add(op *project.InjectOperation) {
+func Add(op QueueableOperation) {
 	requestQueueMutex.Lock()
-	requestQueueInjectOperations[op.GUID] = op
+	requestQueueInjectOperations[op.GetGUID()] = op
 	requestQueueMutex.Unlock()
 }
 
@@ -95,7 +99,7 @@ func Decrement(guid string) {
 	}
 
 	if _, existing := requestQueueInjectOperations[guid]; existing {
-		requestQueueInjectOperations[guid].RequestsMadeCount += 1
+		requestQueueInjectOperations[guid].IncrementRequestCount()
 		requestQueueInjectOperations[guid].Broadcast()
 	}
 

@@ -1,18 +1,19 @@
-package scripting
+package project
 
 import (
 	"encoding/json"
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/pipeline/proximity-core/internal/request_queue"
-	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/pipeline/proximity-core/internal/scripting"
 )
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call
 type RunScriptParameters struct {
-	Code        []ScriptCode
+	Code        []scripting.ScriptCode
 	Title       string
 	Development bool
 	ScriptGroup string
@@ -28,11 +29,12 @@ type RunScriptParameters struct {
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
 // @Router /scripts/{guid}/cancel [patch]
-func CancelScript(w http.ResponseWriter, r *http.Request) {
+func CancelScriptAPI(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	guid := vars["guid"]
 
-	err := CancelScriptInternal(guid)
+	err := scripting.CancelScriptInternal(guid)
+	CancelScript(guid)
 
 	if err != nil {
 		http.Error(w, "Error cancelling Python script: "+err.Error(), http.StatusInternalServerError)
@@ -40,7 +42,7 @@ func CancelScript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if it's an inject operation and cancel that appropriately too
-	injectOp := project.InjectFromGUID(guid)
+	injectOp := InjectFromGUID(guid)
 	if injectOp != nil {
 		injectOp.TotalRequestCount = 0
 		injectOp.UpdateAndRecord()
@@ -58,7 +60,7 @@ func CancelScript(w http.ResponseWriter, r *http.Request) {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param body body scripting.RunScriptParameters true "Run Script Parameters in JSON format"
+// @Param body project.RunScriptParameters true "Run Script Parameters in JSON format"
 // @Success 200 {string} string Guid
 // @Failure 500 {string} string Error
 // @Router /scripts/run [post]
@@ -73,8 +75,29 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mainScript := ""
+	for _, scriptPart := range params.Code {
+		if scriptPart.MainScript {
+			mainScript = scriptPart.Code
+		}
+	}
+
+	scriptRun := &ScriptRun{
+		GUID:        uuid.NewString(),
+		Title:       params.Title,
+		Development: params.Development,
+		ScriptGroup: params.ScriptGroup,
+		Script:      mainScript,
+	}
+
+	scriptRun.RecordOrUpdate()
+
 	port := getPort(r.Host)
-	guid, err := StartScript(port, params.Code, params.Title, params.Development, "", params.ScriptGroup, r.Header.Get("X-API-Key"), nil)
+	guid, err := scripting.StartScript(
+		port,
+		params.Code,
+		r.Header.Get("X-API-Key"),
+		scriptRun)
 
 	if err != nil {
 		http.Error(w, "Error running Python script: "+err.Error(), http.StatusInternalServerError)
@@ -100,7 +123,7 @@ func UpdateProgress(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	guid := vars["guid"]
 
-	var params project.ScriptProgressUpdate
+	var params ScriptProgressUpdate
 
 	// Try to decode the request body into the struct. If there is an error,
 	// respond to the client with the error message and a 400 status code.

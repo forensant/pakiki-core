@@ -25,6 +25,6 @@ func init() {
 
 	pf, _ := os.CreateTemp("", "proximity-testprojdb-*")
 	tf, _ := os.CreateTemp("", "proximity-testtmpdb-*")
-	ioHub := project.NewIOHub()
+	ioHub := project.NewIOHub("", "")
 	ioHub.Run(pf.Name(), tf.Name())
 }

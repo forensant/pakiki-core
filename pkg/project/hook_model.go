@@ -1,0 +1,183 @@
+package project
+
+import (
+	"encoding/base64"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/pipeline/proximity-core/internal/scripting"
+	"gorm.io/gorm"
+)
+
+var hookLibrary scripting.ScriptCode = scripting.ScriptCode{
+	Code:       "",
+	Filename:   "hook_library.py",
+	MainScript: false,
+}
+
+var hooks []Hook
+
+// Hook contains the details of a piece of code which can be run either before or after a request
+type Hook struct {
+	ID                uint `json:"-"`
+	GUID              string
+	Name              string
+	Enabled           bool
+	InternallyManaged bool
+	HookType          string
+	MatchRequest      bool
+	MatchResponse     bool
+	DisplayJson       string
+	Code              string
+	SortOrder         int
+	ObjectType        string `gorm:"-"`
+}
+
+// HookResponse is used by the proxy to get the results after running a hook
+type HookResponse struct {
+	ResponseReady   chan bool
+	Modified        bool
+	ModifiedRequest []byte
+}
+
+func refreshHooks() {
+	var hookEntries []Hook
+	result := readableDatabase.Order("hooks.internally_managed").Order("hooks.hook_type").Order("hooks.sort_order").Find(&hookEntries)
+
+	if result.Error != nil {
+		fmt.Printf("Error retrieving hook entries from database: %s", result.Error)
+		return
+	}
+
+	hooks = hookEntries
+}
+
+func (h *Hook) Record() {
+	if h.GUID == "" {
+		h.GUID = uuid.NewString()
+	}
+
+	ioHub.databaseWriter <- h
+
+	h.ObjectType = "Hook"
+	ioHub.broadcast <- h
+
+	go refreshHooks()
+}
+
+func RunHooksOnRequest(req *Request, reqBytes []byte) *HookResponse {
+	response := &HookResponse{
+		ResponseReady:   make(chan bool),
+		Modified:        false,
+		ModifiedRequest: reqBytes,
+	}
+
+	if req.isLarge() || hookLibrary.Code == "" {
+		return response
+	}
+
+	code := "request = RequestResponse({'GUID':'" + req.GUID + "'," +
+		"'URL': '" + EscapeForPython(req.URL) + "'," +
+		"'Verb': '" + req.Verb + "'," +
+		"'ResponseStatusCode': " + strconv.Itoa(req.ResponseStatusCode) + "," +
+		"'ResponseContentType': '" + EscapeForPython(req.ResponseContentType) + "'})\n"
+
+	base64Bytes := base64.StdEncoding.EncodeToString(reqBytes)
+	code += "request.parse_request(base64.b64decode('" + EscapeForPython(base64Bytes) + "'))\n"
+
+	for _, hook := range hooks {
+		if !hook.Enabled {
+			continue
+		}
+
+		if !hook.MatchRequest {
+			continue
+		}
+
+		response.Modified = true
+		code += "\n" + hook.Code + "\n"
+	}
+
+	if !response.Modified {
+		return response
+	}
+
+	code += "\nprint('PROXIMITY_HOOK_RESULT:' + request.request_to_base64())\n"
+
+	errorLog := &HookErrorLog{
+		Code:         code,
+		HookResponse: response,
+	}
+
+	fullCode := []scripting.ScriptCode{
+		hookLibrary,
+		{
+			Code:       code,
+			Filename:   "hooks.py",
+			MainScript: true,
+		},
+	}
+
+	// the error log contains the relevant hooks to do the processing after the script has run
+	scripting.StartScript(ioHub.port, fullCode, ioHub.apiToken, errorLog)
+
+	return response
+}
+
+func (hr *HookResponse) parseResponse(log *HookErrorLog) {
+	log.Output = strings.Trim(log.Output, "\n")
+	lines := strings.Split(log.Output, "\n")
+
+	if len(lines) == 0 {
+		hr.ResponseReady <- true
+		return
+	}
+
+	lastLine := lines[len(lines)-1]
+	hasResponse := (strings.Index(lastLine, "PROXIMITY_HOOK_RESULT:") == 0)
+
+	// Save the error log
+	if len(lines) > 1 {
+		if hasResponse {
+			lines = lines[:len(lines)-1]
+		}
+		log.Output = strings.Join(lines, "\n")
+		log.Record()
+	}
+
+	if !hasResponse {
+		hr.ResponseReady <- true
+		return
+	}
+
+	// We have a response, so let's parse it
+	base64Resp := lastLine[len("PROXIMITY_HOOK_RESULT:"):]
+	respBytes, err := base64.StdEncoding.DecodeString(base64Resp)
+
+	if err != nil {
+		fmt.Printf("Error decoding response: %s", err)
+		hr.ResponseReady <- true
+		return
+	}
+
+	hr.ModifiedRequest = respBytes
+	hr.ResponseReady <- true
+}
+
+func (h *Hook) ShouldFilter(str string) bool {
+	return false
+}
+
+func (h *Hook) validate() error {
+	if h.GUID == "" {
+		h.GUID = uuid.NewString()
+	}
+
+	return nil
+}
+
+func (h *Hook) WriteToDatabase(db *gorm.DB) {
+	db.Save(h)
+}

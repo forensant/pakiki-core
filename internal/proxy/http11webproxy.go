@@ -42,6 +42,38 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 	request := project.NewRequestFromHttp(req, requestBytes)
 	var response *http.Response
 
+	hookResp := project.RunHooksOnRequest(request, requestBytes)
+
+	if hookResp.Modified {
+		<-hookResp.ResponseReady
+
+		if !bytes.Equal(hookResp.ModifiedRequest, requestBytes) {
+			requestBytes = hookResp.ModifiedRequest
+
+			// in case we don't intercept
+			modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(requestBytes)))
+			oldUrl := req.URL
+			req, err = http.ReadRequest(modifiedRequest)
+			req.URL.Scheme = oldUrl.Scheme
+			req.URL.Host = oldUrl.Host
+
+			if !interceptSettings.BrowserToServer {
+				// if we're not doing other modifications, update the request
+				dataPacket := project.DataPacket{
+					Data:        requestBytes,
+					Direction:   "Request",
+					Modified:    true,
+					GUID:        uuid.NewString(),
+					Time:        time.Now().Unix(),
+					StartOffset: 0,
+					EndOffset:   int64(len(requestBytes)) - 1,
+				}
+
+				request.DataPackets = append(request.DataPackets, dataPacket)
+			}
+		}
+	}
+
 	if interceptSettings.BrowserToServer {
 		interceptedRequest := interceptRequest(request, "", "browser_to_server", requestBytes)
 		<-interceptedRequest.ResponseReady

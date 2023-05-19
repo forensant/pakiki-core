@@ -463,6 +463,11 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 	}
 }
 
+func (request *Request) isLarge() bool {
+	fullLength := request.RequestSize + request.ResponseSize
+	return fullLength > int64(MaxResponsePacketSize) && request.Protocol == "HTTP/1.1"
+}
+
 func (request *Request) isResource() bool {
 	content_types := [...]string{
 		"font/",
