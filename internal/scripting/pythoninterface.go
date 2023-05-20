@@ -22,11 +22,6 @@ import (
 	"strings"
 
 	_ "embed"
-
-	"github.com/google/uuid"
-
-	"github.com/pipeline/proximity-core/internal/request_queue"
-	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 //go:embed proximity_core.py
@@ -42,7 +37,12 @@ type ScriptCode struct {
 }
 
 type ScriptCaller interface {
+	GetGUID() string
 	RecordError(string)
+
+	SetFullOutput(string)
+	SetOutput(string)
+	SetStatus(string)
 }
 
 func CancelScriptInternal(guid string) error {
@@ -54,8 +54,6 @@ func CancelScriptInternal(guid string) error {
 			return err
 		}
 	}
-
-	project.CancelScript(guid)
 
 	return nil
 }
@@ -75,20 +73,6 @@ func readFromBuffer(r io.ReadCloser, waitForNewline bool) (string, error) {
 			return "", err
 		}
 	}
-}
-
-func recordInProject(scriptRun project.ScriptRun) {
-	if scriptRun.Status == "Error" || scriptRun.Error != "" {
-		project.CancelInjectOperation(scriptRun.GUID, scriptRun.Error)
-	}
-
-	databaseScriptRun := project.ScriptRunFromGUID(scriptRun.GUID)
-	if databaseScriptRun != nil {
-		scriptRun.TotalRequestCount = databaseScriptRun.TotalRequestCount
-	}
-
-	scriptRun.UpdateRunningScripts()
-	scriptRun.RecordOrUpdate()
 }
 
 func replaceCodeVariables(code string, guid string, port string, apiKey string) string {
@@ -125,10 +109,7 @@ func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCl
 		return
 	}
 
-	fmt.Printf("Starting Python interpreter at %s\n", pythonPath)
-	fmt.Printf("Core Environment: %+v\n", os.Environ())
 	pythonCmd := exec.Command(pythonPath)
-	fmt.Printf("Interpreter Environment: %+v\n", pythonCmd.Environ())
 	stdin, err = pythonCmd.StdinPipe()
 	if err != nil {
 		return
@@ -153,11 +134,8 @@ func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCl
 	return
 }
 
-func StartScript(hostPort string, scriptCode []ScriptCode, title string, development bool, guid string, scriptGroup string, apiKey string, scriptCaller ScriptCaller) (string, error) {
-
-	if guid == "" {
-		guid = uuid.NewString()
-	}
+func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, scriptCaller ScriptCaller) (string, error) {
+	guid := scriptCaller.GetGUID()
 
 	pythonIn, pythonOut, pythonErr, err := startPythonInterpreter(guid)
 	if err != nil {
@@ -171,26 +149,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 
 	scriptCode = append([]ScriptCode{commonScriptCode}, scriptCode...)
 
-	mainScript := ""
-	for _, scriptPart := range scriptCode {
-		if scriptPart.MainScript {
-			mainScript = scriptPart.Code
-		}
-	}
-
-	scriptRun := project.ScriptRun{
-		GUID:        guid,
-		Script:      mainScript,
-		TextOutput:  "",
-		Title:       title,
-		Error:       "",
-		Status:      "Running",
-		Development: development,
-		ScriptGroup: scriptGroup,
-	}
-
-	// create the initial record within the project
-	recordInProject(scriptRun)
+	scriptCaller.SetStatus("Running")
 
 	go func() {
 		for idx, scriptPart := range scriptCode {
@@ -207,10 +166,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 					fmt.Println(err)
 				}
 
-				scriptRun.Error = err
-				scriptRun.Status = "Error"
-
-				recordInProject(scriptRun)
+				scriptCaller.RecordError(err)
 
 				runningScripts[guid].Process.Kill()
 				delete(runningScripts, guid)
@@ -233,21 +189,17 @@ func StartScript(hostPort string, scriptCode []ScriptCode, title string, develop
 					errStr = string(stripOutputTags(lineRead))
 				} else if bytesRead != 0 {
 					fullOutput = stripOutputTags(append(fullOutput, lineRead...))
-					outputUpdate := project.ScriptOutputUpdate{
-						GUID:       guid,
-						TextOutput: string(stripOutputTags(lineRead)),
-					}
-					outputUpdate.Record()
+					scriptCaller.SetOutput(string(stripOutputTags(lineRead)))
 				}
 
 				if err != nil || errStr != "" { // will indicate that the file has been closed
-					scriptRun.TextOutput = string(fullOutput)
-					scriptRun.Error = errStr
-					scriptRun.Status = "Completed"
+					scriptCaller.SetFullOutput(string(fullOutput))
+					if errStr != "" {
+						scriptCaller.RecordError(errStr)
+					} else {
+						scriptCaller.SetStatus("Completed")
+					}
 
-					recordInProject(scriptRun)
-
-					request_queue.CloseQueueIfEmpty(guid)
 					readingFinishedChannel <- true
 					return
 				}

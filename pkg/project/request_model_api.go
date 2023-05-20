@@ -417,7 +417,7 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 	var requestResponse RequestResponseContents
 	requestResponse.Protocol = httpRequest.Protocol
 	requestResponse.CombinedContentLength = httpRequest.RequestSize + httpRequest.ResponseSize
-	requestResponse.LargeResponse = requestResponse.CombinedContentLength > int64(MaxResponsePacketSize) && httpRequest.Protocol == "HTTP/1.1"
+	requestResponse.LargeResponse = httpRequest.isLarge()
 
 	var dataPackets []DataPacket
 	dataPacketOrder := "direction, id"

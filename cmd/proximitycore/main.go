@@ -27,7 +27,6 @@ import (
 
 	assets "github.com/pipeline/proximity-core"
 	"github.com/pipeline/proximity-core/internal/proxy"
-	"github.com/pipeline/proximity-core/internal/scripting"
 	"github.com/pipeline/proximity-core/pkg/project"
 )
 
@@ -77,7 +76,7 @@ func main() {
 	projectPath, tempDBPath, shouldSave := getProjectPath(parameters.ProjectPath, parameters.TempProjectPath)
 	shouldCleanupProjectSettings = shouldSave
 
-	ioHub := project.NewIOHub()
+	ioHub := project.NewIOHub(port, apiToken)
 	gormDB, tempDBPath = ioHub.Run(projectPath, tempDBPath)
 
 	if gormDB == nil {
@@ -123,6 +122,14 @@ func main() {
 
 	rtr := mux.NewRouter()
 
+	rtr.HandleFunc("/hooks", authenticate(project.HandleHooks))
+	rtr.HandleFunc("/hooks/errors", authenticate(project.GetHookErrors))
+	rtr.HandleFunc("/hooks/errors/{guid}", authenticate(project.DeleteHookError))
+	rtr.HandleFunc("/hooks/order", authenticate(project.OrderHooks))
+	rtr.HandleFunc("/hooks/set_library", authenticate(project.SetHookLibrary))
+	rtr.HandleFunc("/hooks/{guid}/enabled", authenticate(project.EnableHook))
+	rtr.HandleFunc("/hooks/{guid}", authenticate(project.DeleteHook))
+
 	rtr.HandleFunc("/inject_operations", authenticateWithGormDB(project.GetInjectOperations))
 	rtr.HandleFunc("/inject_operations/fuzzdb_payload", authenticate(proxy.GetFuzzdbPayload))
 	rtr.HandleFunc("/inject_operations/payloads", authenticate(proxy.GetInjectPayloads))
@@ -167,13 +174,13 @@ func main() {
 	rtr.HandleFunc("/script_groups/{guid}/title", authenticateWithGormDB(project.PatchScriptGroupTitle))
 
 	rtr.HandleFunc("/scripts", authenticateWithGormDB(project.GetScripts))
-	rtr.HandleFunc("/scripts/run", authenticate(scripting.RunScript))
+	rtr.HandleFunc("/scripts/run", authenticate(project.RunScript))
 	rtr.HandleFunc("/scripts/{guid}", authenticateWithGormDB(project.GetScript))
 	rtr.HandleFunc("/scripts/{guid}/append_html_output", authenticateWithGormDB(project.PostAppendHTMLOutputScript))
 	rtr.HandleFunc("/scripts/{guid}/archive", authenticateWithGormDB(project.PatchArchiveScript))
-	rtr.HandleFunc("/scripts/{guid}/cancel", authenticate(scripting.CancelScript))
+	rtr.HandleFunc("/scripts/{guid}/cancel", authenticate(project.CancelScriptAPI))
 	rtr.HandleFunc("/scripts/{guid}/export", authenticateWithGormDB(project.ExportScriptResults))
-	rtr.HandleFunc("/scripts/{guid}/update_progress", authenticate(scripting.UpdateProgress))
+	rtr.HandleFunc("/scripts/{guid}/update_progress", authenticate(project.UpdateProgress))
 
 	rtr.HandleFunc("/ping", ping)
 

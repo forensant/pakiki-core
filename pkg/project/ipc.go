@@ -54,6 +54,9 @@ type IOHub struct {
 
 	// writes a given record into the database
 	databaseWriter chan DBRecord
+
+	port     string
+	apiToken string
 }
 
 const (
@@ -119,13 +122,15 @@ func marshalObject(obj interface{}) []byte {
 	return b
 }
 
-func NewIOHub() *IOHub {
+func NewIOHub(port string, apiToken string) *IOHub {
 	ioHub = &IOHub{
 		broadcast:      make(chan BroadcastableObject),
 		register:       make(chan *WebSocketClient),
 		unregister:     make(chan *WebSocketClient),
 		clients:        make(map[*WebSocketClient]bool),
 		databaseWriter: make(chan DBRecord),
+		port:           port,
+		apiToken:       apiToken,
 	}
 
 	return ioHub
@@ -231,6 +236,7 @@ func (h *IOHub) Run(p string, tempPath string) (*gorm.DB, string) {
 
 	autosaveTimer = time.AfterFunc(time.Minute*5, autosave)
 	go refreshScope()
+	go refreshHooks()
 
 	go func() {
 		for {

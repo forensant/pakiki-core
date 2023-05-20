@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"text/template"
 	"unicode/utf8"
 
@@ -33,7 +32,12 @@ func runInjection(inject *project.InjectOperation, port string, apiKey string) {
 		MainScript: true,
 	}
 
-	_, err = scripting.StartScript(port, []scripting.ScriptCode{scriptCode}, "", true, inject.GUID, "", apiKey, inject)
+	_, err = scripting.StartScript(
+		port,
+		[]scripting.ScriptCode{scriptCode},
+		apiKey,
+		inject)
+
 	if err != nil {
 		inject.RecordError("Error running script: " + err.Error())
 	}
@@ -68,9 +72,9 @@ func generateScriptForInjection(inject *project.InjectOperation) (string, error)
 	}
 
 	params := scriptTemplateParameters{
-		Host:     escapeForPython(inject.Host),
+		Host:     project.EscapeForPython(inject.Host),
 		Payloads: stringListToPython(payloads),
-		Request:  escapeForPython(string(requestJson)),
+		Request:  project.EscapeForPython(string(requestJson)),
 		SSL:      ssl,
 	}
 	temp, err := template.New("script").Parse(scriptTemplate)
@@ -85,15 +89,6 @@ func generateScriptForInjection(inject *project.InjectOperation) (string, error)
 	}
 
 	return finalScript.String(), nil
-}
-
-func escapeForPython(input string) string {
-	output := strings.ReplaceAll(input, "\\", "\\\\")
-	output = strings.ReplaceAll(output, "\n", "\\n")
-	output = strings.ReplaceAll(output, "'", "\\'")
-	output = strings.ReplaceAll(output, "\x0A", "")
-	output = strings.ReplaceAll(output, "\x0D", "")
-	return output
 }
 
 func generatePayloads(inject *project.InjectOperation) []string {
@@ -113,7 +108,7 @@ func generatePayloads(inject *project.InjectOperation) []string {
 		for scanner.Scan() {
 			text := scanner.Text()
 			if utf8.ValidString(text) {
-				payloads = append(payloads, escapeForPython(text))
+				payloads = append(payloads, project.EscapeForPython(text))
 			}
 		}
 	}
@@ -136,7 +131,7 @@ func stringListToPython(strs []string) string {
 		} else {
 			output += ",\n"
 		}
-		output += "'" + escapeForPython(str) + "'"
+		output += "'" + project.EscapeForPython(str) + "'"
 	}
 	output += "]"
 	return output

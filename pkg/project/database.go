@@ -185,6 +185,8 @@ func moveFile(src, dst string) error {
 }
 
 func migrateTables(db *gorm.DB) {
+	db.AutoMigrate(&Hook{})
+	db.AutoMigrate(&HookErrorLog{})
 	db.AutoMigrate(&InjectOperationRequestPart{})
 	db.AutoMigrate(&InjectOperation{})
 	db.AutoMigrate(&Request{})

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pipeline/proximity-core/internal/scripting"
+	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 func TestScriptRequestAPIs(t *testing.T) {
@@ -62,7 +63,7 @@ req.queue()
 	}
 
 	proximityServerMux := http.NewServeMux()
-	proximityServerMux.HandleFunc("/scripts/run", scripting.RunScript)
+	proximityServerMux.HandleFunc("/scripts/run", project.RunScript)
 	proximityServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
 	proximityServerMux.HandleFunc("/requests/queue", AddRequestToQueue)
 	s := httptest.NewServer(proximityServerMux)
@@ -93,7 +94,7 @@ req.queue()
 		go srv.Serve(listener)
 		host := listener.Addr().String()
 
-		scriptParams := scripting.RunScriptParameters{
+		scriptParams := project.RunScriptParameters{
 			Code: []scripting.ScriptCode{{
 				Code:       strings.ReplaceAll(test.script, "HOSTNAME", host),
 				Filename:   "script.py",
