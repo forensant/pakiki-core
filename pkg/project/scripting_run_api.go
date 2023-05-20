@@ -60,7 +60,7 @@ func CancelScriptAPI(w http.ResponseWriter, r *http.Request) {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param body project.RunScriptParameters true "Run Script Parameters in JSON format"
+// @Param body body project.RunScriptParameters true "Run Script Parameters in JSON format"
 // @Success 200 {string} string Guid
 // @Failure 500 {string} string Error
 // @Router /scripts/run [post]
