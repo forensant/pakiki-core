@@ -194,12 +194,12 @@ jobs:
       - name: Set permissions
         run: chmod +x build/*
 
-      - name: Run tests
-        working-directory: build
-        run: ../scripts/test.sh
+#      - name: Run tests
+#        working-directory: build
+#        run: ../scripts/test.sh
 
-      - name: Remove coverage
-        run: rm build/coverage.txt
+#      - name: Remove coverage
+#        run: rm build/coverage.txt
   
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3

@@ -1,7 +1,6 @@
 package project
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,7 +62,6 @@ func (h *HookErrorLog) Record() {
 }
 
 func (h *HookErrorLog) RecordError(err string) {
-	fmt.Printf("Error reported\n")
 	h.Error = err
 	h.Record()
 	h.HookResponse.parseResponse(h)
