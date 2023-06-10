@@ -78,7 +78,24 @@ func getOOBClient() (*interactsh.Client, error) {
 }
 
 func oobStartPolling() {
-	oob_client.StartPolling(time.Duration(5)*time.Second, func(interaction *server.Interaction) {
+	oob_client.StartPolling(time.Duration(5)*time.Second, func(interaction *server.Interaction, srvErr error) {
+		if srvErr != nil {
+			fmt.Printf("InteractSH returned error (regenerating interactsh client): %s\n", srvErr.Error())
+			oob_client.StopPolling()
+			err := oob_client.Close()
+			if err != nil {
+				fmt.Printf("Could not close interactsh client: %s\n", err.Error())
+			}
+
+			err = generateOOBClient()
+			if err != nil {
+				fmt.Printf("Could not generate new interactsh client (not polling): %s\n", err.Error())
+			} else {
+				oobStartPolling()
+			}
+			return
+		}
+
 		url := interaction.Protocol + "://" + interaction.FullId + "." + interactDomain
 		verb := ""
 
