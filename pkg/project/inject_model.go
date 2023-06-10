@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/pipeline/proximity-core/internal/request_queue"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -85,13 +86,8 @@ func (injectOperation *InjectOperation) Broadcast() {
 	injectOperation.DoNotRecord = prevValue
 }
 
-func CancelInjectOperation(guid string, err string) {
-	injectOperation := InjectFromGUID(guid)
-	if injectOperation == nil {
-		return
-	}
-
-	injectOperation.RecordError(err)
+func (injectOp *InjectOperation) GetGUID() string {
+	return injectOp.GUID
 }
 
 // Record sends the inject operation to the user interface and/or records it in the database
@@ -117,11 +113,26 @@ func (injectOperation *InjectOperation) Record() {
 }
 
 // RecordError updates the error field and transmits notification of the error to the GUI
-func (injectOperation *InjectOperation) RecordError(err string) {
+func (injectOp *InjectOperation) RecordError(err string) {
 	fmt.Println(err)
-	injectOperation.TotalRequestCount = 0
-	injectOperation.Error = err
-	injectOperation.UpdateAndRecord()
+	injectOp.TotalRequestCount = 0
+	injectOp.Error = err
+	injectOp.UpdateAndRecord()
+	request_queue.CloseQueueIfEmpty(injectOp.GUID)
+}
+
+func (injectOp *InjectOperation) SetFullOutput(string) {
+	// do nothing
+}
+
+func (injectOp *InjectOperation) SetOutput(string) {
+	// do nothing
+}
+
+func (injectOp *InjectOperation) SetStatus(s string) {
+	if s == "Completed" || s == "Error" {
+		request_queue.CloseQueueIfEmpty(injectOp.GUID)
+	}
 }
 
 func TitlizeName(filename string) string {

@@ -2,9 +2,11 @@ package project
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/pipeline/proximity-core/internal/request_queue"
 	"gorm.io/gorm"
 )
 
@@ -56,6 +58,15 @@ type runningScriptDetails struct {
 
 var runningScriptsMutex sync.Mutex
 var runningScripts map[string]*runningScriptDetails = make(map[string]*runningScriptDetails)
+
+func EscapeForPython(input string) string {
+	output := strings.ReplaceAll(input, "\\", "\\\\")
+	output = strings.ReplaceAll(output, "\n", "\\n")
+	output = strings.ReplaceAll(output, "'", "\\'")
+	output = strings.ReplaceAll(output, "\x0A", "")
+	output = strings.ReplaceAll(output, "\x0D", "")
+	return output
+}
 
 func ScriptIncrementTotalRequests(guid string) {
 	runningScriptsMutex.Lock()
@@ -135,6 +146,10 @@ func CancelScript(guid string) {
 	script.Record()
 }
 
+func (sr *ScriptRun) GetGUID() string {
+	return sr.GUID
+}
+
 // Record sends the script output update details to the user interface
 func (scriptOutputUpdate *ScriptOutputUpdate) Record() {
 	scriptOutputUpdate.ObjectType = "Script Output Update"
@@ -209,6 +224,29 @@ func (scriptRun *ScriptRun) RecordOrUpdate() {
 	scriptRun.Record()
 }
 
+func (scriptRun *ScriptRun) SetFullOutput(output string) {
+	scriptRun.TextOutput = output
+}
+
+func (scriptRun *ScriptRun) SetOutput(output string) {
+	outputUpdate := ScriptOutputUpdate{
+		GUID:       scriptRun.GUID,
+		TextOutput: output,
+	}
+	outputUpdate.Record()
+}
+
+func (scriptRun *ScriptRun) SetStatus(status string) {
+	scriptRun.Status = status
+	databaseScriptRun := ScriptRunFromGUID(scriptRun.GUID)
+	if databaseScriptRun != nil {
+		scriptRun.TotalRequestCount = databaseScriptRun.TotalRequestCount
+	}
+	scriptRun.UpdateRunningScripts()
+	scriptRun.RecordOrUpdate()
+	request_queue.CloseQueueIfEmpty(scriptRun.GUID)
+}
+
 func (scriptRun *ScriptRun) UpdateFromRunningScript() {
 	runningScriptsMutex.Lock()
 	if runningScript, ok := runningScripts[scriptRun.GUID]; ok {
@@ -247,8 +285,13 @@ func (scriptRun *ScriptRun) UpdateRunningScripts() {
 // RecordError updates the error field and transmits notification of the error to the GUI
 func (scriptRun *ScriptRun) RecordError(err string) {
 	fmt.Println(err)
-	scriptRun.TotalRequestCount = 0
+	databaseScriptRun := ScriptRunFromGUID(scriptRun.GUID)
+	if databaseScriptRun != nil {
+		scriptRun.TotalRequestCount = databaseScriptRun.TotalRequestCount
+	}
 	scriptRun.Error = err
+	scriptRun.Status = "Error"
+	scriptRun.UpdateRunningScripts()
 	scriptRun.UpdateAndRecord()
 }
 

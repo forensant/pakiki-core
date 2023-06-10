@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pipeline/proximity-core/internal/scripting"
 	_ "github.com/pipeline/proximity-core/internal/testing_init"
 	"github.com/pipeline/proximity-core/pkg/project"
 )
@@ -220,7 +219,7 @@ func TestCancelInjectScan(t *testing.T) {
 	proximityServerMux := mux.NewRouter()
 	proximityServerMux.HandleFunc("/inject_operation/run", RunInjection)
 	proximityServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
-	proximityServerMux.HandleFunc("/scripts/{guid}/cancel", scripting.CancelScript)
+	proximityServerMux.HandleFunc("/scripts/{guid}/cancel", project.CancelScriptAPI)
 	proximityServerMux.HandleFunc("/requests", project.GetRequests)
 	proximityServerMux.HandleFunc("/inject_operations/{guid}", project.GetInjectOperation)
 

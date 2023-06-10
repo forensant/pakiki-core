@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-
-	_ "github.com/pipeline/proximity-core/internal/testing_init"
 )
 
 func TestRunScript(t *testing.T) {
