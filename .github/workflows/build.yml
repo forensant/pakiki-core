@@ -47,11 +47,6 @@ jobs:
         with:
           submodules: true
           
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.11.0
-      
       - name: Download frontend
         uses: actions/download-artifact@v2
         with:
@@ -60,7 +55,7 @@ jobs:
             
         
       - name: Install system dependencies
-        run: sudo apt install build-essential
+        run: sudo apt install build-essential python3.11-dev
 
       - name: Install golang
         uses: actions/setup-go@v3
