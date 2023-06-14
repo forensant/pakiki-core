@@ -105,7 +105,7 @@ char* getDir() {
 #ifdef _WIN32
   char* dir = concatenateDir("\\python39");
 #elif defined(__linux__)
-  const char* pythonSubdir = "/python310";
+  const char* pythonSubdir = "/python311";
 
   // identify the current path of the executable - so that we can run cleanly under flatpak
   std::filesystem::path path = std::filesystem::canonical("/proc/self/exe").parent_path();
