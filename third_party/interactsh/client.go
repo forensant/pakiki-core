@@ -84,7 +84,7 @@ func New(options *Options) (*Client, error) {
 }
 
 // InteractionCallback is a callback function for a reported interaction
-type InteractionCallback func(*server.Interaction)
+type InteractionCallback func(*server.Interaction, error)
 
 // serialisedClient is used to store the client object in JSON format
 type serialisedClient struct {
@@ -218,7 +218,12 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 		b := make([]byte, 10240)
 		r, _ := resp.Body.Read(b)
 		b = b[:r]
-		fmt.Printf("Error code: %d, message: %s\n", resp.StatusCode, string(b))
+		fmt.Printf("InteractSH Error code: %d, message: %s\n", resp.StatusCode, string(b))
+		if resp.StatusCode == http.StatusBadRequest {
+			// this means that the server has been restarted or interaction id cannot be found
+			// so we want to regenerate the client
+			callback(nil, errors.New("interaction correlation id could not be found on the server"))
+		}
 		return errors.New("couldn't poll interactions")
 	}
 	response := &server.PollResponse{}
@@ -238,7 +243,7 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 			gologger.Error().Msgf("Could not unmarshal interaction data interaction: %v\n", err)
 			continue
 		}
-		callback(interaction)
+		callback(interaction, nil)
 	}
 
 	for _, plaintext := range response.Extra {
@@ -247,7 +252,7 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 			gologger.Error().Msgf("Could not unmarshal interaction data interaction: %v\n", err)
 			continue
 		}
-		callback(interaction)
+		callback(interaction, nil)
 	}
 
 	// handle root-tld data if any
@@ -257,7 +262,7 @@ func (c *Client) getInteractions(callback InteractionCallback) error {
 			gologger.Error().Msgf("Could not unmarshal interaction data interaction: %v\n", err)
 			continue
 		}
-		callback(interaction)
+		callback(interaction, nil)
 	}
 
 	return nil
