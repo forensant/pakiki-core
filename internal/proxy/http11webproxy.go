@@ -43,6 +43,7 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 	var response *http.Response
 
 	hookResp := project.RunHooksOnRequest(request, requestBytes)
+	hookRun := false
 
 	if hookResp.Modified {
 		<-hookResp.ResponseReady
@@ -56,6 +57,8 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 			req, err = http.ReadRequest(modifiedRequest)
 			req.URL.Scheme = oldUrl.Scheme
 			req.URL.Host = oldUrl.Host
+
+			hookRun = true
 
 			if !interceptSettings.BrowserToServer {
 				// if we're not doing other modifications, update the request
@@ -75,7 +78,7 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 	}
 
 	if interceptSettings.BrowserToServer {
-		interceptedRequest := interceptRequest(request, "", "browser_to_server", requestBytes)
+		interceptedRequest := interceptRequest(request, "", "browser_to_server", requestBytes, hookRun)
 		<-interceptedRequest.ResponseReady
 
 		modifiedRequestData := request.GetRequestResponseData("Request", true)
@@ -148,26 +151,64 @@ func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.
 	if request != nil {
 		can_intercept := request.HandleResponse(resp, ctx, true)
 
-		if can_intercept && (interceptSettings.ServerToBrowser || request.InterceptResponse) {
-			interceptedResponse := interceptRequest(request, "", "server_to_browser", request.GetRequestResponseData("Response", false))
-			<-interceptedResponse.ResponseReady
+		if can_intercept {
+			responseBytes := request.GetRequestResponseData("Response", false)
+			shouldIntercept := (interceptSettings.ServerToBrowser || request.InterceptResponse)
 
-			responseBytes := request.GetRequestResponseData("Response", true)
-			if len(responseBytes) == 0 {
-				responseBytes = request.GetRequestResponseData("Response", false)
+			hookResp := project.RunHooksOnResponse(request, responseBytes)
+
+			hasBeenModified := false
+			hookRun := false
+
+			if hookResp.Modified {
+				<-hookResp.ResponseReady
+
+				if !bytes.Equal(hookResp.ModifiedRequest, responseBytes) {
+					responseBytes = hookResp.ModifiedRequest
+					hasBeenModified = true
+					hookRun = true
+
+					if !shouldIntercept {
+						// if we're not doing other modifications, update the request
+						dataPacket := project.DataPacket{
+							Data:        responseBytes,
+							Direction:   "Response",
+							Modified:    true,
+							GUID:        uuid.NewString(),
+							Time:        time.Now().Unix(),
+							StartOffset: 0,
+							EndOffset:   int64(len(responseBytes)) - 1,
+						}
+
+						request.DataPackets = append(request.DataPackets, dataPacket)
+					}
+				}
 			}
 
-			responseBytes = project.CorrectLengthHeaders(responseBytes)
-			modifiedResponse := bufio.NewReader(io.NopCloser(bytes.NewBuffer(responseBytes)))
-			newResponse, err := http.ReadResponse(modifiedResponse, resp.Request)
+			if shouldIntercept {
+				interceptedResponse := interceptRequest(request, "", "server_to_browser", responseBytes, hookRun)
+				<-interceptedResponse.ResponseReady
 
-			if err != nil {
-				request.Error = "Error reading modified response: " + err.Error()
-			} else {
-				resp = newResponse
+				responseBytes = request.GetRequestResponseData("Response", true)
+				if len(responseBytes) == 0 {
+					responseBytes = request.GetRequestResponseData("Response", false)
+				}
+				hasBeenModified = true
+
+				removeInterceptedRequest(interceptedResponse)
 			}
 
-			removeInterceptedRequest(interceptedResponse)
+			if hasBeenModified {
+				responseBytes = project.CorrectLengthHeaders(responseBytes)
+				modifiedResponse := bufio.NewReader(io.NopCloser(bytes.NewBuffer(responseBytes)))
+				newResponse, err := http.ReadResponse(modifiedResponse, resp.Request)
+
+				if err != nil {
+					request.Error = "Error reading modified response: " + err.Error()
+				} else {
+					resp = newResponse
+				}
+			}
 		}
 
 		if errorToReport != nil {
@@ -236,7 +277,7 @@ func onWebsocketPacketReceived(data []byte, direction goproxy.WebsocketDirection
 			interceptDirection = "server_to_browser"
 		}
 
-		interceptedRequest := interceptRequest(request, dataPacketGuid, interceptDirection, data)
+		interceptedRequest := interceptRequest(request, dataPacketGuid, interceptDirection, data, false)
 		<-interceptedRequest.ResponseReady
 
 		for _, dataPacket := range request.DataPackets {

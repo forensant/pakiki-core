@@ -67,33 +67,49 @@ func (h *Hook) Record() {
 	go refreshHooks()
 }
 
-func RunHooksOnRequest(req *Request, reqBytes []byte) *HookResponse {
+func runHooks(req *Request, reqBytes []byte, isResponse bool) *HookResponse {
 	response := &HookResponse{
 		ResponseReady:   make(chan bool),
 		Modified:        false,
 		ModifiedRequest: reqBytes,
 	}
 
-	if req.isLarge() || hookLibrary.Code == "" {
+	if req.isLarge() || hookLibrary.Code == "" || req.Protocol != "HTTP" {
 		return response
 	}
 
-	code := "request = RequestResponse({'GUID':'" + req.GUID + "'," +
+	direction := "request"
+	if isResponse {
+		direction = "response"
+	}
+
+	code := direction + " = RequestResponse({'GUID':'" + req.GUID + "'," +
 		"'URL': '" + EscapeForPython(req.URL) + "'," +
 		"'Verb': '" + req.Verb + "'," +
 		"'ResponseStatusCode': " + strconv.Itoa(req.ResponseStatusCode) + "," +
 		"'ResponseContentType': '" + EscapeForPython(req.ResponseContentType) + "'})\n"
 
 	base64Bytes := base64.StdEncoding.EncodeToString(reqBytes)
-	code += "request.parse_request(base64.b64decode('" + EscapeForPython(base64Bytes) + "'))\n"
+
+	if isResponse {
+		code += "response.parse_response(base64.b64decode('" + EscapeForPython(base64Bytes) + "'))\n"
+	} else {
+		code += "request.parse_request(base64.b64decode('" + EscapeForPython(base64Bytes) + "'))\n"
+	}
 
 	for _, hook := range hooks {
 		if !hook.Enabled {
 			continue
 		}
 
-		if !hook.MatchRequest {
-			continue
+		if isResponse {
+			if hook.MatchRequest {
+				continue
+			}
+		} else {
+			if hook.MatchResponse {
+				continue
+			}
 		}
 
 		response.Modified = true
@@ -104,7 +120,11 @@ func RunHooksOnRequest(req *Request, reqBytes []byte) *HookResponse {
 		return response
 	}
 
-	code += "\nprint('PROXIMITY_HOOK_RESULT:' + request.request_to_base64())\n"
+	if isResponse {
+		code += "\nprint('PROXIMITY_HOOK_RESULT:' + response.response_to_base64())\n"
+	} else {
+		code += "\nprint('PROXIMITY_HOOK_RESULT:' + request.request_to_base64())\n"
+	}
 
 	errorLog := &HookErrorLog{
 		Code:         code,
@@ -124,6 +144,14 @@ func RunHooksOnRequest(req *Request, reqBytes []byte) *HookResponse {
 	scripting.StartScript(ioHub.port, fullCode, ioHub.apiToken, errorLog)
 
 	return response
+}
+
+func RunHooksOnRequest(req *Request, reqBytes []byte) *HookResponse {
+	return runHooks(req, reqBytes, false)
+}
+
+func RunHooksOnResponse(req *Request, respBytes []byte) *HookResponse {
+	return runHooks(req, respBytes, true)
 }
 
 func (hr *HookResponse) parseResponse(log *HookErrorLog) {
