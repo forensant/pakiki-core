@@ -61,14 +61,15 @@ bool errorOccurred() {
     PyTracebackObject* traceback = (PyTracebackObject*)errtraceback;
     if(traceback) {
       do {
-        // TODO: Here we can also print all of the details of the python frame (traceback->tb_frame)
-        PyObject *s = PyObject_Str(traceback->tb_frame->f_code->co_filename);
-        Py_ssize_t size;
-        const char* filename = PyUnicode_AsUTF8AndSize(s, &size);
+        PyFrameObject *frame = traceback->tb_frame;
+        int lineNumber = PyFrame_GetLineNumber(frame);
+        PyObject *code_obj = (PyObject *)PyFrame_GetCode(frame);
+        PyObject *filename_obj = PyObject_GetAttrString(code_obj, "co_filename");
+        const char *filename = PyUnicode_AsUTF8(filename_obj);
 
-        printf("%s:%d\n", filename, traceback->tb_lineno);
+        printf("%s:%d\n", filename, lineNumber, function_name);
         traceback = traceback->tb_next;
-        Py_DECREF(s);
+        Py_XDECREF(filename_obj);
 
       } while(traceback != nullptr);
     }
@@ -232,27 +233,40 @@ bool runPythonScript() {
   return endInterpreter;
 }
 
-int main(int /*argc*/, char *argv[]) {
-  wchar_t *program = Py_DecodeLocale(argv[0], nullptr);
-  if (program == nullptr) {
-    fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
-    exit(1);
+int main(int argc, char *argv[]) {
+  PyStatus status;
+
+  PyConfig config;
+  PyConfig_InitPythonConfig(&config);
+  config.isolated = 1;
+
+  /* Decode command line arguments.
+    Implicitly preinitialize Python (in isolated mode). */
+  status = PyConfig_SetBytesArgv(&config, argc, argv);
+  if (PyStatus_Exception(status)) {
+    goto exception;
   }
-  Py_SetProgramName(program);  /* optional but recommended */
-  char* currDir = getDir();
 
-  if(currDir != NULL) {
-    Py_SetPythonHome(GetWC(currDir));
+  status = Py_InitializeFromConfig(&config);
+  if (PyStatus_Exception(status)) {
+    goto exception;
   }
-
-  Py_UnbufferedStdioFlag = 1;
-
-  Py_Initialize();
+  PyConfig_Clear(&config);
 
   runPythonScript();
 
   Py_Finalize();
-  PyMem_RawFree(program);
-
+  
   return 0;
+
+exception:
+  PyConfig_Clear(&config);
+  if (PyStatus_IsExit(status)) {
+    return status.exitcode;
+  }
+  /* Display the error message and exit the process with
+    non-zero exit code */
+  Py_ExitStatusException(status);
+
+  
 }
