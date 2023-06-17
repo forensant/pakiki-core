@@ -67,7 +67,7 @@ bool errorOccurred() {
         PyObject *filename_obj = PyObject_GetAttrString(code_obj, "co_filename");
         const char *filename = PyUnicode_AsUTF8(filename_obj);
 
-        printf("%s:%d\n", filename, lineNumber, function_name);
+        printf("%s:%d\n", filename, lineNumber);
         traceback = traceback->tb_next;
         Py_XDECREF(filename_obj);
 
@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
   runPythonScript();
 
   Py_Finalize();
-  
+
   return 0;
 
 exception:
