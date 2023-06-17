@@ -9,8 +9,8 @@ func TestSitemapPathDetermination(t *testing.T) {
 		url          string
 		expectedPath string
 	}{
-		{"https://example.com/accounts/summary", "https://example.com/accounts"},
-		{"https://example.com/accounts/products/purchased", "https://example.com/accounts/products"},
+		{"https://example.com/accounts/summary", "https://example.com/accounts/"},
+		{"https://example.com/accounts/products/purchased", "https://example.com/accounts/products/"},
 	}
 
 	for _, url := range urls {

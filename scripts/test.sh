@@ -7,8 +7,15 @@
 set -e
 echo "" > coverage.txt
 
+function cleanup() {
+    rm ../internal/scripting/proximitypythoninterpreter
+    rm ../internal/scripting/python311
+}
+
+trap cleanup EXIT
+
 ln -s $PWD/proximitypythoninterpreter ../internal/scripting/
-ln -s $PWD/python310 ../internal/scripting/
+ln -s $PWD/python311 ../internal/scripting/
 
 for d in $(go list ../... | grep -v vendor); do
     if [[ "$OSTYPE" == "darwin"* ]]; then    
@@ -23,5 +30,3 @@ for d in $(go list ../... | grep -v vendor); do
     fi
 done
 
-rm ../internal/scripting/proximitypythoninterpreter
-rm ../internal/scripting/python310
