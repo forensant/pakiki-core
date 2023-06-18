@@ -68,14 +68,14 @@ arch --x86_64 /usr/local/bin/brew install python@3.10
 Linux requires the following dependencies to build Proximity:
 
   * A C/C++ Compiler
-  * Python3.10
+  * Python3.11
   * Ruby for the dependency compilation script
 
 The installation will depend on your particular distribution.
 
 #### Debian-based distributions (including Ubuntu)
 
-```sudo apt install build-essential python3.10-dev ruby```
+```sudo apt install build-essential python3.11-dev ruby```
 
 ### Launching for development
 Ensure you have built the project using the build script at least once to create the necessary dependencies.
