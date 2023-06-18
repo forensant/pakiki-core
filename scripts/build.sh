@@ -31,13 +31,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     lipo -create -output build/proximitycore build/ProximityCore_x86_64 build/ProximityCore_arm64
     rm build/ProximityCore_*
 else
-    mkdir -p build/python310/lib
+    mkdir -p build/python311/lib
 
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
-    gcc $(python3.10-config --cflags) $(python3.10-config --ldflags) $(python3.10-config --libs) -std=c++17 -fPIC tools/PythonInterpreter.cpp -o build/proximitypythoninterpreter -lstdc++ -lpython3.10
+    gcc $(python3.11-config --cflags) $(python3.11-config --ldflags) $(python3.11-config --libs) -std=c++17 -fPIC tools/PythonInterpreter.cpp -o build/proximitypythoninterpreter -lstdc++ -lpython3.11
     
-    cp -r $(python3.10-config --prefix)/lib/python3.10 build/python310/lib
+    cp -r $(python3.11-config --prefix)/lib/python3.11 build/python311/lib
 
     scripts/copy_lib_linux.rb build/
 
