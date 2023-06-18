@@ -26,7 +26,7 @@ func GetSettings() (*ProxySettings, error) {
 	}
 
 	settings := &ProxySettings{
-		Http11ProxyAddr:       ":8888",
+		Http11ProxyAddr:       ":8080",
 		MaxConnectionsPerHost: 2,
 	}
 
