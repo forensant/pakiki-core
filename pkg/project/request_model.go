@@ -312,8 +312,14 @@ func findInjectPoints(b []byte) []InjectOperationRequestPart {
 		return parts
 	}
 
-	bodyParts, _ := findInjectPointsSplitURLEncoded(remainingHeaders, body, true)
+	bodyParts, headerBodyRemaining := findInjectPointsSplitURLEncoded(remainingHeaders, body, true)
 	parts = append(parts, bodyParts...)
+	if len(headerBodyRemaining) != 0 {
+		parts = append(parts, InjectOperationRequestPart{
+			RequestPart: base64.StdEncoding.EncodeToString(headerBodyRemaining),
+			Inject:      false,
+		})
+	}
 
 	return parts
 }
