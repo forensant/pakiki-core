@@ -197,7 +197,7 @@ func (scriptRun *ScriptRun) Record() {
 		ioHub.broadcast <- scriptRun
 	}
 
-	if scriptRun.ScriptGroup != "" && scriptRun.Status != "Running" {
+	if scriptRun.ScriptGroup != "" && scriptRun.Status != "" && scriptRun.Status != "Running" {
 		endScriptGroupIfRequired(scriptRun.ScriptGroup)
 	}
 

@@ -28,7 +28,7 @@ type InterceptedRequestResponse struct {
 var interceptedRequests []*project.InterceptedRequest
 var interceptedRequestsLock sync.Mutex
 
-func interceptRequest(request *project.Request, guid string, direction string, requestData []byte) *project.InterceptedRequest {
+func interceptRequest(request *project.Request, guid string, direction string, requestData []byte, hookRun bool) *project.InterceptedRequest {
 	interceptedRequest := &project.InterceptedRequest{
 		Request:       request,
 		GUID:          guid,
@@ -36,6 +36,7 @@ func interceptRequest(request *project.Request, guid string, direction string, r
 		Direction:     direction,
 		ResponseReady: make(chan bool),
 		IsUTF8:        utf8.Valid(requestData),
+		HookRun:       hookRun,
 	}
 
 	interceptedRequest.Record(project.RecordActionAdd)
@@ -150,34 +151,10 @@ func SetInterceptedResponse(w http.ResponseWriter, r *http.Request) {
 	for _, req := range interceptedRequests {
 		if req.Direction == response.Direction && req.Request.GUID == response.RequestGUID && response.DataPacketGUID == req.GUID {
 			requestBytes, _ := base64.StdEncoding.DecodeString(response.Body)
-			direction := "Request"
-			if response.Direction == "server_to_browser" {
-				direction = "Response"
-			}
-			req.RequestAction = response.RequestAction
-
 			origRequestBytes, _ := base64.StdEncoding.DecodeString(req.Body)
-			if !bytes.Equal(origRequestBytes, requestBytes) {
-				var startOffset int64 = 0
-				if direction == "Response" {
-					startOffset = req.Request.RequestSize
-				}
 
-				dataPacket := project.DataPacket{
-					Data:        requestBytes,
-					Direction:   direction,
-					Modified:    true,
-					GUID:        response.DataPacketGUID,
-					Time:        time.Now().Unix(),
-					StartOffset: startOffset,
-					EndOffset:   int64(startOffset) + int64(len(requestBytes)) - 1,
-				}
-
-				req.Request.DataPackets = append(req.Request.DataPackets, dataPacket)
-
-				if req.Request.Protocol != "Websocket" {
-					req.Request.CorrectModifiedRequestResponse(direction)
-				}
+			if !bytes.Equal(origRequestBytes, requestBytes) || req.HookRun {
+				recordRequestData(req, response.RequestAction, requestBytes)
 			}
 
 			req.ResponseReady <- true
@@ -199,9 +176,49 @@ func HandleInterceptSettingsRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func recordRequestData(req *project.InterceptedRequest, action string, requestBytes []byte) {
+	direction := "Request"
+	if req.Direction == "server_to_browser" {
+		direction = "Response"
+	}
+
+	req.RequestAction = action
+
+	var startOffset int64 = 0
+	if direction == "Response" {
+		startOffset = req.Request.RequestSize
+	}
+
+	guid := req.GUID
+	if guid == "" {
+		guid = req.Request.GUID
+	}
+
+	dataPacket := project.DataPacket{
+		Data:        requestBytes,
+		Direction:   direction,
+		Modified:    true,
+		GUID:        guid,
+		Time:        time.Now().Unix(),
+		StartOffset: startOffset,
+		EndOffset:   int64(startOffset) + int64(len(requestBytes)) - 1,
+	}
+
+	req.Request.DataPackets = append(req.Request.DataPackets, dataPacket)
+
+	if req.Request.Protocol != "Websocket" {
+		req.Request.CorrectModifiedRequestResponse(direction)
+	}
+}
+
 func releaseInterceptedRequests() {
 	interceptedRequestsLock.Lock()
 	for _, req := range interceptedRequests {
+		if req.HookRun {
+			base64Body, _ := base64.StdEncoding.DecodeString(req.Body)
+			recordRequestData(req, req.RequestAction, base64Body)
+		}
+
 		if !interceptSettings.BrowserToServer && req.Direction == "browser_to_server" {
 			req.RequestAction = "forward"
 			req.ResponseReady <- true

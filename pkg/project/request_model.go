@@ -131,7 +131,7 @@ func NewRequestFromHttp(httpRequest *http.Request, rawBytes []byte) *Request {
 
 	r := &Request{
 		URL:         url,
-		Protocol:    httpRequest.Proto,
+		Protocol:    "HTTP",
 		Verb:        httpRequest.Method,
 		DataPackets: []DataPacket{{Data: responseBytes, Direction: "Request", StartOffset: 0, EndOffset: int64(len(responseBytes) - 1)}},
 		RequestSize: int64(len(responseBytes)),

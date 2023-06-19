@@ -23,6 +23,7 @@ type PayloadEntry struct {
 	SamplePayloads []string
 	SubEntries     []PayloadEntry
 	Title          string
+	PayloadCount   int
 }
 
 type PayloadFile struct {
@@ -57,6 +58,28 @@ func RunInjection(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&operation)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if operation.Host == "" {
+		http.Error(w, "Please specify a host to target", http.StatusBadRequest)
+		return
+	}
+
+	if len(operation.FuzzDB) == 0 && len(operation.CustomPayloads) == 0 && operation.IterateFrom == operation.IterateTo {
+		http.Error(w, "Please specify a payload to run", http.StatusBadRequest)
+		return
+	}
+
+	has_fuzz_points := false
+	for _, requestPart := range operation.Request {
+		if requestPart.Inject {
+			has_fuzz_points = true
+		}
+	}
+
+	if !has_fuzz_points {
+		http.Error(w, "Please specify at least one part of the request to fuzz", http.StatusBadRequest)
 		return
 	}
 
@@ -150,6 +173,18 @@ func GetInjectPayloads(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
+func countLines(filename string) int {
+	lineCounterFile, _ := fuzzdb.Open(filename)
+	defer lineCounterFile.Close()
+
+	scanner := bufio.NewScanner(lineCounterFile)
+	line_count := 0
+	for scanner.Scan() {
+		line_count += 1
+	}
+	return line_count
+}
+
 func getPort(host string) string {
 	portIdx := strings.LastIndex(host, ":")
 
@@ -179,8 +214,12 @@ func readPayloadDirectory(path string, entry *PayloadEntry) {
 		}
 
 		fileSamplePayloads := make([]string, 0)
+		payloadCount := 0
 		if !fileEntry.IsDir() {
+			payloadCount = countLines(fileEntryPath)
 			fileSamplePayloads = samplePayloads(fileEntryPath)
+			fileSamplePayloads = append(fileSamplePayloads, "")
+			fileSamplePayloads = append(fileSamplePayloads, "Total entries: "+strconv.Itoa(payloadCount))
 		}
 
 		newEntry := PayloadEntry{
@@ -190,6 +229,7 @@ func readPayloadDirectory(path string, entry *PayloadEntry) {
 			SamplePayloads: fileSamplePayloads,
 			IsDirectory:    fileEntry.Type().IsDir(),
 			SubEntries:     make([]PayloadEntry, 0),
+			PayloadCount:   payloadCount,
 		}
 
 		if fileEntry.IsDir() {
@@ -217,18 +257,6 @@ func samplePayloads(filename string) []string {
 		}
 		payloads = append(payloads, text)
 	}
-
-	lineCounterFile, _ := fuzzdb.Open(filename)
-	defer lineCounterFile.Close()
-
-	scanner = bufio.NewScanner(lineCounterFile)
-	line_count := 0
-	for scanner.Scan() {
-		line_count += 1
-	}
-
-	payloads = append(payloads, "")
-	payloads = append(payloads, "Total entries: "+strconv.Itoa(line_count))
 
 	return payloads
 }

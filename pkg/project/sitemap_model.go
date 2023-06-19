@@ -77,7 +77,7 @@ func sitemapPathFromUrl(url_str string) string {
 
 	// now strip back from the last /
 	lastSlashIdx := strings.LastIndex(u, "/")
-	return u[0:lastSlashIdx]
+	return u[0:lastSlashIdx] + "/"
 }
 
 func (siteMapPath *SiteMapPath) WriteToDatabase(db *gorm.DB) {
