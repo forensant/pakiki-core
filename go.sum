@@ -140,6 +140,8 @@ github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072/go.mod 
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
 github.com/flosch/pongo2 v0.0.0-20190707114632-bbf5a6c351f4/go.mod h1:T9YF2M40nIgbVgp3rreNmTged+9HrbNTIQf1PsaIiTA=
+github.com/forensant/goproxy v0.0.0-20230620193648-66cc989b2a48 h1:3tNvQU3IqcbXu2pSWDuMbAUC08vyBJ48rtv8TOw26z8=
+github.com/forensant/goproxy v0.0.0-20230620193648-66cc989b2a48/go.mod h1:yqyiDCPBdJXWy950YDqdrWskPRWI6DmjCh/pGuGGm1Q=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
@@ -451,14 +453,6 @@ github.com/pierrec/lz4 v1.0.2-0.20190131084431-473cd7ce01a1/go.mod h1:3/3N9NVKO0
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pingcap/errors v0.11.4 h1:lFuQV/oaUMGcD2tqt+01ROSmJs75VG1ToEOkZIZ4nE4=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
-github.com/pipeline/goproxy v0.0.0-20220325203806-0f35eb8d399c h1:N2yIGDvvNP6/cvWAIjBtYTKPkUkqZnnR8W/ldvgUYm4=
-github.com/pipeline/goproxy v0.0.0-20220325203806-0f35eb8d399c/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
-github.com/pipeline/goproxy v0.0.0-20221020070820-8b67b5dbeb93 h1:92lgYhJeVbUocXhqsvCUkn0yWF/uz8e6pZlsqy68phw=
-github.com/pipeline/goproxy v0.0.0-20221020070820-8b67b5dbeb93/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
-github.com/pipeline/goproxy v0.0.0-20221105234639-037273096ec3 h1:3S+3fXcCS7taZPJilTZE/ymeFchK/Vebcm4sFa8u8No=
-github.com/pipeline/goproxy v0.0.0-20221105234639-037273096ec3/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
-github.com/pipeline/goproxy v0.0.0-20221119175713-2dd845258e5d h1:hHzehCDUHspynebbPpjTmo415TuTtGKoZwyffDLZNM4=
-github.com/pipeline/goproxy v0.0.0-20221119175713-2dd845258e5d/go.mod h1:yfl7g8+Ujf1U2KLGh+YGfcOiqamYhCbNQqEHmXMu9Zk=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

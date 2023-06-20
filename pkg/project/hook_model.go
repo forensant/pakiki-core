@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/forensant/pakiki-core/internal/scripting"
 	"github.com/google/uuid"
-	"github.com/pipeline/proximity-core/internal/scripting"
 	"gorm.io/gorm"
 )
 
@@ -121,9 +121,9 @@ func runHooks(req *Request, reqBytes []byte, isResponse bool) *HookResponse {
 	}
 
 	if isResponse {
-		code += "\nprint('PROXIMITY_HOOK_RESULT:' + response.response_to_base64())\n"
+		code += "\nprint('PAKIKI_HOOK_RESULT:' + response.response_to_base64())\n"
 	} else {
-		code += "\nprint('PROXIMITY_HOOK_RESULT:' + request.request_to_base64())\n"
+		code += "\nprint('PAKIKI_HOOK_RESULT:' + request.request_to_base64())\n"
 	}
 
 	errorLog := &HookErrorLog{
@@ -164,7 +164,7 @@ func (hr *HookResponse) parseResponse(log *HookErrorLog) {
 	}
 
 	lastLine := lines[len(lines)-1]
-	hasResponse := (strings.Index(lastLine, "PROXIMITY_HOOK_RESULT:") == 0)
+	hasResponse := (strings.Index(lastLine, "PAKIKI_HOOK_RESULT:") == 0)
 
 	// Save the error log
 	if len(lines) > 1 {
@@ -181,7 +181,7 @@ func (hr *HookResponse) parseResponse(log *HookErrorLog) {
 	}
 
 	// We have a response, so let's parse it
-	base64Resp := lastLine[len("PROXIMITY_HOOK_RESULT:"):]
+	base64Resp := lastLine[len("PAKIKI_HOOK_RESULT:"):]
 	respBytes, err := base64.StdEncoding.DecodeString(base64Resp)
 
 	if err != nil {

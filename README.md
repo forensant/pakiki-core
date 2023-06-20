@@ -4,13 +4,13 @@
 </picture>
 
 ## Overview
-Proximity is an intercepting proxy, allowing you to view and manipulate network requests between your web browser and the servers its communicating with. It is designed for web application penetration testing, but could be used for general debugging of applications, etc. It is similar in principle to mitmproxy or OWASP ZAP.
+Pakiki is an intercepting proxy, allowing you to view and manipulate network requests between your web browser and the servers its communicating with. It is designed for web application penetration testing, but could be used for general debugging of applications, etc. It is similar in principle to mitmproxy or OWASP ZAP.
 
 It takes the philosophy of do one thing, and do it well. The intent is not to pack in features which are rarely, if ever, used in practice. This is especially true where good quality standalone tools already exist.
 
 This repository contains the core which proxies traffic, and exposes an API to interact with the captured traffic and perform other key functions. When compiled, it includes a web interface. The web interface is intended to be used for forward deployments, quick testing, or where the desktop interfaces won't otherwise run. It's not as polished as or as featureful as the dedicated desktop interface(s).
 
-**While this is tested periodically on Windows and MacOS, the majority of building/testing takes place on Kali. Builds are provided as part of the GUI release and can be downloaded at https://github.com/pipeline/proximity-frontend-gtk/releases**
+**While this is tested periodically on Windows and MacOS, the majority of building/testing takes place on Kali. Builds are provided as part of the GUI release and can be downloaded at https://github.com/forensant/pakiki-frontend-gtk/releases**
 
 <img src="assets/screenshot.png" />
 
@@ -65,7 +65,7 @@ arch --x86_64 /usr/local/bin/brew install python@3.10
 
 ### Linux dependencies
 
-Linux requires the following dependencies to build Proximity:
+Linux requires the following dependencies to build Pakiki:
 
   * A C/C++ Compiler
   * Python3.11
@@ -80,13 +80,13 @@ The installation will depend on your particular distribution.
 ### Launching for development
 Ensure you have built the project using the build script at least once to create the necessary dependencies.
 
-To launch the development version, from the build directory run: ```go run ../cmd/proximitycore/main.go -project sample_project.prx```
+To launch the development version, from the build directory run: ```go run ../cmd/pakikicore/main.go -project sample_project.prx```
 To run the HTML frontend go into that directory and run ```npm run serve```
 
 ## 🤝 Contributing
 
 Contributions, issues and feature requests are welcome.<br />
-Feel free to check [issues page](https://github.com/pipeline/proximity-core/issues) if you want to contribute.<br />
+Feel free to check [issues page](https://github.com/forensant/pakiki-core/issues) if you want to contribute.<br />
 [Check the contributing guide](./CONTRIBUTING.md).<br />
 
 While this core will remain free and open source, there will be commercial frontends built on top in the future with further features which are designed to help professional pentesters.

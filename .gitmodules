@@ -1,3 +1,3 @@
 [submodule "www/html_frontend"]
 	path = www/html_frontend
-	url = https://github.com/pipeline/proximity-frontend-html
+	url = https://github.com/forensant/pakiki-frontend-html

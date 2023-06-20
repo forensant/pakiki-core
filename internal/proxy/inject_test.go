@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/forensant/pakiki-core/internal/testing_init"
+	"github.com/forensant/pakiki-core/pkg/project"
 	"github.com/gorilla/mux"
-	_ "github.com/pipeline/proximity-core/internal/testing_init"
-	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 type injectTestCase struct {
@@ -140,10 +140,10 @@ func TestRunInjectScan(t *testing.T) {
 		},
 	}
 
-	proximityServerMux := http.NewServeMux()
-	proximityServerMux.HandleFunc("/inject_operation/run", RunInjection)
-	proximityServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
-	s := httptest.NewServer(proximityServerMux)
+	pakikiServerMux := http.NewServeMux()
+	pakikiServerMux.HandleFunc("/inject_operation/run", RunInjection)
+	pakikiServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
+	s := httptest.NewServer(pakikiServerMux)
 	defer s.Close()
 
 	for _, test := range tests {
@@ -216,14 +216,14 @@ func TestCancelInjectScan(t *testing.T) {
 		IterateTo:   100,
 	}
 
-	proximityServerMux := mux.NewRouter()
-	proximityServerMux.HandleFunc("/inject_operation/run", RunInjection)
-	proximityServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
-	proximityServerMux.HandleFunc("/scripts/{guid}/cancel", project.CancelScriptAPI)
-	proximityServerMux.HandleFunc("/requests", project.GetRequests)
-	proximityServerMux.HandleFunc("/inject_operations/{guid}", project.GetInjectOperation)
+	pakikiServerMux := mux.NewRouter()
+	pakikiServerMux.HandleFunc("/inject_operation/run", RunInjection)
+	pakikiServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
+	pakikiServerMux.HandleFunc("/scripts/{guid}/cancel", project.CancelScriptAPI)
+	pakikiServerMux.HandleFunc("/requests", project.GetRequests)
+	pakikiServerMux.HandleFunc("/inject_operations/{guid}", project.GetInjectOperation)
 
-	s := httptest.NewServer(proximityServerMux)
+	s := httptest.NewServer(pakikiServerMux)
 	defer s.Close()
 
 	testServerMux := http.NewServeMux()

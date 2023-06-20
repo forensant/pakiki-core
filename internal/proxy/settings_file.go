@@ -76,7 +76,7 @@ func SaveSettings(settings *ProxySettings) error {
 }
 
 func settingsPath() (string, error) {
-	configPath := configdir.LocalConfig("Forensant", "Proximity")
+	configPath := configdir.LocalConfig("Forensant", "Pakiki")
 	err := configdir.MakePath(configPath) // Ensure it exists.
 	if err != nil {
 		return "", err

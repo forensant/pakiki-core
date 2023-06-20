@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/forensant/pakiki-core/internal/request_queue"
+	"github.com/forensant/pakiki-core/internal/scripting"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/pipeline/proximity-core/internal/request_queue"
-	"github.com/pipeline/proximity-core/internal/scripting"
 )
 
 // MakeRequestParameters contains the parameters which are parsed to the Make Request API call

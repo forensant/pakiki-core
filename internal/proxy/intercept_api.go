@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/forensant/pakiki-core/pkg/project"
 )
 
 type InterceptSettings struct {

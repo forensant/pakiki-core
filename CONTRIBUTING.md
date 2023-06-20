@@ -1,8 +1,8 @@
-# Contributing to Proximity
+# Contributing to Pakiki
 
-Thanks for wanting to contribute to Proximity.
+Thanks for wanting to contribute to Pakiki.
 
-Prior to submitting a pull request, it's worth reaching out via email (team@proximityhq.com) or an issue to confirm that the code will be in line with the general road map for the project, and that the approach won't conflict with other planned features.
+Prior to submitting a pull request, it's worth reaching out via email (team@pakikiproxy.com) or an issue to confirm that the code will be in line with the general road map for the project, and that the approach won't conflict with other planned features.
 
 ## Pull request process
  1. Ensure that install/build dependencies are removed.
@@ -65,7 +65,7 @@ further defined and clarified by project maintainers.
 ### Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by contacting the project team at team@getproximity.com. All
+reported by contacting the project team at team@pakikiproxy.com. All
 complaints will be reviewed and investigated and will result in a response that
 is deemed necessary and appropriate to the circumstances. The project team is
 obligated to maintain confidentiality with regard to the reporter of an incident.

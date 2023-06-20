@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/forensant/pakiki-core/pkg/project"
 )
 
 //go:embed resources/fuzzdb

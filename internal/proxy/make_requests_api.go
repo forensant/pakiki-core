@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pipeline/proximity-core/internal/request_queue"
-	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/forensant/pakiki-core/internal/request_queue"
+	"github.com/forensant/pakiki-core/pkg/project"
 )
 
 var defaultConnectionPool *http.Client

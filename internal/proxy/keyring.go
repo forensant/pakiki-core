@@ -4,7 +4,7 @@ package proxy
 
 import "github.com/zalando/go-keyring"
 
-const keyringService = "Proximity"
+const keyringService = "Pakiki"
 
 func keyringGet(property string) (string, error) {
 	return keyring.Get(keyringService, property)

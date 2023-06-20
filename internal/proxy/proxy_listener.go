@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/pipeline/proximity-core/internal/request_queue"
+	"github.com/forensant/pakiki-core/internal/request_queue"
 )
 
 var listenerWaitGroup sync.WaitGroup
 var http11ProxyServer *http.Server
 
-//RestartListeners restarts all proxy listeners, with the new addresses
+// RestartListeners restarts all proxy listeners, with the new addresses
 func RestartListeners(settings *ProxySettings) error {
 	err := StopListeners()
 	if err != nil {
@@ -23,7 +23,7 @@ func RestartListeners(settings *ProxySettings) error {
 	return startListenersWithConfig(settings)
 }
 
-//StartListeners starts all proxy listeners using either the default settings or the ones read from the configuration file
+// StartListeners starts all proxy listeners using either the default settings or the ones read from the configuration file
 func StartListeners() error {
 	configuration, err := GetSettings()
 	if err != nil {

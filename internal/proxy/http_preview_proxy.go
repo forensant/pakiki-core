@@ -10,8 +10,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/pipeline/goproxy"
-	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/forensant/goproxy"
+	"github.com/forensant/pakiki-core/pkg/project"
 )
 
 func onPreviewProxyRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {

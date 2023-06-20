@@ -53,7 +53,7 @@ bool errorOccurred() {
       PyObject *s = PyObject_Str(errvalue);
       Py_ssize_t size;
       const char* exception = PyUnicode_AsUTF8AndSize(s, &size);
-      printf("PROXIMITY_PYTHON_INTERPRETER_ERROR\n");
+      printf("PAKIKI_PYTHON_INTERPRETER_ERROR\n");
       printf("%s\n", exception);
       Py_DECREF(s);
     }
@@ -196,11 +196,11 @@ bool runPythonScript() {
   string filename;
   bool endInterpreter = false;
 
-  while(line != "PROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT" && line != "PROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER") {
+  while(line != "PAKIKI_PYTHON_INTERPRETER_END_OF_SCRIPT" && line != "PAKIKI_PYTHON_INTERPRETER_END_INTERPRETER") {
     if(filename == "") {
       filename = line;
     }
-    else if(line == "PROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK") {
+    else if(line == "PAKIKI_PYTHON_INTERPRETER_END_OF_BLOCK") {
       if(pythonCode != "") {
         if(runDiscreteCode(pythonCode, filename.c_str(), py_dict) == false) {
           errorThrown = true;
@@ -209,7 +209,7 @@ bool runPythonScript() {
       }
       pythonCode = "";
       filename = "";
-      cerr << "PROXIMITY_PYTHON_INTERPRETER_READY" << endl;
+      cerr << "PAKIKI_PYTHON_INTERPRETER_READY" << endl;
     }
     else {
       pythonCode += line + "\n";
@@ -217,7 +217,7 @@ bool runPythonScript() {
     std::getline(std::cin, line, '\n');
   }
 
-  if(line == "PROXIMITY_PYTHON_INTERPRETER_END_INTERPRETER") {
+  if(line == "PAKIKI_PYTHON_INTERPRETER_END_INTERPRETER") {
     endInterpreter = true;
   }
 
@@ -225,7 +225,7 @@ bool runPythonScript() {
     runDiscreteCode(pythonCode, filename.c_str(), py_dict);
   }
 
-  cerr << "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED" << endl;
+  cerr << "PAKIKI_PYTHON_INTERPRETER_SCRIPT_FINISHED" << endl;
 
   Py_EndInterpreter(PyThreadState_Get());
   PyThreadState_Swap(globalThreadState);

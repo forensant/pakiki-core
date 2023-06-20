@@ -1,4 +1,4 @@
-module github.com/pipeline/proximity-core
+module github.com/forensant/pakiki-core
 
 go 1.16
 
@@ -6,6 +6,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/elazarl/goproxy v0.0.0-20211114080932-d06c3be7c11b // indirect
+	github.com/forensant/goproxy v0.0.0-20230620193648-66cc989b2a48 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-openapi/spec v0.20.7 // indirect
@@ -16,7 +17,6 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
 	github.com/mattn/go-sqlite3 v1.14.6
-	github.com/pipeline/goproxy v0.0.0-20221119175713-2dd845258e5d
 	github.com/pkg/errors v0.9.1
 	github.com/projectdiscovery/gologger v1.1.4
 	github.com/projectdiscovery/interactsh v0.0.7

@@ -9,9 +9,9 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "cmd/proximitycore/main.go",
+            "program": "cmd/pakikicore/main.go",
             "cwd": "${workspaceFolder}/build",
-            "args": ["-project", "abc2"],
+            "args": ["-project", "abc.prx"],
         }
     ]
 }

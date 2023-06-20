@@ -69,8 +69,8 @@ func compressFile(src string, dst string) error {
 
 	zw := gzip.NewWriter(of)
 	defer zw.Close()
-	zw.Name = "proximity.db"
-	zw.Comment = "PROXIMITY"
+	zw.Name = "pakiki.db"
+	zw.Comment = "PAKIKI"
 
 	_, err = io.Copy(zw, sf)
 	if err != nil {
@@ -199,7 +199,7 @@ func migrateTables(db *gorm.DB) {
 }
 
 func tempFilename() (string, error) {
-	tempdbfile, err := ioutil.TempFile(os.TempDir(), "proximity-tmp-*.db")
+	tempdbfile, err := ioutil.TempFile(os.TempDir(), "pakiki-tmp-*.db")
 	tempdbfile.Close()
 
 	if err != nil {

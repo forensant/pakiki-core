@@ -32,7 +32,7 @@ def make_request_to_core(uri: str, obj = {}) -> bytes:
   content_type = 'application/json'
   
   if obj != {} and type(obj) is dict:
-    obj['scan_id'] = 'PROXIMITY_SCRIPT_ID'
+    obj['scan_id'] = 'PAKIKI_SCRIPT_ID'
     property_data = json.dumps(obj).encode('UTF-8')
     method = 'POST'
   elif obj != {} and type(obj) is str:
@@ -45,13 +45,13 @@ def make_request_to_core(uri: str, obj = {}) -> bytes:
     method = 'POST'
 
   headers = {
-    'X-API-Key': 'PROXIMITY_API_KEY'
+    'X-API-Key': 'PAKIKI_API_KEY'
   }
 
   if property_data is not None and property_data != {}:
     headers['Content-Type'] = content_type
 
-  req = urllib.request.Request("http://localhost:PROXIMITY_PROXY_PORT" + uri, property_data, headers, method=method)
+  req = urllib.request.Request("http://localhost:PAKIKI_PROXY_PORT" + uri, property_data, headers, method=method)
   
   try:
     with urllib.request.urlopen(req) as call_response:

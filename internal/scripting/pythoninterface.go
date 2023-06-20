@@ -24,7 +24,7 @@ import (
 	_ "embed"
 )
 
-//go:embed proximity_core.py
+//go:embed pakiki_core.py
 var commonCode string
 
 var runningScripts = make(map[string]*exec.Cmd)
@@ -76,17 +76,17 @@ func readFromBuffer(r io.ReadCloser, waitForNewline bool) (string, error) {
 }
 
 func replaceCodeVariables(code string, guid string, port string, apiKey string) string {
-	code = strings.ReplaceAll(code, "PROXIMITY_PROXY_PORT", port)
-	code = strings.ReplaceAll(code, "PROXIMITY_SCRIPT_ID", guid)
-	code = strings.ReplaceAll(code, "PROXIMITY_API_KEY", apiKey)
+	code = strings.ReplaceAll(code, "PAKIKI_PROXY_PORT", port)
+	code = strings.ReplaceAll(code, "PAKIKI_SCRIPT_ID", guid)
+	code = strings.ReplaceAll(code, "PAKIKI_API_KEY", apiKey)
 
 	return code
 }
 
 func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCloser, stderr io.ReadCloser, err error) {
-	executableName := "/proximitypythoninterpreter"
+	executableName := "/pakikipythoninterpreter"
 	if runtime.GOOS == "windows" {
-		executableName = "\\proximitypythoninterpreter.exe"
+		executableName = "\\pakikipythoninterpreter.exe"
 	}
 
 	executablePath, err := os.Executable()
@@ -144,7 +144,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 
 	commonScriptCode := ScriptCode{
 		Code:     commonCode,
-		Filename: "proximity_core.py",
+		Filename: "pakiki_core.py",
 	}
 
 	scriptCode = append([]ScriptCode{commonScriptCode}, scriptCode...)
@@ -174,7 +174,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 			}
 		}
 
-		pythonIn.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
+		pythonIn.Write([]byte("\nPAKIKI_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
 
 		readingFinishedChannel := make(chan bool)
 		go func() {
@@ -185,7 +185,7 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 				lineRead := readBuf[:bytesRead]
 
 				errStr := ""
-				if bytes.Contains(lineRead, []byte("PROXIMITY_PYTHON_INTERPRETER_ERROR")) {
+				if bytes.Contains(lineRead, []byte("PAKIKI_PYTHON_INTERPRETER_ERROR")) {
 					errStr = string(stripOutputTags(lineRead))
 				} else if bytesRead != 0 {
 					fullOutput = stripOutputTags(append(fullOutput, lineRead...))
@@ -216,9 +216,9 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 }
 
 func stripOutputTags(output []byte) []byte {
-	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED\n"), []byte(""))
-	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_ERROR\n"), []byte(""))
-	output = bytes.ReplaceAll(output, []byte("PROXIMITY_PYTHON_INTERPRETER_READY\n"), []byte(""))
+	output = bytes.ReplaceAll(output, []byte("PAKIKI_PYTHON_INTERPRETER_SCRIPT_FINISHED\n"), []byte(""))
+	output = bytes.ReplaceAll(output, []byte("PAKIKI_PYTHON_INTERPRETER_ERROR\n"), []byte(""))
+	output = bytes.ReplaceAll(output, []byte("PAKIKI_PYTHON_INTERPRETER_READY\n"), []byte(""))
 	return output
 }
 
@@ -233,7 +233,7 @@ func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, s
 	if lastBlock {
 		return nil
 	}
-	stdin.Write([]byte("\n\nPROXIMITY_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
+	stdin.Write([]byte("\n\nPAKIKI_PYTHON_INTERPRETER_END_OF_BLOCK\n"))
 
 	output, err := readFromBuffer(stderr, true)
 	if err != nil {
@@ -241,7 +241,7 @@ func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, s
 	}
 
 	output = strings.TrimSpace(output)
-	if !strings.Contains(output, "PROXIMITY_PYTHON_INTERPRETER_READY") && !strings.Contains(output, "PROXIMITY_PYTHON_INTERPRETER_SCRIPT_FINISHED") {
+	if !strings.Contains(output, "PAKIKI_PYTHON_INTERPRETER_READY") && !strings.Contains(output, "PAKIKI_PYTHON_INTERPRETER_SCRIPT_FINISHED") {
 		allOutput := make([]byte, 10240)
 		stderr.Read(allOutput)
 		fullOutput := append([]byte(output), allOutput...)

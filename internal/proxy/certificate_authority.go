@@ -37,15 +37,15 @@ func generateRootPEMs() (caCertificate string, caKey string, err error) {
 	ca := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization:  []string{"Forensant Proximity Root CA"},
+			Organization:  []string{"Pakiki Proxy Root CA"},
 			Country:       []string{"NZ"},
 			Province:      []string{""},
 			Locality:      []string{""},
 			StreetAddress: []string{""},
 			PostalCode:    []string{""},
-			CommonName:    "Forensant Proximity Root CA",
+			CommonName:    "Pakiki Proxy Root CA",
 		},
-		DNSNames:              []string{"proximity.forensant.com"},
+		DNSNames:              []string{"proxyca.pakikiproxy.com"},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(30, 0, 0),
 		IsCA:                  true,

@@ -25,9 +25,9 @@ import (
 	"github.com/gorilla/mux"
 	process "github.com/shirou/gopsutil/process"
 
-	assets "github.com/pipeline/proximity-core"
-	"github.com/pipeline/proximity-core/internal/proxy"
-	"github.com/pipeline/proximity-core/pkg/project"
+	assets "github.com/forensant/pakiki-core"
+	"github.com/forensant/pakiki-core/internal/proxy"
+	"github.com/forensant/pakiki-core/pkg/project"
 )
 
 var apiToken, port string
@@ -44,17 +44,16 @@ type commandLineParameters struct {
 	PreviewProxyPort int
 }
 
-// @title Proximity Core
+// @title Pakiki Core
 // @version 1.0
-// @description This provides the common functions which are relied upon by the Proximity frontends.
-// @termsOfService https://forensant.com/terms/
+// @description This provides the common functions which are relied upon by the Pakiki frontends.
+// @termsOfService https://pakikiproxy.com/legal/
 
 // @contact.name API Support
-// @contact.url https://forensant.com/support
-// @contact.email support@forensant.com
+// @contact.url https://pakikiproxy.com/
+// @contact.email support@pakikiproxy.com
 
-// @license.name Commercial
-// @license.url https://proximity.forensant.com/terms
+// @license.name MIT
 
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header

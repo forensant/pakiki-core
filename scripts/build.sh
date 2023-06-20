@@ -2,7 +2,7 @@
 
 # generate dependencies and tidy the project
 echo "# Generating Swagger documents"
-swag init -o api -g cmd/proximitycore/main.go --parseInternal
+swag init -o api -g cmd/pakikicore/main.go --parseInternal
 
 #go mod tidy
 
@@ -21,31 +21,31 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     ln -s $(python3.10 -c "import sys; print(sys.base_prefix + '/lib/python3.10/')") build/python310_arm64/lib/
 
     # For compiling both architectures into one executable (this is not currently done, as we'd need to bundle two sets of dependencies): 
-    lipo -create -output build/proximitypythoninterpreter build/PythonInterpreter_arm64 build/PythonInterpreter_x86_64
+    lipo -create -output build/pakikipythoninterpreter build/PythonInterpreter_arm64 build/PythonInterpreter_x86_64
 
     rm -rf build/PythonInterpreter_*
 
-    echo "# Building Proximity Core"
-    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o build/ProximityCore_x86_64 cmd/proximitycore/main.go
-    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o build/ProximityCore_arm64 cmd/proximitycore/main.go
-    lipo -create -output build/proximitycore build/ProximityCore_x86_64 build/ProximityCore_arm64
-    rm build/ProximityCore_*
+    echo "# Building Pakiki Core"
+    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o build/PakikiCore_x86_64 cmd/pakikicore/main.go
+    CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o build/PakikiCore_arm64 cmd/pakikicore/main.go
+    lipo -create -output build/pakikicore build/PakikiCore_x86_64 build/PakikiCore_arm64
+    rm build/PakikiCore_*
 else
     mkdir -p build/python311/lib
 
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
-    gcc $(python3.11-config --cflags) $(python3.11-config --ldflags) $(python3.11-config --libs) -std=c++17 -fPIC tools/PythonInterpreter.cpp -o build/proximitypythoninterpreter -lstdc++ -lpython3.11
+    gcc $(python3.11-config --cflags) $(python3.11-config --ldflags) $(python3.11-config --libs) -std=c++17 -fPIC tools/PythonInterpreter.cpp -o build/pakikipythoninterpreter -lstdc++ -lpython3.11
     
     cp -r $(python3.11-config --prefix)/lib/python3.11 build/python311/lib
 
     scripts/copy_lib_linux.rb build/
 
-    echo "# Building Proximity Core"
-    go build -ldflags "-s -w" -o build/proximitycore cmd/proximitycore/main.go
+    echo "# Building Pakiki Core"
+    go build -ldflags "-s -w" -o build/pakikicore cmd/pakikicore/main.go
 fi
 
 echo ""
 echo ""
-echo "Proximity built :)"
-echo "Run ./proximitycore from the build directory to get started"
+echo "Pakiki built :)"
+echo "Run ./pakikicore from the build directory to get started"

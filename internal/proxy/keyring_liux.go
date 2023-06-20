@@ -53,7 +53,7 @@ func keyringSet(property string, value string) error {
 }
 
 func keyPath(filename string) (string, error) {
-	configPath := configdir.LocalConfig("Forensant", "Proximity")
+	configPath := configdir.LocalConfig("Forensant", "Pakiki")
 	err := configdir.MakePath(configPath) // Ensure it exists.
 	if err != nil {
 		return "", err

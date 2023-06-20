@@ -8,20 +8,20 @@ set -e
 echo "" > coverage.txt
 
 function cleanup() {
-    rm ../internal/scripting/proximitypythoninterpreter
+    rm ../internal/scripting/pakikipythoninterpreter
     rm ../internal/scripting/python311
 }
 
 trap cleanup EXIT
 
-ln -s $PWD/proximitypythoninterpreter ../internal/scripting/
+ln -s $PWD/pakikipythoninterpreter ../internal/scripting/
 ln -s $PWD/python311 ../internal/scripting/
 
 for d in $(go list ../... | grep -v vendor); do
     if [[ "$OSTYPE" == "darwin"* ]]; then    
-        CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin go test -coverprofile=profile.out -coverpkg=github.com/pipeline/proximity-core,github.com/pipeline/proximity-core/pkg/project,github.com/pipeline/proximity-core/internal/proxy,github.com/pipeline/proximity-core/internal/request_queue,github.com/pipeline/proximity-core/internal/scripting $d
+        CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin go test -coverprofile=profile.out -coverpkg=github.com/forensant/pakiki-core,github.com/forensant/pakiki-core/pkg/project,github.com/forensant/pakiki-core/internal/proxy,github.com/forensant/pakiki-core/internal/request_queue,github.com/forensant/pakiki-core/internal/scripting $d
     else
-        go test -coverprofile=profile.out -coverpkg=github.com/pipeline/proximity-core,github.com/pipeline/proximity-core/pkg/project,github.com/pipeline/proximity-core/internal/proxy,github.com/pipeline/proximity-core/internal/request_queue,github.com/pipeline/proximity-core/internal/scripting $d
+        go test -coverprofile=profile.out -coverpkg=github.com/forensant/pakiki-core,github.com/forensant/pakiki-core/pkg/project,github.com/forensant/pakiki-core/internal/proxy,github.com/forensant/pakiki-core/internal/request_queue,github.com/forensant/pakiki-core/internal/scripting $d
     fi
     
     if [ -f profile.out ]; then

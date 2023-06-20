@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forensant/goproxy"
 	"github.com/google/uuid"
-	"github.com/pipeline/goproxy"
 	"gorm.io/gorm"
 )
 

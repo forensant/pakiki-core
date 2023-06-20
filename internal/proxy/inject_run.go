@@ -10,8 +10,8 @@ import (
 	"text/template"
 	"unicode/utf8"
 
-	"github.com/pipeline/proximity-core/internal/scripting"
-	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/forensant/pakiki-core/internal/scripting"
+	"github.com/forensant/pakiki-core/pkg/project"
 )
 
 //go:embed inject_python.py

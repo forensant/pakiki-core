@@ -142,10 +142,10 @@ jobs:
       - name: Run swaggo
         run: |
           go install github.com/swaggo/swag/cmd/swag
-          swag init -o api -g cmd/proximitycore/main.go --parseInternal
+          swag init -o api -g cmd/pakikicore/main.go --parseInternal
 
       - name: Build
-        run: go build -o build/proximitycore.exe cmd/proximitycore/main.go
+        run: go build -o build/pakikicore.exe cmd/pakikicore/main.go
 
       - name: Upload build
         uses: actions/upload-artifact@v2.2.3

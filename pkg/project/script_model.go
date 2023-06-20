@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/forensant/pakiki-core/internal/request_queue"
 	"github.com/google/uuid"
-	"github.com/pipeline/proximity-core/internal/request_queue"
 	"gorm.io/gorm"
 )
 

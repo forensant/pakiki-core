@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/forensant/goproxy"
+	"github.com/forensant/pakiki-core/pkg/project"
 	"github.com/google/uuid"
-	"github.com/pipeline/goproxy"
-	"github.com/pipeline/proximity-core/pkg/project"
 )
 
 func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
@@ -100,7 +100,7 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 		default:
 			response = goproxy.NewResponse(req,
 				goproxy.ContentTypeText, http.StatusForbidden,
-				"Request dropped by Proximity")
+				"Request dropped by Pakiki Proxy")
 		}
 
 		if forward {

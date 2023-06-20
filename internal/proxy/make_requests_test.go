@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pipeline/proximity-core/internal/scripting"
-	"github.com/pipeline/proximity-core/pkg/project"
+	"github.com/forensant/pakiki-core/internal/scripting"
+	"github.com/forensant/pakiki-core/pkg/project"
 )
 
 func TestScriptRequestAPIs(t *testing.T) {
@@ -62,11 +62,11 @@ req.queue()
 		},
 	}
 
-	proximityServerMux := http.NewServeMux()
-	proximityServerMux.HandleFunc("/scripts/run", project.RunScript)
-	proximityServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
-	proximityServerMux.HandleFunc("/requests/queue", AddRequestToQueue)
-	s := httptest.NewServer(proximityServerMux)
+	pakikiServerMux := http.NewServeMux()
+	pakikiServerMux.HandleFunc("/scripts/run", project.RunScript)
+	pakikiServerMux.HandleFunc("/requests/bulk_queue", BulkRequestQueue)
+	pakikiServerMux.HandleFunc("/requests/queue", AddRequestToQueue)
+	s := httptest.NewServer(pakikiServerMux)
 	defer s.Close()
 
 	for _, test := range tests {

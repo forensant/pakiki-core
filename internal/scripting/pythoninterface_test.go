@@ -30,7 +30,7 @@ func TestRunScript(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error sending script: %s", err)
 			}
-			in.Write([]byte("\nPROXIMITY_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
+			in.Write([]byte("\nPAKIKI_PYTHON_INTERPRETER_END_OF_SCRIPT\n"))
 
 			scriptOutput, err := readFromBuffer(out, false)
 			if err != nil {
