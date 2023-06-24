@@ -237,8 +237,9 @@ int main(int argc, char *argv[]) {
   PyStatus status;
 
   PyConfig config;
-  PyConfig_InitPythonConfig(&config);
+  PyConfig_InitIsolatedConfig(&config);
   config.isolated = 1;
+  config.home = GetWC(getDir());
 
   /* Decode command line arguments.
     Implicitly preinitialize Python (in isolated mode). */

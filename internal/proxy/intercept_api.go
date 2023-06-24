@@ -157,6 +157,8 @@ func SetInterceptedResponse(w http.ResponseWriter, r *http.Request) {
 				recordRequestData(req, response.RequestAction, requestBytes)
 			}
 
+			req.RequestAction = response.RequestAction
+
 			req.ResponseReady <- true
 			req.Record(project.RecordActionDelete)
 		}
