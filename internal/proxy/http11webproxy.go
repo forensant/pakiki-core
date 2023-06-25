@@ -100,7 +100,7 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 		default:
 			response = goproxy.NewResponse(req,
 				goproxy.ContentTypeText, http.StatusForbidden,
-				"Request dropped by Pakiki Proxy")
+				"Request dropped by Pākiki Proxy")
 		}
 
 		if forward {
