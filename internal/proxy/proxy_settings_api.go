@@ -82,7 +82,7 @@ func setProxySettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if proxySettings.Http11UpstreamProxyAddr != "" && !strings.Contains(proxySettings.Http11UpstreamProxyAddr, "://") {
-		http.Error(w, "Upstream proxy must be in the format of: http://host:port ", http.StatusInternalServerError)
+		http.Error(w, "Upstream proxy must be in the format of: http://host:port or socks5://host:port ", http.StatusInternalServerError)
 		return
 	}
 
