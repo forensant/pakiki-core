@@ -1,6 +1,6 @@
-# Contributing to Pakiki
+# Contributing to Pākiki
 
-Thanks for wanting to contribute to Pakiki.
+Thanks for wanting to contribute to Pākiki.
 
 Prior to submitting a pull request, it's worth reaching out via email (team@pakikiproxy.com) or an issue to confirm that the code will be in line with the general road map for the project, and that the approach won't conflict with other planned features.
 

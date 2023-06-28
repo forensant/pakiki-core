@@ -25,7 +25,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
     rm -rf build/PythonInterpreter_*
 
-    echo "# Building Pakiki Core"
+    echo "# Building Pākiki Core"
     CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o build/PakikiCore_x86_64 cmd/pakikicore/main.go
     CGO_CFLAGS=-Wno-undef-prefix CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o build/PakikiCore_arm64 cmd/pakikicore/main.go
     lipo -create -output build/pakikicore build/PakikiCore_x86_64 build/PakikiCore_arm64
@@ -41,11 +41,11 @@ else
 
     scripts/copy_lib_linux.rb build/
 
-    echo "# Building Pakiki Core"
+    echo "# Building Pākiki Core"
     go build -ldflags "-s -w" -o build/pakikicore cmd/pakikicore/main.go
 fi
 
 echo ""
 echo ""
-echo "Pakiki built :)"
+echo "Pākiki built :)"
 echo "Run ./pakikicore from the build directory to get started"

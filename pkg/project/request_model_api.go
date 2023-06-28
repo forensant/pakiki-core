@@ -100,7 +100,8 @@ func CompareRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 		return
 	}
 
-	if baseRequest.Protocol != "HTTP/1.1" || compareRequest.Protocol != "HTTP/1.1" {
+	if !strings.Contains(baseRequest.Protocol, "HTTP") ||
+		!strings.Contains(compareRequest.Protocol, "HTTP") {
 		http.Error(w, "Only HTTP requests can be compared.", http.StatusBadRequest)
 		return
 	}

@@ -44,9 +44,9 @@ type commandLineParameters struct {
 	PreviewProxyPort int
 }
 
-// @title Pakiki Core
+// @title Pākiki Core
 // @version 1.0
-// @description This provides the common functions which are relied upon by the Pakiki frontends.
+// @description This provides the common functions which are relied upon by the Pākiki frontends.
 // @termsOfService https://pakikiproxy.com/legal/
 
 // @contact.name API Support
