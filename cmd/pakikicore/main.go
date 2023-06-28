@@ -104,6 +104,13 @@ func main() {
 	}
 	browserHomeFilesystem := http.FileServer(http.FS(browserHomeSubdir))
 
+	docsSubdir, err := fs.Sub(assets.DocsDir, "docs/pakiki-documentation")
+	if err != nil {
+		log.Fatal("Could not open the subdirectory for the documentation: " + err.Error())
+		return
+	}
+	docsFilesystem := http.FileServer(http.FS(docsSubdir))
+
 	err = proxy.StartListeners()
 	if err != nil {
 		log.Printf("Warning: The proxy could not be started, %v\n", err.Error())
@@ -199,6 +206,8 @@ func main() {
 	))
 
 	rtr.PathPrefix("/browser_home/").Handler(http.StripPrefix("/browser_home/", browserHomeFilesystem))
+	rtr.PathPrefix("/docs/").Handler(http.StripPrefix("/docs", docsFilesystem))
+	rtr.PathPrefix("/_media/").Handler(http.StripPrefix("", docsFilesystem))
 	rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
 
 	http.Handle("/", rtr)

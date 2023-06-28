@@ -1,3 +1,6 @@
 [submodule "www/html_frontend"]
 	path = www/html_frontend
 	url = https://github.com/forensant/pakiki-frontend-html
+[submodule "docs/pakiki-documentation"]
+	path = docs/pakiki-documentation
+	url = https://github.com/forensant/pakiki-documentation
