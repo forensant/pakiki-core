@@ -13,9 +13,12 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	assets "github.com/forensant/pakiki-core"
 	"github.com/gorilla/mux"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"gorm.io/gorm"
+
+	"rogchap.com/v8go"
 )
 
 const RequestFilterSQL = "url LIKE ? OR id IN (SELECT request_id FROM data_packets WHERE request_id NOT IN (SELECT id FROM requests WHERE response_size > 10485760 OR request_size > 10485760) GROUP BY request_id HAVING GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)"
@@ -23,6 +26,8 @@ const RequestNegativeFilterSQL = "url NOT LIKE ? AND id IN (SELECT request_id FR
 
 // Ensure that the code-based check is also updated in this scenario
 const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND response_content_type NOT LIKE 'image/%' AND response_content_type NOT LIKE 'javascript/%' AND response_content_type NOT LIKE 'text/css%' AND url NOT LIKE '%.jpg%' AND url NOT LIKE '%.gif%' AND url NOT LIKE '%.png%' AND url NOT LIKE '%.svg' AND url NOT LIKE '%.woff2%' AND url NOT LIKE '%.css%' AND url NOT LIKE '%.js%')"
+
+var v8vm *v8go.Isolate
 
 // RequestResponseContents contains the request and response in base64 format
 type RequestResponseContents struct {
@@ -395,12 +400,14 @@ func GetRequestPartialData(w http.ResponseWriter, r *http.Request, db *gorm.DB) 
 // @Produce  text/text
 // @Security ApiKeyAuth
 // @Param guid path string true "Request GUID"
+// @Param highlight query bool true "Syntax Highlight Req/Resp"
 // @Success 200 {object} project.RequestResponseContents
 // @Failure 500 {string} string Error
 // @Router /requests/{guid}/contents [get]
 func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	guid := vars["guid"]
+	shouldHighlight := r.FormValue("highlight") == "true"
 
 	if guid == "" {
 		http.Error(w, "GUID not supplied", http.StatusInternalServerError)
@@ -478,13 +485,17 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 		}
 
 		contentType := httpRequest.ResponseContentType
+		isUTF8 := (utf8.Valid(origReq) && utf8.Valid(origResp) && utf8.Valid(modReq) && utf8.Valid(modResp))
+		if !isUTF8 {
+			shouldHighlight = false
+		}
 
-		requestResponse.Request = base64.StdEncoding.EncodeToString(origReq)
-		requestResponse.Response = base64.StdEncoding.EncodeToString(formatResponse(origResp, contentType))
-		requestResponse.ModifiedRequest = base64.StdEncoding.EncodeToString(modReq)
-		requestResponse.ModifiedResponse = base64.StdEncoding.EncodeToString(formatResponse(modResp, contentType))
+		requestResponse.Request = highlightAndEncode(origReq, shouldHighlight)
+		requestResponse.Response = highlightAndEncode(formatResponse(origResp, contentType), shouldHighlight)
+		requestResponse.ModifiedRequest = highlightAndEncode(modReq, shouldHighlight)
+		requestResponse.ModifiedResponse = highlightAndEncode(formatResponse(modResp, contentType), shouldHighlight)
 
-		requestResponse.IsUTF8 = (utf8.Valid(origReq) && utf8.Valid(origResp) && utf8.Valid(modReq) && utf8.Valid(modResp))
+		requestResponse.IsUTF8 = isUTF8
 	}
 
 	requestResponse.URL = httpRequest.URL
@@ -751,6 +762,42 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
+func highlightAndEncode(req []byte, shouldHighlight bool) string {
+	encodedStr := base64.StdEncoding.EncodeToString(req)
+	if !shouldHighlight {
+		return encodedStr
+	}
+
+	split := bytes.SplitN(req, []byte("\r\n\r\n"), 2)
+
+	if len(split) == 0 {
+		return ""
+	}
+
+	to_ret := syntaxHighlightText(split[0], "http")
+	if len(split) > 1 && len(split[1]) > 0 {
+		contentHeader := ""
+		headers := strings.Split(string(split[0]), "\r\n")
+		for _, header := range headers {
+			if strings.HasPrefix(header, "Content-Type: ") {
+				contentHeader = strings.TrimPrefix(header, "Content-Type: ")
+			}
+		}
+
+		contentType := "html"
+		if strings.Contains(contentHeader, "javascript") {
+			contentType = "javascript"
+		} else if strings.Contains(contentHeader, "json") {
+			contentType = "json"
+		} else if strings.Contains(contentHeader, "css") || strings.Contains(contentHeader, "stylesheet") {
+			contentType = "css"
+		}
+		to_ret += "\r\n\r\n" + syntaxHighlightText(split[1], contentType)
+	}
+
+	return base64.StdEncoding.EncodeToString([]byte(to_ret))
+}
+
 // PatchRequestNotes godoc
 // @Summary Update Request Notes
 // @Description updates a specific request's notes
@@ -919,4 +966,19 @@ func RequestDataSearch(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	w.Write(responseToWrite)
+}
+
+func syntaxHighlightText(text []byte, language string) string {
+	if v8vm == nil {
+		v8vm = v8go.NewIsolate()
+	}
+
+	encText := base64.StdEncoding.EncodeToString(text)
+
+	ctx := v8go.NewContext(v8vm)
+	ctx.RunScript(assets.HighlightJS, "highlight.js")
+	ctx.RunScript(assets.AtobJS, "atob.js")
+	ctx.RunScript("const result = atob('"+encText+"')", "script.js")
+	val, _ := ctx.RunScript("hljs.highlight(result, {language: '"+language+"'}).value", "value.js")
+	return val.String()
 }

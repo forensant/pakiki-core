@@ -13,3 +13,9 @@ var SwaggerJSON string
 
 //go:embed docs/pakiki-documentation/*.md docs/pakiki-documentation/*.html docs/pakiki-documentation/_media/* docs/pakiki-documentation/getting_started/* docs/pakiki-documentation/workflows/*
 var DocsDir embed.FS
+
+//go:embed third_party/highlight.min.js
+var HighlightJS string
+
+//go:embed third_party/atob.js
+var AtobJS string

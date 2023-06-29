@@ -34,6 +34,7 @@ require (
 	gopkg.in/corvus-ch/zbase32.v1 v1.0.0
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.5
+	rogchap.com/v8go v0.9.0
 )
 
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
