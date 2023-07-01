@@ -792,10 +792,12 @@ func highlightAndEncode(req []byte, shouldHighlight bool) string {
 		} else if strings.Contains(contentHeader, "css") || strings.Contains(contentHeader, "stylesheet") {
 			contentType = "css"
 		}
-		to_ret += "\r\n\r\n" + syntaxHighlightText(split[1], contentType)
+
+		to_ret = append(to_ret, []byte("\r\n\r\n")...)
+		to_ret = append(to_ret, syntaxHighlightText(split[1], contentType)...)
 	}
 
-	return base64.StdEncoding.EncodeToString([]byte(to_ret))
+	return base64.StdEncoding.EncodeToString(to_ret)
 }
 
 // PatchRequestNotes godoc
@@ -968,7 +970,7 @@ func RequestDataSearch(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(responseToWrite)
 }
 
-func syntaxHighlightText(text []byte, language string) string {
+func syntaxHighlightText(text []byte, language string) []byte {
 	if v8vm == nil {
 		v8vm = v8go.NewIsolate()
 	}
@@ -979,6 +981,14 @@ func syntaxHighlightText(text []byte, language string) string {
 	ctx.RunScript(assets.HighlightJS, "highlight.js")
 	ctx.RunScript(assets.AtobJS, "atob.js")
 	ctx.RunScript("const result = atob('"+encText+"')", "script.js")
-	val, _ := ctx.RunScript("hljs.highlight(result, {language: '"+language+"'}).value", "value.js")
-	return val.String()
+	ctx.RunScript("const highlightedTxt = hljs.highlight(result, {language: '"+language+"'}).value", "script.js")
+	val, _ := ctx.RunScript("btoa(highlightedTxt)", "value.js")
+	retStr, err := base64.StdEncoding.DecodeString(val.String())
+
+	if err != nil {
+		fmt.Printf("Error decoding base64: %s\n", err)
+		return []byte("")
+	}
+
+	return retStr
 }
