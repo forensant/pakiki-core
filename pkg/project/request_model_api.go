@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -36,6 +37,7 @@ type RequestResponseContents struct {
 	Response              string
 	ModifiedRequest       string
 	ModifiedResponse      string
+	Preview               string
 	Modified              bool
 	URL                   string
 	MimeType              string
@@ -401,6 +403,7 @@ func GetRequestPartialData(w http.ResponseWriter, r *http.Request, db *gorm.DB) 
 // @Security ApiKeyAuth
 // @Param guid path string true "Request GUID"
 // @Param highlight query bool true "Syntax Highlight Req/Resp"
+// @Param max_highlight_length query int true "Maximum length of data to highlight (in B)"
 // @Success 200 {object} project.RequestResponseContents
 // @Failure 500 {string} string Error
 // @Router /requests/{guid}/contents [get]
@@ -490,11 +493,29 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 			shouldHighlight = false
 		}
 
-		requestResponse.Request = highlightAndEncode(origReq, shouldHighlight)
-		requestResponse.Response = highlightAndEncode(formatResponse(origResp, contentType), shouldHighlight)
-		requestResponse.ModifiedRequest = highlightAndEncode(modReq, shouldHighlight)
-		requestResponse.ModifiedResponse = highlightAndEncode(formatResponse(modResp, contentType), shouldHighlight)
+		maxHighlightLength, err := strconv.Atoi(r.FormValue("max_highlight_length"))
+		if err != nil {
+			maxHighlightLength = -1
+		}
 
+		requestResponse.Request = highlightAndEncode(origReq, shouldHighlight, maxHighlightLength)
+		requestResponse.Response = highlightAndEncode(formatResponse(origResp, contentType), shouldHighlight, maxHighlightLength)
+		requestResponse.ModifiedRequest = highlightAndEncode(modReq, shouldHighlight, maxHighlightLength)
+		requestResponse.ModifiedResponse = highlightAndEncode(formatResponse(modResp, contentType), shouldHighlight, maxHighlightLength)
+
+		previewBytes := origResp
+		if len(modResp) > 0 {
+			previewBytes = modResp
+		}
+
+		previewBodySplit := bytes.SplitN(previewBytes, []byte("\r\n\r\n"), 2)
+		if len(previewBodySplit) == 2 {
+			previewBytes = previewBodySplit[1]
+		} else {
+			previewBytes = []byte("")
+		}
+
+		requestResponse.Preview = base64.StdEncoding.EncodeToString(previewBytes)
 		requestResponse.IsUTF8 = isUTF8
 	}
 
@@ -762,7 +783,7 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-func highlightAndEncode(req []byte, shouldHighlight bool) string {
+func highlightAndEncode(req []byte, shouldHighlight bool, maxHighlightLength int) string {
 	encodedStr := base64.StdEncoding.EncodeToString(req)
 	if !shouldHighlight {
 		return encodedStr
@@ -784,17 +805,21 @@ func highlightAndEncode(req []byte, shouldHighlight bool) string {
 			}
 		}
 
-		contentType := "html"
-		if strings.Contains(contentHeader, "javascript") {
-			contentType = "javascript"
-		} else if strings.Contains(contentHeader, "json") {
-			contentType = "json"
-		} else if strings.Contains(contentHeader, "css") || strings.Contains(contentHeader, "stylesheet") {
-			contentType = "css"
-		}
-
 		to_ret = append(to_ret, []byte("\r\n\r\n")...)
-		to_ret = append(to_ret, syntaxHighlightText(split[1], contentType)...)
+
+		if len(split[1]) > maxHighlightLength {
+			to_ret = append(to_ret, []byte(html.EscapeString(string(split[1])))...)
+		} else {
+			contentType := "html"
+			if strings.Contains(contentHeader, "javascript") {
+				contentType = "javascript"
+			} else if strings.Contains(contentHeader, "json") {
+				contentType = "json"
+			} else if strings.Contains(contentHeader, "css") || strings.Contains(contentHeader, "stylesheet") {
+				contentType = "css"
+			}
+			to_ret = append(to_ret, syntaxHighlightText(split[1], contentType)...)
+		}
 	}
 
 	return base64.StdEncoding.EncodeToString(to_ret)
