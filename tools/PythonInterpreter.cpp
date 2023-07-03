@@ -40,9 +40,9 @@ wchar_t *GetWC(const char *c) {
     return nullptr;
   }
 
-  const size_t cSize = strlen(c)+1;
-  wchar_t* wc = new wchar_t[cSize];
-  mbstowcs (wc, c, cSize);
+  size_t length = mbstowcs(NULL, c, 0) + 1;
+  wchar_t* wc = new wchar_t[length];
+  mbstowcs (wc, c, length);
 
   return wc;
 }
@@ -148,8 +148,9 @@ char* getDir() {
 
     fd = open(dir, O_RDONLY);
 
-    if(fd == -1)
+    if(fd == -1) {
       return nullptr;
+    }
   }
   
   close(fd);
@@ -238,6 +239,8 @@ bool runPythonScript() {
 }
 
 int main(int argc, char *argv[]) {
+  setlocale(LC_ALL, "en_US.UTF-8");
+
   PyStatus status;
 
   PyConfig config;
