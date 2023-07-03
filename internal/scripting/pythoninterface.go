@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	_ "embed"
 )
@@ -157,7 +158,8 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, pythonErr, idx == len(scriptCode)-1)
 
 			if err != nil {
-				err := "Error running script: " + err.Error()
+				outputStr, _ := readFromBuffer(pythonOut, false)
+				err := "Error running script: " + err.Error() + ", stdout: %s\n" + outputStr + "\n"
 				fmt.Println(err + "\n")
 
 				if scriptCaller != nil {
@@ -242,6 +244,7 @@ func sendCodeToInterpreter(filename string, code string, stdin io.WriteCloser, s
 
 	output = strings.TrimSpace(output)
 	if !strings.Contains(output, "PAKIKI_PYTHON_INTERPRETER_READY") && !strings.Contains(output, "PAKIKI_PYTHON_INTERPRETER_SCRIPT_FINISHED") {
+		time.Sleep(2 * time.Second)
 		allOutput := make([]byte, 10240)
 		stderr.Read(allOutput)
 		fullOutput := append([]byte(output), allOutput...)
