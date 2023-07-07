@@ -196,6 +196,24 @@ func recordRequestData(req *project.InterceptedRequest, action string, requestBy
 		guid = req.Request.GUID
 	}
 
+	// add the end of the header block, if required
+	if bytes.Contains(requestBytes, []byte("\r\n")) {
+		if !bytes.Contains(requestBytes, []byte("\r\n\r\n")) {
+			requestBytes = append(requestBytes, []byte("\r\n")...)
+			if !bytes.Contains(requestBytes, []byte("\r\n\r\n")) {
+				requestBytes = append(requestBytes, []byte("\r\n")...)
+			}
+		}
+	} else {
+		// it's just \n
+		if !bytes.Contains(requestBytes, []byte("\n\n")) {
+			requestBytes = append(requestBytes, []byte("\n")...)
+			if !bytes.Contains(requestBytes, []byte("\n\n")) {
+				requestBytes = append(requestBytes, []byte("\n")...)
+			}
+		}
+	}
+
 	dataPacket := project.DataPacket{
 		Data:        requestBytes,
 		Direction:   direction,
