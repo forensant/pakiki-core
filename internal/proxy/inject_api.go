@@ -61,25 +61,9 @@ func RunInjection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if operation.Host == "" {
-		http.Error(w, "Please specify a host to target", http.StatusBadRequest)
-		return
-	}
-
-	if len(operation.FuzzDB) == 0 && len(operation.CustomPayloads) == 0 && operation.IterateFrom == operation.IterateTo {
-		http.Error(w, "Please specify a payload to run", http.StatusBadRequest)
-		return
-	}
-
-	has_fuzz_points := false
-	for _, requestPart := range operation.Request {
-		if requestPart.Inject {
-			has_fuzz_points = true
-		}
-	}
-
-	if !has_fuzz_points {
-		http.Error(w, "Please specify at least one part of the request to fuzz", http.StatusBadRequest)
+	err = operation.ValidateAndSanitize()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

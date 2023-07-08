@@ -55,8 +55,15 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 			modifiedRequest := bufio.NewReader(io.NopCloser(bytes.NewBuffer(requestBytes)))
 			oldUrl := req.URL
 			req, err = http.ReadRequest(modifiedRequest)
-			req.URL.Scheme = oldUrl.Scheme
-			req.URL.Host = oldUrl.Host
+			if err == nil {
+				req.URL.Scheme = oldUrl.Scheme
+				req.URL.Host = oldUrl.Host
+			} else {
+				response = goproxy.NewResponse(req,
+					goproxy.ContentTypeText, http.StatusBadRequest,
+					"Pākiki Proxy could not read the modified request")
+				request.Error = "Could not read modified request: " + err.Error()
+			}
 
 			hookRun = true
 
@@ -101,25 +108,33 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 			response = goproxy.NewResponse(req,
 				goproxy.ContentTypeText, http.StatusForbidden,
 				"Request dropped by Pākiki Proxy")
+			response.ProtoMajor = req.ProtoMajor
+			response.ProtoMinor = req.ProtoMinor
 		}
 
 		if forward {
 			oldUrl := req.URL
+			oldReq := req
 			req, err = http.ReadRequest(modifiedRequest)
-			req.URL.Scheme = oldUrl.Scheme
-			req.URL.Host = oldUrl.Host
-			request.RequestSize = int64(len(modifiedRequestData))
-		}
-
-		if err != nil {
-			// it was an error reading the new request
-			request.Error = "Error reading modified request: " + err.Error()
+			if err == nil {
+				req.URL.Scheme = oldUrl.Scheme
+				req.URL.Host = oldUrl.Host
+				request.RequestSize = int64(len(modifiedRequestData))
+			} else {
+				req = oldReq
+				response = goproxy.NewResponse(req,
+					goproxy.ContentTypeText, http.StatusBadRequest,
+					"Pākiki Proxy could not read the modified request")
+				response.ProtoMajor = req.ProtoMajor
+				response.ProtoMinor = req.ProtoMinor
+				request.Error = "Could not read modified request: " + err.Error() + ", original request sent"
+			}
 		}
 
 		removeInterceptedRequest(interceptedRequest)
 	}
 
-	if ctx.Error != nil {
+	if ctx.Error != nil && request.Error == "" {
 		fmt.Printf("Error: %v", ctx.Error.Error())
 		request.Error = ctx.Error.Error()
 	}
