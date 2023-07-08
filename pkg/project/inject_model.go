@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -189,6 +190,41 @@ func (injectOperation *InjectOperation) UpdateForDisplay() {
 
 	injectOperation.InjectDescription = strings.Join(payloads, ", ")
 	injectOperation.URL = injectOperation.parseURL()
+}
+
+func (injectOp *InjectOperation) ValidateAndSanitize() error {
+	if injectOp.Host == "" {
+		return errors.New("please specify a host to target")
+	}
+
+	if len(injectOp.FuzzDB) == 0 && len(injectOp.CustomPayloads) == 0 && injectOp.IterateFrom == injectOp.IterateTo {
+		return errors.New("please specify a payload to run")
+	}
+
+	has_fuzz_points := false
+	for _, requestPart := range injectOp.Request {
+		if requestPart.Inject {
+			has_fuzz_points = true
+		}
+	}
+
+	if !has_fuzz_points {
+		return errors.New("please specify at least one injection point")
+	}
+
+	if strings.Contains(injectOp.Host, "/") {
+		url, err := url.Parse(injectOp.Host)
+		if err != nil || url.Host == "" {
+			return errors.New("please specify a valid host")
+		}
+
+		injectOp.Host = url.Host
+		if (url.Scheme == "https" && url.Port() != "443") || (url.Scheme == "http" && url.Port() != "80") {
+			injectOp.Host += ":" + url.Port()
+		}
+	}
+
+	return nil
 }
 
 func (injectOperation *InjectOperation) IncrementRequestCount() {
