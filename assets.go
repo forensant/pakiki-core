@@ -8,6 +8,9 @@ var HTMLFrontendDir embed.FS
 //go:embed www/browser_home/*
 var BrowserHomepageDir embed.FS
 
+//go:embed www/cyberchef/build/prod/*
+var CyberChefDir embed.FS
+
 //go:embed api/swagger.json
 var SwaggerJSON string
 

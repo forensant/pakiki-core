@@ -111,6 +111,13 @@ func main() {
 	}
 	docsFilesystem := http.FileServer(http.FS(docsSubdir))
 
+	cyberchefDir, err := fs.Sub(assets.CyberChefDir, "www/cyberchef/build/prod")
+	if err != nil {
+		log.Fatal("Could not open the subdirectory for CyberChef: " + err.Error())
+		return
+	}
+	cyberchefFilesystem := http.FileServer(http.FS(cyberchefDir))
+
 	err = proxy.StartListeners()
 	if err != nil {
 		log.Printf("Warning: The proxy could not be started, %v\n", err.Error())
@@ -208,6 +215,7 @@ func main() {
 
 	rtr.PathPrefix("/browser_home/").Handler(http.StripPrefix("/browser_home/", browserHomeFilesystem))
 	rtr.PathPrefix("/docs/").Handler(http.StripPrefix("/docs", docsFilesystem))
+	rtr.PathPrefix("/cyberchef/").Handler(http.StripPrefix("/cyberchef/", cyberchefFilesystem))
 	rtr.PathPrefix("/_media/").Handler(http.StripPrefix("", docsFilesystem))
 	rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
 

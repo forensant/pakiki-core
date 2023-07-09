@@ -4,3 +4,6 @@
 [submodule "docs/pakiki-documentation"]
 	path = docs/pakiki-documentation
 	url = https://github.com/forensant/pakiki-documentation
+[submodule "www/cyberchef"]
+	path = www/cyberchef
+	url = https://github.com/gchq/CyberChef.git
