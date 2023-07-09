@@ -6,6 +6,14 @@ swag init -o api -g cmd/pakikicore/main.go --parseInternal
 
 #go mod tidy
 
+# build cyberchef
+export NODE_OPTIONS=--max_old_space_size=2048
+cd www/cyberchef
+npm install
+npm run build
+
+cd ../..
+
 # now do the actual build
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # MacOS is handled separately, so that it can be compiled for both arm64 and amd64 architectures
