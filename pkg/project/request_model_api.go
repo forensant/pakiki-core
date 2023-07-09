@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -402,8 +403,8 @@ func GetRequestPartialData(w http.ResponseWriter, r *http.Request, db *gorm.DB) 
 // @Produce  text/text
 // @Security ApiKeyAuth
 // @Param guid path string true "Request GUID"
-// @Param highlight query bool true "Syntax Highlight Req/Resp"
-// @Param max_highlight_length query int true "Maximum length of data to highlight (in B)"
+// @Param highlight query false true "Syntax Highlight Req/Resp"
+// @Param max_highlight_length query int false "Maximum length of data to highlight (in bytes, default is 50KB)"
 // @Success 200 {object} project.RequestResponseContents
 // @Failure 500 {string} string Error
 // @Router /requests/{guid}/contents [get]
@@ -495,13 +496,14 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 
 		maxHighlightLength, err := strconv.Atoi(r.FormValue("max_highlight_length"))
 		if err != nil {
-			maxHighlightLength = -1
+			// default of 50KB
+			maxHighlightLength = 50 * 1024
 		}
 
-		requestResponse.Request = highlightAndEncode(origReq, shouldHighlight, maxHighlightLength)
-		requestResponse.Response = highlightAndEncode(formatResponse(origResp, contentType), shouldHighlight, maxHighlightLength)
-		requestResponse.ModifiedRequest = highlightAndEncode(modReq, shouldHighlight, maxHighlightLength)
-		requestResponse.ModifiedResponse = highlightAndEncode(formatResponse(modResp, contentType), shouldHighlight, maxHighlightLength)
+		requestResponse.Request = highlightAndEncode(origReq, shouldHighlight, maxHighlightLength, false)
+		requestResponse.Response = highlightAndEncode(formatResponse(origResp, contentType), shouldHighlight, maxHighlightLength, false)
+		requestResponse.ModifiedRequest = highlightAndEncode(modReq, shouldHighlight, maxHighlightLength, false)
+		requestResponse.ModifiedResponse = highlightAndEncode(formatResponse(modResp, contentType), shouldHighlight, maxHighlightLength, false)
 
 		previewBytes := origResp
 		if len(modResp) > 0 {
@@ -783,29 +785,37 @@ func GetRequest(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write(response)
 }
 
-func highlightAndEncode(req []byte, shouldHighlight bool, maxHighlightLength int) string {
+func highlightAndEncode(req []byte, shouldHighlight bool, maxHighlightLength int, from_text_field bool) string {
 	encodedStr := base64.StdEncoding.EncodeToString(req)
 	if !shouldHighlight {
 		return encodedStr
 	}
 
-	split := bytes.SplitN(req, []byte("\r\n\r\n"), 2)
+	header_block_separator := []byte("\r\n\r\n")
+	header_separator := "\r\n"
+
+	if from_text_field {
+		header_block_separator = []byte("\n\n")
+		header_separator = "\n"
+	}
+
+	split := bytes.SplitN(req, header_block_separator, 2)
 
 	if len(split) == 0 {
 		return ""
 	}
 
 	to_ret := syntaxHighlightText(split[0], "http")
-	if len(split) > 1 && len(split[1]) > 0 {
+	if len(split) > 1 {
 		contentHeader := ""
-		headers := strings.Split(string(split[0]), "\r\n")
+		headers := strings.Split(string(split[0]), string(header_separator))
 		for _, header := range headers {
 			if strings.HasPrefix(header, "Content-Type: ") {
 				contentHeader = strings.TrimPrefix(header, "Content-Type: ")
 			}
 		}
 
-		to_ret = append(to_ret, []byte("\r\n\r\n")...)
+		to_ret = append(to_ret, header_block_separator...)
 
 		if len(split[1]) > maxHighlightLength {
 			to_ret = append(to_ret, []byte(html.EscapeString(string(split[1])))...)
@@ -823,6 +833,33 @@ func highlightAndEncode(req []byte, shouldHighlight bool, maxHighlightLength int
 	}
 
 	return base64.StdEncoding.EncodeToString(to_ret)
+}
+
+// HighlightRequest godoc
+// @Summary Highlight A Request
+// @Description applies syntax highlighting to the given request
+// @Tags Requests
+// @Produce  html
+// @Security ApiKeyAuth
+// @Param body body string true "The request to highlight (base64 encoded)"
+// @Success 200 {string} string message
+// @Failure 500 {string} string Error
+// @Router /requests/highlight [post]
+func HighlightRequest(w http.ResponseWriter, r *http.Request) {
+	// read the request body
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	req, err := base64.StdEncoding.DecodeString(string(body))
+	if err != nil {
+		http.Error(w, "Could not decode request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte(highlightAndEncode(req, true, 100*1024, true)))
 }
 
 // PatchRequestNotes godoc

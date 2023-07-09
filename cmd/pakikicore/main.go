@@ -154,6 +154,7 @@ func main() {
 
 	rtr.HandleFunc("/requests", authenticate(project.GetRequests))
 	rtr.HandleFunc("/requests/bulk_queue", authenticate(proxy.BulkRequestQueue))
+	rtr.HandleFunc("/requests/highlight", authenticate(project.HighlightRequest))
 	rtr.HandleFunc("/requests/make", authenticate(proxy.MakeRequest))
 	rtr.HandleFunc("/requests/queue", authenticate(proxy.AddRequestToQueue))
 	rtr.HandleFunc("/requests/sitemap", authenticate(project.GetSitemap))
