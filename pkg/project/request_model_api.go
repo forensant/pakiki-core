@@ -71,6 +71,12 @@ type RequestSearchResult struct {
 	EndOffset   uint64
 }
 
+// PartialRequestResponse contains a list of rows which match the given criteria and how many rows in total match
+type PartialRequestResponse struct {
+	TotalRequests uint64
+	Requests      []Request
+}
+
 // CompareRequests godoc
 // @Summary Compare Two Requests
 // @Description compares two requests and returns the differences
@@ -578,6 +584,8 @@ func isInSlice(slice []string, val string) bool {
 // @Param sort_col query string false "Column to sort by (default time)"
 // @Param sort_dir query string false "Column direction to sort by (default asc)"
 // @Param last query int false "Limit to the last n requests (sorted by time)"
+// @Param limit query int false "Maximum number of rows to return"
+// @Param offset query int false "Offset X rows from the start"
 // @Security ApiKeyAuth
 // @Success 200 {array} project.Request
 // @Failure 500 {string} string Error
@@ -650,6 +658,27 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		sortDirection = requestSortDir
 	}
 
+	limit := r.FormValue("limit")
+	offset := r.FormValue("offset")
+	var requestCount int64 = 0
+	if limit != "" {
+		tx = tx.Table("requests")
+		tx.Count(&requestCount)
+	}
+	if limit != "" {
+		limitInt, err := strconv.Atoi(limit)
+		if err == nil {
+			tx = tx.Limit(limitInt)
+		}
+	}
+
+	if offset != "" {
+		offsetInt, err := strconv.Atoi(offset)
+		if err == nil {
+			tx = tx.Offset(offsetInt)
+		}
+	}
+
 	result = tx.Order(sortColumn + " " + sortDirection).Find(&requests)
 
 	if result.Error != nil {
@@ -667,7 +696,17 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		requests = inScopeRequests
 	}
 
-	response, err := json.Marshal(requests)
+	var response []byte
+	var err error
+
+	if limit != "" {
+		response, err = json.Marshal(PartialRequestResponse{
+			TotalRequests: uint64(requestCount),
+			Requests:      requests,
+		})
+	} else {
+		response, err = json.Marshal(requests)
+	}
 	if err != nil {
 		http.Error(w, "Could not marshal requests: "+err.Error(), http.StatusInternalServerError)
 		return

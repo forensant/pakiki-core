@@ -52,6 +52,9 @@ type Request struct {
 
 	SiteMapPathID int         `json:"-"`
 	SiteMapPath   SiteMapPath `json:"-"`
+
+	Action string `gorm:"-"`
+	Saved  bool   `gorm:"-" json:"-"`
 }
 
 // RequestSummary represents all of the fields required by the GUI
@@ -586,10 +589,13 @@ func (request *Request) Record() {
 		request.SiteMapPath = getSiteMapPath(request.URL)
 
 	}
+
 	ioHub.databaseWriter <- request
 
 	request.ObjectType = "HTTP Request"
 	ioHub.broadcast <- request
+
+	request.Saved = true
 }
 
 func urlMatchesScope(urlStr string) bool {
@@ -621,6 +627,12 @@ func urlMatchesScope(urlStr string) bool {
 }
 
 func (request *Request) ShouldFilter(filter string) bool {
+	if request.Saved {
+		request.Action = "modified"
+	} else {
+		request.Action = "new"
+	}
+
 	if filter == "" {
 		return false
 	}
@@ -640,14 +652,18 @@ func (request *Request) ShouldFilter(filter string) bool {
 	if strings.Contains(filter, "inscope:true") {
 		filter = strings.Replace(filter, "inscope:true", "", 1)
 		if !urlMatchesScope(request.URL) {
-			return true
+			request.Action = "filtered"
+			return false
 		}
 	}
 
 	filter = strings.TrimLeft(filter, " ")
 
 	if excludeResources && filter == "" {
-		return request.isResource()
+		if request.isResource() {
+			request.Action = "filtered"
+		}
+		return false
 	}
 
 	var requests []Request
@@ -679,7 +695,11 @@ func (request *Request) ShouldFilter(filter string) bool {
 
 	resultFound := (len(requests) > 0)
 
-	return !resultFound
+	if !resultFound {
+		request.Action = "filtered"
+	}
+
+	return false
 }
 
 func (request *Request) update() error {
