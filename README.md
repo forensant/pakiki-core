@@ -75,7 +75,7 @@ The installation will depend on your particular distribution.
 
 #### Debian-based distributions (including Ubuntu)
 
-```sudo apt install build-essential python3.11-dev ruby```
+```sudo apt install build-essential python3.11-dev ruby npm```
 
 ### Launching for development
 Ensure you have built the project using the build script at least once to create the necessary dependencies.

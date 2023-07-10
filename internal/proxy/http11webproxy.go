@@ -31,7 +31,17 @@ import (
 	"github.com/google/uuid"
 )
 
+var passthroughUrls = []string{
+	"https://accounts.google.com:443/ListAccounts?gpsia=1&source=ChromiumBrowser",
+	"https://update.googleapis.com:443/service/update2/json",
+	"http://edgedl.me.gvt1.com:80/edgedl/release2/chrome_component/",
+}
+
 func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
+	if requestOnPassthroughList(req) {
+		return req, nil
+	}
+
 	requestBytes, err := httputil.DumpRequestOut(req, true)
 
 	if err != nil {
@@ -306,6 +316,16 @@ func onWebsocketPacketReceived(data []byte, direction goproxy.WebsocketDirection
 	}
 
 	return data
+}
+
+func requestOnPassthroughList(req *http.Request) bool {
+	urlStr := req.URL.String()
+	for _, passthroughUrl := range passthroughUrls {
+		if strings.HasPrefix(urlStr, passthroughUrl) {
+			return true
+		}
+	}
+	return false
 }
 
 func setCA(caCert, caKey []byte) error {
