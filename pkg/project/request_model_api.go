@@ -27,7 +27,7 @@ const RequestFilterSQL = "url LIKE ? OR id IN (SELECT request_id FROM data_packe
 const RequestNegativeFilterSQL = "url NOT LIKE ? AND id IN (SELECT request_id FROM data_packets WHERE request_id NOT IN (SELECT id FROM requests WHERE response_size > 10485760 OR request_size > 10485760) GROUP BY request_id HAVING GROUP_CONCAT(data) NOT LIKE ? ORDER BY direction ASC, id ASC)"
 
 // Ensure that the code-based check is also updated in this scenario
-const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND response_content_type NOT LIKE 'image/%' AND response_content_type NOT LIKE 'javascript/%' AND response_content_type NOT LIKE 'text/css%' AND url NOT LIKE '%.jpg%' AND url NOT LIKE '%.gif%' AND url NOT LIKE '%.png%' AND url NOT LIKE '%.svg' AND url NOT LIKE '%.woff2%' AND url NOT LIKE '%.css%' AND url NOT LIKE '%.js%')"
+const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND response_content_type NOT LIKE 'image/%' AND response_content_type NOT LIKE '%javascript%' AND response_content_type NOT LIKE 'text/css%' AND url NOT LIKE '%.jpg%' AND url NOT LIKE '%.gif%' AND url NOT LIKE '%.png%' AND url NOT LIKE '%.svg' AND url NOT LIKE '%.woff2%' AND url NOT LIKE '%.css%' AND url NOT LIKE '%.js%')"
 
 var v8vm *v8go.Isolate
 
@@ -559,10 +559,9 @@ func getRequestResponseString(db *gorm.DB, r Request, maxSize int64) (reqData st
 			err = res.Error
 			return
 		}
-
-		for _, pkt := range dataPackets {
-			reqData += string(pkt.Data)
-		}
+	}
+	for _, pkt := range dataPackets {
+		reqData += string(pkt.Data)
 	}
 
 	dataPackets = make([]DataPacket, 0)
@@ -573,10 +572,9 @@ func getRequestResponseString(db *gorm.DB, r Request, maxSize int64) (reqData st
 			err = res.Error
 			return
 		}
-
-		for _, pkt := range dataPackets {
-			respData += string(pkt.Data)
-		}
+	}
+	for _, pkt := range dataPackets {
+		respData += string(pkt.Data)
 	}
 
 	return
