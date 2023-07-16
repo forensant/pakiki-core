@@ -172,6 +172,12 @@ func CorrectLengthHeaders(request []byte) []byte {
 	return newRequest
 }
 
+func (request *Request) committed() bool {
+	var req Request
+	result := readableDatabase.Where("id = ?", request.ID).First(&req)
+	return result.Error == nil
+}
+
 // CorrectModifiedRequestResponse removes transfer encoding headers and sets a correct content length
 // it should only be called on requests/responses where we have the entire contents in one data packet
 func (request *Request) CorrectModifiedRequestResponse(direction string) {
@@ -587,15 +593,13 @@ func (request *Request) Record() {
 		(successful || request.ScanID == "") {
 
 		request.SiteMapPath = getSiteMapPath(request.URL)
-
 	}
 
+	request.Saved = request.committed()
 	ioHub.databaseWriter <- request
 
 	request.ObjectType = "HTTP Request"
 	ioHub.broadcast <- request
-
-	request.Saved = true
 }
 
 func urlMatchesScope(urlStr string) bool {
