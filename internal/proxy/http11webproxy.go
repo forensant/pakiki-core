@@ -1,11 +1,9 @@
-// This is using the following library
+// This is using a forked and slightly modified version of the following library:
 // https://github.com/elazarl/goproxy
-
-// At some point, we may need to refactor this so that H2 will work, but the library does support websockets
 //
-// Basically, it works well enough for now, but at some point we may need to make significant contributions or a fork
-// to the goproxy library in order to support everything we need - including more robust error handling which is exposed to the
-// intercept functions.
+// Basically, it works well enough for now, but at some point we may need to make significant contributions
+// in order to support everything we need - including more robust error handling which is exposed to the
+// intercept functions, better control of H2/H3, etc.
 
 package proxy
 
@@ -35,6 +33,7 @@ var passthroughUrls = []string{
 	"https://accounts.google.com:443/ListAccounts?gpsia=1&source=ChromiumBrowser",
 	"https://update.googleapis.com:443/service/update2/json",
 	"http://edgedl.me.gvt1.com:80/edgedl/release2/chrome_component/",
+	"http://edgedl.me.gvt1.com/edgedl/release2/chrome_component/",
 	"https://www.google.com:443/complete/search?client=chrome-omni",
 	"https://optimizationguide-pa.googleapis.com:443/v1:GetModels",
 }
