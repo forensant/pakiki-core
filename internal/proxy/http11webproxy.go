@@ -36,6 +36,7 @@ var passthroughUrls = []string{
 	"https://update.googleapis.com:443/service/update2/json",
 	"http://edgedl.me.gvt1.com:80/edgedl/release2/chrome_component/",
 	"https://www.google.com:443/complete/search?client=chrome-omni",
+	"https://optimizationguide-pa.googleapis.com:443/v1:GetModels",
 }
 
 func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
