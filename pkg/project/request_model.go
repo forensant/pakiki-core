@@ -487,7 +487,6 @@ func (request *Request) isResource() bool {
 	content_types := [...]string{
 		"font/",
 		"image/",
-		"javascript/",
 		"text/css",
 	}
 
@@ -495,6 +494,10 @@ func (request *Request) isResource() bool {
 		if strings.HasPrefix(request.ResponseContentType, content_type) {
 			return true
 		}
+	}
+
+	if strings.Contains(request.ResponseContentType, "javascript") {
+		return true
 	}
 
 	file_types := [...]string{
