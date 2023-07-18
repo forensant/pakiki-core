@@ -16,7 +16,7 @@ import (
 
 var oob_client *interactsh.Client = nil
 var generation_chan chan bool = nil
-var interactDomain string = "interact.proximityhq.com"
+var interactDomain string = "interactsh.pakikiproxy.com"
 
 func generateOOBClient() error {
 	var err error

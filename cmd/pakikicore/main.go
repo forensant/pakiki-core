@@ -498,7 +498,7 @@ func monitorParentProcess(parentPID int32) {
 
 func parseCommandLineFlags() commandLineParameters {
 	apiKeyPtr := flag.String("api-key", "", "A key required to be passed to the X-API-Key header for every request")
-	bindAddressPtr := flag.String("bind-address", "localhost", "The address to bind the API and UI to")
+	bindAddressPtr := flag.String("bind-address", "localhost", "The IP address to bind the API and UI to (default 127.0.0.1)")
 	parentPIDInt := flag.Int("parentpid", 0, "The process id (PID) of the proxy parent process")
 	projectPathPtr := flag.String("project", "", "The path to the project to open")
 	tempProjectPathPtr := flag.String("temp-project", "", "The path to the temporary project file to open")
