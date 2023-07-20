@@ -507,13 +507,17 @@ func (request *Request) isResource() bool {
 		".svg",
 		".woff2",
 		".css",
-		".js",
 	}
 
 	for _, file_type := range file_types {
 		if strings.Contains(request.URL, file_type) {
 			return true
 		}
+	}
+
+	// javascript is again a slightly special case, as we can have jsx, jsp, etc
+	if strings.Contains(request.URL, ".js?") || strings.LastIndex(request.URL, ".js") == len(request.URL)-3 {
+		return true
 	}
 
 	return false

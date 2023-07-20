@@ -79,6 +79,43 @@ func TestInjectPointIdentification(t *testing.T) {
 	}
 }
 
+func TestIsResource(t *testing.T) {
+	tests := []struct {
+		url        string
+		isResource bool
+	}{
+		{"https://example.com", false},
+		{"https://example.com/test", false},
+		{"https://example.com/test?abc=123", false},
+		{"https://example.com/test.js", true},
+		{"https://example.com/test.js?abc=123", true},
+		{"https://example.com/test.css", true},
+		{"https://example.com/test.css?abc=123", true},
+		{"https://example.com/test.png", true},
+		{"https://example.com/test.png?abc=123", true},
+		{"https://example.com/test.jsx", false},
+		{"https://example.com/test.jsx?abc=123", false},
+	}
+
+	for _, test := range tests {
+		req := Request{
+			URL: test.url,
+		}
+
+		if req.isResource() != test.isResource {
+			t.Errorf("Expected URL '%s' to be a resource: %t", test.url, test.isResource)
+		}
+
+		// the request filter is a bit more complicated, as the entry needs to be in the database
+		req.WriteToDatabase(writableDatabase)
+		req.ShouldFilter("exclude_resources:true example.com")
+
+		if (test.isResource && req.Action != "filtered") || (!test.isResource && req.Action == "filtered") {
+			t.Errorf("Expected URL '%s' to be a resource %t", test.url, test.isResource)
+		}
+	}
+}
+
 func TestURLScoping(t *testing.T) {
 	scopes := []struct {
 		name           string
