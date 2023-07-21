@@ -409,7 +409,7 @@ func GetRequestPartialData(w http.ResponseWriter, r *http.Request, db *gorm.DB) 
 // @Produce  text/text
 // @Security ApiKeyAuth
 // @Param guid path string true "Request GUID"
-// @Param highlight query false true "Syntax Highlight Req/Resp"
+// @Param highlight query bool true "Syntax Highlight Req/Resp"
 // @Param max_highlight_length query int false "Maximum length of data to highlight (in bytes, default is 50KB)"
 // @Success 200 {object} project.RequestResponseContents
 // @Failure 500 {string} string Error
