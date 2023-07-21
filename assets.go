@@ -14,7 +14,7 @@ var CyberChefDir embed.FS
 //go:embed api/swagger.json
 var SwaggerJSON string
 
-//go:embed docs/pakiki-documentation/*.md docs/pakiki-documentation/*.html docs/pakiki-documentation/_media/* docs/pakiki-documentation/getting_started/* docs/pakiki-documentation/workflows/*
+//go:embed docs/pakiki-documentation/*.md docs/pakiki-documentation/*.html docs/pakiki-documentation/_media/* docs/pakiki-documentation/getting_started/* docs/pakiki-documentation/workflows/* docs/pakiki-documentation/features/*
 var DocsDir embed.FS
 
 //go:embed third_party/highlight.min.js
