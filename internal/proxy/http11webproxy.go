@@ -96,7 +96,7 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 	}
 
 	if interceptSettings.BrowserToServer {
-		interceptedRequest := interceptRequest(request, "", "browser_to_server", requestBytes, hookRun)
+		interceptedRequest := interceptRequest(request, "", "browser_to_server", requestBytes, hookRun, nil)
 		<-interceptedRequest.ResponseReady
 
 		modifiedRequestData := request.GetRequestResponseData("Request", true)
@@ -212,7 +212,11 @@ func onHttp11ResponseReceived(resp *http.Response, ctx *goproxy.ProxyCtx) *http.
 			}
 
 			if shouldIntercept {
-				interceptedResponse := interceptRequest(request, "", "server_to_browser", responseBytes, hookRun)
+				reqBytes := request.GetRequestResponseData("Request", false)
+				if len(reqBytes) == 0 {
+					reqBytes = request.GetRequestResponseData("Request", false)
+				}
+				interceptedResponse := interceptRequest(request, "", "server_to_browser", responseBytes, hookRun, reqBytes)
 				<-interceptedResponse.ResponseReady
 
 				responseBytes = request.GetRequestResponseData("Response", true)
@@ -303,7 +307,7 @@ func onWebsocketPacketReceived(data []byte, direction goproxy.WebsocketDirection
 			interceptDirection = "server_to_browser"
 		}
 
-		interceptedRequest := interceptRequest(request, dataPacketGuid, interceptDirection, data, false)
+		interceptedRequest := interceptRequest(request, dataPacketGuid, interceptDirection, data, false, nil)
 		<-interceptedRequest.ResponseReady
 
 		for _, dataPacket := range request.DataPackets {

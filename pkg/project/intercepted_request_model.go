@@ -7,6 +7,7 @@ type InterceptedRequest struct {
 	Request       *Request
 	GUID          string
 	Body          string    `example:"<base64 encoded body>"`
+	RequestBody   string    `example:"<base64 encoded body> (for responses)"`
 	Direction     string    `example:"Either browser_to_server or server_to_browser"`
 	ResponseReady chan bool `json:"-"`
 	ObjectType    string

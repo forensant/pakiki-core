@@ -28,11 +28,12 @@ type InterceptedRequestResponse struct {
 var interceptedRequests []*project.InterceptedRequest
 var interceptedRequestsLock sync.Mutex
 
-func interceptRequest(request *project.Request, guid string, direction string, requestData []byte, hookRun bool) *project.InterceptedRequest {
+func interceptRequest(request *project.Request, guid string, direction string, requestResponseData []byte, hookRun bool, requestData []byte) *project.InterceptedRequest {
 	interceptedRequest := &project.InterceptedRequest{
 		Request:       request,
 		GUID:          guid,
-		Body:          base64.StdEncoding.EncodeToString(requestData),
+		Body:          base64.StdEncoding.EncodeToString(requestResponseData),
+		RequestBody:   base64.StdEncoding.EncodeToString(requestData),
 		Direction:     direction,
 		ResponseReady: make(chan bool),
 		IsUTF8:        utf8.Valid(requestData),
