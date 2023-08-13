@@ -16,7 +16,7 @@ import (
 // @Summary Get All Scope Entries
 // @Description gets a list of all scope entries
 // @Tags Requests
-// @Produce  json
+// @Produce json
 // @Security ApiKeyAuth
 // @Success 200 {array} project.ScopeEntry
 // @Failure 500 {string} string Error
@@ -66,7 +66,7 @@ type ScopeTargetJSON struct {
 // @Tags Requests
 // @Produce  json
 // @Security ApiKeyAuth
-// @Param body body project.ScopeTargetJSON true "Scope target JSON, as exported from a bug bounty program"
+// @Param path query string true "GUID to delete"
 // @Success 200 {string} string Message
 // @Failure 500 {string} string Error
 // @Router /scope/entry/{guid} [delete]
@@ -230,4 +230,50 @@ func OrderScopeEntries(w http.ResponseWriter, r *http.Request) {
 	refreshScope()
 
 	w.Write([]byte("OK"))
+}
+
+// URLInScope godoc
+// @Summary Checks URL Scope
+// @Description checks if the given URL is in scope
+// @Tags Requests
+// @Produce string
+// @Security ApiKeyAuth
+// @Param url query string true "URL to check"
+// @Success 200 {string} string true or false
+// @Failure 500 {string} string Error
+// @Router /scope/url_in_scope [get]
+func URLInScope(w http.ResponseWriter, r *http.Request) {
+	url := r.FormValue("url")
+	if url == "" {
+		http.Error(w, "URL must be specified", http.StatusBadRequest)
+		return
+	}
+
+	for _, entry := range scope {
+		urlInScope, err := entry.URLInScope(url)
+		if err != nil {
+			http.Error(w, "Error checking if URL is in scope: %s"+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if !urlInScope {
+			continue
+		}
+
+		if entry.IncludeInScope {
+			w.Write([]byte("true"))
+			return
+		}
+
+		if !entry.IncludeInScope {
+			w.Write([]byte("false"))
+			return
+		}
+	}
+
+	if len(scope) == 0 {
+		w.Write([]byte("true"))
+	} else {
+		w.Write([]byte("false"))
+	}
 }

@@ -179,6 +179,7 @@ func main() {
 	rtr.HandleFunc("/scope/entry", authenticate(project.PostScopeEntry))
 	rtr.HandleFunc("/scope/import", authenticate(project.ImportScope))
 	rtr.HandleFunc("/scope/order", authenticate(project.OrderScopeEntries))
+	rtr.HandleFunc("/scope/url_in_scope", authenticate(project.URLInScope))
 
 	rtr.HandleFunc("/script_groups", authenticateWithGormDB(project.HandleScriptGroups))
 	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))
