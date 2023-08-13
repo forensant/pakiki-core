@@ -17,6 +17,7 @@ import (
 
 	"github.com/forensant/pakiki-core/internal/request_queue"
 	"github.com/forensant/pakiki-core/pkg/project"
+	"github.com/google/uuid"
 )
 
 var defaultConnectionPool *http.Client
@@ -361,11 +362,35 @@ func initConnectionPool() {
 func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient *http.Client, httpContext context.Context) (*project.Request, error) {
 	blankReq := &project.Request{
 		URL:         "",
-		Protocol:    "http",
+		Protocol:    "HTTP",
 		Verb:        "",
 		DataPackets: []project.DataPacket{{Data: requestData, Direction: "Request", StartOffset: 0, EndOffset: int64(len(requestData) - 1)}},
 		RequestSize: int64(len(requestData)),
 	}
+
+	hookResp := project.RunHooksOnRequest(blankReq, requestData)
+
+	if hookResp.Modified {
+		<-hookResp.ResponseReady
+
+		if !bytes.Equal(hookResp.ModifiedRequest, requestData) {
+			requestData = hookResp.ModifiedRequest
+
+			// if we're not doing other modifications, update the request
+			dataPacket := project.DataPacket{
+				Data:        requestData,
+				Direction:   "Request",
+				Modified:    true,
+				GUID:        uuid.NewString(),
+				Time:        time.Now().Unix(),
+				StartOffset: 0,
+				EndOffset:   int64(len(requestData)) - 1,
+			}
+
+			blankReq.DataPackets = append(blankReq.DataPackets, dataPacket)
+		}
+	}
+
 	requestData = project.CorrectLengthHeaders(requestData)
 
 	b := bytes.NewReader(requestData)
