@@ -236,7 +236,7 @@ func OrderScopeEntries(w http.ResponseWriter, r *http.Request) {
 // @Summary Checks URL Scope
 // @Description checks if the given URL is in scope
 // @Tags Requests
-// @Produce string
+// @Produce plain
 // @Security ApiKeyAuth
 // @Param url query string true "URL to check"
 // @Success 200 {string} string true or false
