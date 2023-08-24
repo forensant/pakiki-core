@@ -66,7 +66,6 @@ func getOOBClient() (*interactsh.Client, error) {
 
 			err = generateOOBClient()
 			if err != nil {
-				close(generation_chan)
 				return oob_client, err
 			}
 		}
