@@ -17,6 +17,7 @@ import (
 
 	"github.com/forensant/pakiki-core/internal/request_queue"
 	"github.com/forensant/pakiki-core/pkg/project"
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 )
 
@@ -165,6 +166,10 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 	errorThrown := false
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		request, err := makeRequestToSite(params.SSL, params.Host, requestData, defaultConnectionPool, httpContext)
 
 		if err != nil {
@@ -188,6 +193,10 @@ func AddRequestToQueue(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		select {
 		case <-requestFinishedChannel:
 			request_queue.Decrement(params.ScanID)
@@ -314,6 +323,10 @@ func BulkRequestQueue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		// now create workers to actually send the requests
 		payloads := make(chan []string, len(params.Replacements)+1)
 		complete := make(chan bool, settings.MaxConnectionsPerHost)

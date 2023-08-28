@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/forensant/goproxy"
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -459,6 +460,10 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 
 	if len(responseBytes) >= int(MaxResponsePacketSize) || stream {
 		go func() {
+			sentry.CurrentHub().Clone()
+			defer sentry.Flush(5 * time.Second)
+			defer sentry.Recover()
+
 			streamLargeRequest(request, startTime, bodyBytes, bodyToRead, bodyWriter, len(headers), ctx, stream)
 			closeReaders(originalBody, gzipBody)
 			if bodyWriter != nil {
@@ -468,6 +473,10 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 		return false
 	} else {
 		go func() {
+			sentry.CurrentHub().Clone()
+			defer sentry.Flush(5 * time.Second)
+			defer sentry.Recover()
+
 			if copyBody {
 				bodyWriter.Write(bodyBytes)
 				bodyWriter.Close()

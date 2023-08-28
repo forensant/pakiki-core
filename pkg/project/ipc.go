@@ -17,6 +17,7 @@ import (
 
 	_ "embed"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/gorilla/websocket"
 )
 
@@ -239,6 +240,10 @@ func (h *IOHub) Run(p string, tempPath string) (*gorm.DB, string) {
 	go refreshHooks()
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		for {
 			select {
 			case client := <-h.register:

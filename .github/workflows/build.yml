@@ -53,7 +53,6 @@ jobs:
           name: www
           path: www/html_frontend/dist/
             
-        
       - name: Install system dependencies
         run: sudo apt install build-essential python3.11-dev
 

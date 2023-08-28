@@ -26,6 +26,7 @@ import (
 
 	"github.com/forensant/goproxy"
 	"github.com/forensant/pakiki-core/pkg/project"
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 )
 
@@ -394,6 +395,10 @@ func startHttp11BrowserProxy(wg *sync.WaitGroup, settings *ProxySettings) (*http
 	}
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		defer wg.Done()
 		err := srv.Serve(listener)
 		if err != http.ErrServerClosed {

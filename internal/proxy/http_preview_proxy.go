@@ -9,9 +9,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/forensant/goproxy"
 	"github.com/forensant/pakiki-core/pkg/project"
+	"github.com/getsentry/sentry-go"
 )
 
 func onPreviewProxyRequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
@@ -68,6 +70,10 @@ func StartHttpPreviewProxy(listener net.Listener) error {
 	}
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		err := srv.Serve(listener)
 		if err != http.ErrServerClosed {
 			log.Printf("HTTP/1.1 Proxy Listen and Serve failure for the preview proxy: %v", err)

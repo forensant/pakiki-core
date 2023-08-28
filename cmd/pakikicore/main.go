@@ -19,6 +19,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
+	sentryhttp "github.com/getsentry/sentry-go/http"
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"gorm.io/gorm"
 
@@ -33,6 +35,9 @@ import (
 var apiToken, port string
 var gormDB *gorm.DB
 var shouldCleanupProjectSettings bool
+
+var crashHandlingEnabled bool = false
+var release string = "development"
 
 type commandLineParameters struct {
 	APIKey           string
@@ -63,6 +68,32 @@ type commandLineParameters struct {
 // @BasePath
 func main() {
 	parameters := parseCommandLineFlags()
+
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn:                "https://aaf0b2237ce651346d15ff46debe9ff3@sentryio.pakikiproxy.com/3",
+		AttachStacktrace:   true,
+		Release:            release,
+		EnableTracing:      true,
+		TracesSampleRate:   0.1,
+		ProfilesSampleRate: 0.1,
+		ServerName:         "-",
+		BeforeSend: func(event *sentry.Event, hint *sentry.EventHint) *sentry.Event {
+			if !crashHandlingEnabled {
+				return nil
+			}
+			return event
+		},
+	})
+
+	if err != nil {
+		log.Fatalf("sentry.Init: %s", err)
+	}
+
+	// Flush buffered events before the program terminates.
+	// Set the timeout to the maximum duration the program can afford to wait.
+	defer sentry.Flush(5 * time.Second)
+	defer sentry.Recover()
+
 	listener := createListener(parameters.APIPort, parameters.BindAddress)
 	port = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 
@@ -133,8 +164,13 @@ func main() {
 
 	go proxy.StartOutOfBandClient()
 
+	sentryHandler := sentryhttp.New(sentryhttp.Options{})
+
 	rtr := mux.NewRouter()
 
+	rtr.Use(sentryHandler.Handle)
+	rtr.HandleFunc("/crash_reporting/test", authenticate(crash))
+	rtr.HandleFunc("/crash_reporting", authenticate(handleCrashReporting))
 	rtr.HandleFunc("/hooks", authenticate(project.HandleHooks))
 	rtr.HandleFunc("/hooks/errors", authenticate(project.GetHookErrors))
 	rtr.HandleFunc("/hooks/errors/{guid}", authenticate(project.DeleteHookError))
@@ -321,6 +357,16 @@ func cleanup() {
 	}
 }
 
+func crash(w http.ResponseWriter, r *http.Request) {
+	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
+		panic("Test crash")
+	}()
+}
+
 func createListener(portParameter int, hostname string) net.Listener {
 	listener, err := net.Listen("tcp4", hostname+":"+strconv.Itoa(portParameter))
 	if err != nil {
@@ -466,6 +512,16 @@ func handleAPIKey(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(js))
 }
 
+func handleCrashReporting(w http.ResponseWriter, r *http.Request) {
+	crashHandlingEnabled = r.FormValue("enabled") == "true"
+
+	sentry.ConfigureScope(func(scope *sentry.Scope) {
+		scope.SetUser(sentry.User{
+			Email: r.FormValue("user"),
+		})
+	})
+}
+
 func handleSwaggerJSON(w http.ResponseWriter, r *http.Request) {
 	data := strings.ReplaceAll(assets.SwaggerJSON, "\"host\": \"localhost\",", "\"host\": \"localhost:"+port+"\",")
 
@@ -488,6 +544,10 @@ func monitorParentProcess(parentPID int32) {
 	ticker := time.NewTicker(time.Second)
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		for {
 			select {
 			case <-ticker.C:
@@ -505,6 +565,7 @@ func parseCommandLineFlags() commandLineParameters {
 	tempProjectPathPtr := flag.String("temp-project", "", "The path to the temporary project file to open")
 	apiPortPtr := flag.Int("api-port", 10101, "The port for the API and UI to listen on (set to 0 for a random available port)")
 	previewProxyPortPtr := flag.Int("preview-proxy-port", 10111, "The port for the preview proxy to listen on (set to 0 for a random available port)")
+	errorReportingPtr := flag.Bool("error-reporting", false, "Whether to enable error reporting")
 
 	flag.Parse()
 
@@ -513,6 +574,8 @@ func parseCommandLineFlags() commandLineParameters {
 	if *projectPathPtr == "" {
 		log.Fatal("A project path must be specified")
 	}
+
+	crashHandlingEnabled = *errorReportingPtr
 
 	params := commandLineParameters{
 		*apiKeyPtr,

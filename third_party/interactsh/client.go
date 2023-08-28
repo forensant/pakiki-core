@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
@@ -165,6 +166,10 @@ func (c *Client) StartPolling(duration time.Duration, callback InteractionCallba
 	ticker := time.NewTicker(duration)
 	c.quitChan = make(chan struct{})
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		for {
 			select {
 			case <-ticker.C:

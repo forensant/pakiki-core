@@ -23,6 +23,8 @@ import (
 	"time"
 
 	_ "embed"
+
+	"github.com/getsentry/sentry-go"
 )
 
 //go:embed pakiki_core.py
@@ -153,6 +155,10 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 	scriptCaller.SetStatus("Running")
 
 	go func() {
+		sentry.CurrentHub().Clone()
+		defer sentry.Flush(5 * time.Second)
+		defer sentry.Recover()
+
 		for idx, scriptPart := range scriptCode {
 			code := replaceCodeVariables(scriptPart.Code, guid, hostPort, apiKey)
 			err = sendCodeToInterpreter(scriptPart.Filename, code, pythonIn, pythonErr, idx == len(scriptCode)-1)
@@ -180,6 +186,10 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 
 		readingFinishedChannel := make(chan bool)
 		go func() {
+			sentry.CurrentHub().Clone()
+			defer sentry.Flush(5 * time.Second)
+			defer sentry.Recover()
+
 			readBuf := make([]byte, 1024)
 			fullOutput := make([]byte, 0)
 			for {
