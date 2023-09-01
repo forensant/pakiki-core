@@ -12,33 +12,6 @@ import (
 	_ "embed"
 )
 
-// GetScopeEntries godoc
-// @Summary Get All Scope Entries
-// @Description gets a list of all scope entries
-// @Tags Requests
-// @Produce json
-// @Security ApiKeyAuth
-// @Success 200 {array} project.ScopeEntry
-// @Failure 500 {string} string Error
-// @Router /scope/entries [get]
-func GetScopeEntries(w http.ResponseWriter, r *http.Request) {
-	var scopeEntries []ScopeEntry
-	result := readableDatabase.Order("scope_entries.sort_order").Find(&scopeEntries)
-
-	if result.Error != nil {
-		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	response, err := json.Marshal(scopeEntries)
-	if err != nil {
-		http.Error(w, "Could not marshal scope entries: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(response)
-}
-
 type ScopeEntryImportJSON struct {
 	File     string `json:"file"`
 	Host     string `json:"host"`
@@ -93,7 +66,36 @@ func DeleteScopeEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	go refreshScope()
+
 	w.Write([]byte("OK"))
+}
+
+// GetScopeEntries godoc
+// @Summary Get All Scope Entries
+// @Description gets a list of all scope entries
+// @Tags Requests
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {array} project.ScopeEntry
+// @Failure 500 {string} string Error
+// @Router /scope/entries [get]
+func GetScopeEntries(w http.ResponseWriter, r *http.Request) {
+	var scopeEntries []ScopeEntry
+	result := readableDatabase.Order("scope_entries.sort_order").Find(&scopeEntries)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving request from database: "+result.Error.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response, err := json.Marshal(scopeEntries)
+	if err != nil {
+		http.Error(w, "Could not marshal scope entries: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(response)
 }
 
 // ImportScope godoc

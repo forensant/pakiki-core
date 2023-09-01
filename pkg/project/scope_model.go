@@ -27,7 +27,19 @@ type ScopeEntry struct {
 
 func (se *ScopeEntry) URLInScope(urlStr string) (bool, error) {
 	if se.Prefix != "" {
-		return strings.HasPrefix(urlStr, se.Prefix), nil
+		prefix := se.Prefix
+
+		// if the prefix doesn't have a trailing slash, add one
+		// otherwise https://livefirerange.pakikiproxy.com.someotherdomain.com would also match https://livefirerange.pakikiproxy.com
+		if !strings.Contains(strings.Replace(prefix, "://", "", -1), "/") {
+			prefix += "/"
+		}
+
+		if !strings.Contains(strings.Replace(urlStr, "://", "", -1), "/") {
+			urlStr += "/"
+		}
+
+		return strings.HasPrefix(urlStr, prefix), nil
 	}
 
 	u, err := url.Parse(urlStr)
