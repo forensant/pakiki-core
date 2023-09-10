@@ -59,12 +59,20 @@ func GetScript(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 // @Tags Scripting
 // @Produce  json
 // @Security ApiKeyAuth
+// @Param script_group query string false "Optional Script Group to filter by"
 // @Success 200 {array} project.ScriptRun
 // @Failure 500 {string} string Error
 // @Router /scripts [get]
 func GetScripts(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	var scripts []ScriptRun
-	result := db.Order("script_runs.id").Find(&scripts)
+	tx := db.Order("script_runs.id")
+
+	scriptGroup := r.FormValue("script_group")
+	if scriptGroup != "" {
+		tx = tx.Where("script_group = ?", scriptGroup)
+	}
+
+	result := tx.Find(&scripts)
 
 	for idx := range scripts {
 		scripts[idx].UpdateFromRunningScript()
