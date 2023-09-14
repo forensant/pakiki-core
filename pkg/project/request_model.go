@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -472,6 +473,9 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 		}()
 		return false
 	} else {
+		hash := sha256.New()
+		hash.Write(bodyBytes)
+		request.Hash = base64.StdEncoding.EncodeToString(hash.Sum(nil))
 		go func() {
 			sentry.CurrentHub().Clone()
 			defer sentry.Flush(5 * time.Second)
@@ -537,6 +541,14 @@ func streamLargeRequest(request *Request, startTime time.Time, initialResponse [
 		bodyWriter.Write(initialResponse)
 	}
 
+	hash := sha256.New()
+	hash.Write(initialResponse)
+
+	defer func() {
+		request.Hash = base64.StdEncoding.EncodeToString(hash.Sum(nil))
+		request.Record()
+	}()
+
 	responseLength := int64(len(initialResponse)) + int64(headerLen)
 	offset := request.RequestSize + responseLength
 	request.Record()
@@ -575,6 +587,8 @@ func streamLargeRequest(request *Request, startTime time.Time, initialResponse [
 			request.ResponseSize = responseLength
 			request.ResponseContentLength = responseLength - int64(headerLen)
 			request.Record()
+
+			hash.Write(bodyBytes)
 
 			if bodyWriter != nil {
 				bodyWriter.Write(bodyBytes)

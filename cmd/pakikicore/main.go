@@ -217,6 +217,9 @@ func main() {
 	rtr.HandleFunc("/scope/order", authenticate(project.OrderScopeEntries))
 	rtr.HandleFunc("/scope/url_in_scope", authenticate(project.URLInScope))
 
+	rtr.HandleFunc("/scans/{scanid}/status_statistics", authenticate(project.GetScanStatusStats))
+	rtr.HandleFunc("/scans/{scanid}/unique_responses", authenticate(project.GetScanUniqueResponses))
+
 	rtr.HandleFunc("/script_groups", authenticateWithGormDB(project.HandleScriptGroups))
 	rtr.HandleFunc("/script_groups/{guid}", authenticateWithGormDB(project.GetScriptGroup))
 	rtr.HandleFunc("/script_groups/{guid}/archive", authenticateWithGormDB(project.PatchScriptGroupArchive))
