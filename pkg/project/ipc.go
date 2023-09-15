@@ -149,10 +149,13 @@ func NewIOHub(port string, apiToken string) *IOHub {
 // @Failure 500 {string} string Error
 // @Router /notifications [get]
 func Notifications(hub *IOHub, apiToken string, w http.ResponseWriter, r *http.Request) {
-	upgrader.CheckOrigin = func(r *http.Request) bool {
-		key := r.FormValue("api_key")
-		return key == apiToken
+	if upgrader.CheckOrigin == nil {
+		upgrader.CheckOrigin = func(r *http.Request) bool {
+			key := r.FormValue("api_key")
+			return key == apiToken
+		}
 	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 
 	if err != nil {
