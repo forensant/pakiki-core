@@ -625,7 +625,13 @@ func (request *Request) Record() {
 		request.SiteMapPath = getSiteMapPath(request.URL)
 	}
 
-	request.Saved = request.committed()
+	if request.committed() {
+		request.Saved = true
+		request.Action = "modified"
+	} else {
+		request.Action = "new"
+	}
+
 	ioHub.databaseWriter <- request
 
 	request.ObjectType = "HTTP Request"
@@ -661,12 +667,6 @@ func urlMatchesScope(urlStr string) bool {
 }
 
 func (request *Request) ShouldFilter(filter string) bool {
-	if request.Saved {
-		request.Action = "modified"
-	} else {
-		request.Action = "new"
-	}
-
 	if filter == "" {
 		return false
 	}

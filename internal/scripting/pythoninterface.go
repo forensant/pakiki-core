@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	_ "embed"
@@ -31,6 +32,7 @@ import (
 var commonCode string
 
 var runningScripts = make(map[string]*exec.Cmd)
+var runningScriptsMutex sync.RWMutex
 
 // ScriptCode contains an individual file to be run as part of a script
 type ScriptCode struct {
@@ -49,7 +51,9 @@ type ScriptCaller interface {
 }
 
 func CancelScriptInternal(guid string) error {
+	runningScriptsMutex.RLock()
 	command, ok := runningScripts[guid]
+	defer runningScriptsMutex.RUnlock()
 
 	if ok {
 		err := command.Process.Kill()
@@ -132,7 +136,9 @@ func startPythonInterpreter(guid string) (stdin io.WriteCloser, stdout io.ReadCl
 		return
 	}
 
+	runningScriptsMutex.Lock()
 	runningScripts[guid] = pythonCmd
+	runningScriptsMutex.Unlock()
 
 	return
 }
@@ -176,8 +182,10 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 
 				scriptCaller.RecordError(err)
 
+				runningScriptsMutex.Lock()
 				runningScripts[guid].Process.Kill()
 				delete(runningScripts, guid)
+				runningScriptsMutex.Unlock()
 				return
 			}
 		}
@@ -218,10 +226,15 @@ func StartScript(hostPort string, scriptCode []ScriptCode, apiKey string, script
 			}
 		}()
 
-		runningScripts[guid].Wait()
+		runningScriptsMutex.RLock()
+		command := runningScripts[guid]
+		runningScriptsMutex.RUnlock()
+		command.Wait()
 		<-readingFinishedChannel
 
+		runningScriptsMutex.Lock()
 		delete(runningScripts, guid)
+		runningScriptsMutex.Unlock()
 	}()
 
 	return guid, nil
