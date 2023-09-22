@@ -275,7 +275,7 @@ func bulkRequestWorker(ssl bool, hostname string, scanId string, requestParts []
 		req.Record()
 
 		request_queue.Decrement(scanId)
-		project.ScriptDecrementTotalRequests(scanId)
+		project.ScriptIncrementRequestCount(scanId)
 	}
 	done <- true
 }
