@@ -9,11 +9,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// SiteMapItem represents a path in the sitemap
+// SiteMapPath represents a path in the sitemap
 type SiteMapPath struct {
 	ID         uint   `json:"-"`
 	ObjectType string `gorm:"-"`
 	Path       string
+	InScope    bool `gorm:"-"`
 }
 
 var siteMapPaths []SiteMapPath
@@ -59,6 +60,7 @@ func (siteMapPath *SiteMapPath) Record() {
 	ioHub.databaseWriter <- siteMapPath
 
 	siteMapPath.ObjectType = "Site Map Path"
+	siteMapPath.InScope = urlMatchesScope(siteMapPath.Path)
 	ioHub.broadcast <- siteMapPath
 }
 

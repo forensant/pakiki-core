@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+// SiteMapItem represents a path in the sitemap to be returned
+type SiteMapItem struct {
+	Path    string
+	InScope bool
+}
+
 // GetSitemap godoc
 // @Summary Gets the sitemap
 // @Description gets a list of all paths observed by the proxy
@@ -14,7 +20,7 @@ import (
 // @Security ApiKeyAuth
 // @Param parent query string true "An optional filter on the query to restrict to specific paths"
 // @Param scan_id query string true "An optional filter on the query to restrict to the paths to those seen for a particular scan"
-// @Success 200 {array} string
+// @Success 200 {array} project.SiteMapItem
 // @Failure 500 {string} string Error
 // @Router /requests/sitemap [get]
 func GetSitemap(w http.ResponseWriter, r *http.Request) {
@@ -29,10 +35,14 @@ func GetSitemap(w http.ResponseWriter, r *http.Request) {
 	var siteMaps []SiteMapPath
 	readableDatabase.Distinct("site_map_paths.path").Joins("left join requests on site_map_path_id = site_map_paths.id").Where("requests.scan_id = ?", scanId).Find(&siteMaps)
 
-	var siteMap = make([]string, 0)
+	var siteMap = make([]SiteMapItem, 0)
 	if parent == "" {
 		for _, s := range siteMaps {
-			siteMap = append(siteMap, s.Path)
+			item := SiteMapItem{
+				Path:    s.Path,
+				InScope: urlMatchesScope(s.Path),
+			}
+			siteMap = append(siteMap, item)
 		}
 	} else {
 		for _, s := range siteMaps {
@@ -44,7 +54,11 @@ func GetSitemap(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if strings.HasPrefix(s.Path[prefixStart:], parent) {
-				siteMap = append(siteMap, s.Path)
+				item := SiteMapItem{
+					Path:    s.Path,
+					InScope: urlMatchesScope(s.Path),
+				}
+				siteMap = append(siteMap, item)
 			}
 		}
 	}
