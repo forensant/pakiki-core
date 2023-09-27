@@ -453,6 +453,12 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	maxHighlightLength, err := strconv.Atoi(r.FormValue("max_highlight_length"))
+	if err != nil {
+		// default of 50KB
+		maxHighlightLength = 50 * 1024
+	}
+
 	if httpRequest.Protocol == "Websocket" || httpRequest.Protocol == "Out of Band" {
 		requestResponse.DataPackets = dataPackets
 
@@ -463,6 +469,15 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 			requestResponse.DataPackets[idx].IsUTF8 = utf8.Valid(dpkt.Data)
 		}
 
+		if httpRequest.Protocol == "Out of Band" {
+			for _, dpkt := range requestResponse.DataPackets {
+				if dpkt.Direction == "Request" && requestResponse.Request == "" {
+					requestResponse.Request = highlightAndEncode(dpkt.Data, shouldHighlight, maxHighlightLength, false)
+				} else if dpkt.Direction == "Response" && requestResponse.Response == "" {
+					requestResponse.Response = highlightAndEncode(dpkt.Data, shouldHighlight, maxHighlightLength, false)
+				}
+			}
+		}
 	} else {
 		var origReq []byte
 		var origResp []byte
@@ -498,12 +513,6 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 		isUTF8 := (utf8.Valid(origReq) && utf8.Valid(origResp) && utf8.Valid(modReq) && utf8.Valid(modResp))
 		if !isUTF8 {
 			shouldHighlight = false
-		}
-
-		maxHighlightLength, err := strconv.Atoi(r.FormValue("max_highlight_length"))
-		if err != nil {
-			// default of 50KB
-			maxHighlightLength = 50 * 1024
 		}
 
 		requestResponse.Request = highlightAndEncode(origReq, shouldHighlight, maxHighlightLength, false)
