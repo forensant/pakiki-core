@@ -473,8 +473,10 @@ func GetRequestResponseContents(w http.ResponseWriter, r *http.Request) {
 			for _, dpkt := range requestResponse.DataPackets {
 				if dpkt.Direction == "Request" && requestResponse.Request == "" {
 					requestResponse.Request = highlightAndEncode(dpkt.Data, shouldHighlight, maxHighlightLength, false)
+					requestResponse.IsUTF8 = true
 				} else if dpkt.Direction == "Response" && requestResponse.Response == "" {
 					requestResponse.Response = highlightAndEncode(dpkt.Data, shouldHighlight, maxHighlightLength, false)
+					requestResponse.IsUTF8 = true
 				}
 			}
 		}
