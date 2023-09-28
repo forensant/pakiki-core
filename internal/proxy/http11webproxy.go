@@ -97,6 +97,7 @@ func onHttp11RequestReceived(req *http.Request, ctx *goproxy.ProxyCtx) (*http.Re
 	}
 
 	if interceptSettings.BrowserToServer {
+		request.Record()
 		interceptedRequest := interceptRequest(request, "", "browser_to_server", requestBytes, hookRun, nil)
 		<-interceptedRequest.ResponseReady
 
