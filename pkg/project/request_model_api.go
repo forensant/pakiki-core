@@ -78,6 +78,7 @@ type RequestSearchResult struct {
 type PartialRequestResponse struct {
 	TotalRequests uint64
 	Requests      []Request
+	Offset        int
 }
 
 // CompareRequests godoc
@@ -617,7 +618,8 @@ func isInSlice(slice []string, val string) bool {
 // @Param sort_dir query string false "Column direction to sort by (default asc)"
 // @Param last query int false "Limit to the last n requests (sorted by time)"
 // @Param limit query int false "Maximum number of rows to return"
-// @Param offset query int false "Offset X rows from the start"
+// @Param limit_last query bool false "When limiting the number of rows to return, return the last n rows instead of the first n"
+// @Param offset query int false "Offset X rows from the start (if limit_last is not set)"
 // @Security ApiKeyAuth
 // @Success 200 {array} project.Request
 // @Failure 500 {string} string Error
@@ -692,7 +694,9 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 
 	limit := r.FormValue("limit")
 	offset := r.FormValue("offset")
+	limitLast := r.FormValue("limit_last")
 	var requestCount int64 = 0
+	offsetInt := 0
 	if limit != "" {
 		tx = tx.Table("requests")
 		tx.Count(&requestCount)
@@ -701,11 +705,20 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		limitInt, err := strconv.Atoi(limit)
 		if err == nil {
 			tx = tx.Limit(limitInt)
+
+			if limitLast == "true" {
+				offsetInt = (int)(requestCount - int64(limitInt))
+				if offsetInt < 0 {
+					offsetInt = 0
+				}
+				tx = tx.Offset(offsetInt)
+			}
 		}
 	}
 
-	if offset != "" {
-		offsetInt, err := strconv.Atoi(offset)
+	if offset != "" && limitLast != "true" {
+		var err error
+		offsetInt, err = strconv.Atoi(offset)
 		if err == nil {
 			tx = tx.Offset(offsetInt)
 		}
@@ -735,6 +748,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		response, err = json.Marshal(PartialRequestResponse{
 			TotalRequests: uint64(requestCount),
 			Requests:      requests,
+			Offset:        offsetInt,
 		})
 	} else {
 		response, err = json.Marshal(requests)
