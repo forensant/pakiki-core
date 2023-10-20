@@ -36,7 +36,7 @@ func interceptRequest(request *project.Request, guid string, direction string, r
 		RequestBody:   base64.StdEncoding.EncodeToString(requestData),
 		Direction:     direction,
 		ResponseReady: make(chan bool),
-		IsUTF8:        utf8.Valid(requestData),
+		IsUTF8:        utf8.Valid(requestResponseData),
 		HookRun:       hookRun,
 	}
 
