@@ -618,7 +618,7 @@ func isInSlice(slice []string, val string) bool {
 // @Param sort_dir query string false "Column direction to sort by (default asc)"
 // @Param last query int false "Limit to the last n requests (sorted by time)"
 // @Param limit query int false "Maximum number of rows to return"
-// @Param limit_last query bool false "When limiting the number of rows to return, return the last n rows instead of the first n"
+// @Param limit_last query bool false "When limiting the number of rows to return, return the last n rows instead of the first n (does not apply when using in_scope)"
 // @Param offset query int false "Offset X rows from the start (if limit_last is not set)"
 // @Security ApiKeyAuth
 // @Success 200 {array} project.Request
@@ -692,16 +692,16 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		sortDirection = requestSortDir
 	}
 
+	in_scope := r.FormValue("in_scope") == "true"
 	limit := r.FormValue("limit")
 	offset := r.FormValue("offset")
 	limitLast := r.FormValue("limit_last")
 	var requestCount int64 = 0
 	offsetInt := 0
-	if limit != "" {
+	if limit != "" && !in_scope {
 		tx = tx.Table("requests")
 		tx.Count(&requestCount)
-	}
-	if limit != "" {
+
 		limitInt, err := strconv.Atoi(limit)
 		if err == nil {
 			tx = tx.Limit(limitInt)
@@ -716,7 +716,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if offset != "" && limitLast != "true" {
+	if offset != "" && limitLast != "true" && !in_scope {
 		var err error
 		offsetInt, err = strconv.Atoi(offset)
 		if err == nil {
@@ -731,7 +731,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.FormValue("in_scope") == "true" {
+	if in_scope {
 		inScopeRequests := make([]Request, 0)
 		for _, request := range requests {
 			if urlMatchesScope(request.URL) {
@@ -739,12 +739,13 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		requests = inScopeRequests
+		requestCount = int64(len(requests))
 	}
 
 	var response []byte
 	var err error
 
-	if limit != "" {
+	if limit != "" || in_scope {
 		response, err = json.Marshal(PartialRequestResponse{
 			TotalRequests: uint64(requestCount),
 			Requests:      requests,
