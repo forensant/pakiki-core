@@ -745,7 +745,7 @@ func GetRequests(w http.ResponseWriter, r *http.Request) {
 	var response []byte
 	var err error
 
-	if limit != "" || in_scope {
+	if limit != "" /*|| in_scope*/ {
 		response, err = json.Marshal(PartialRequestResponse{
 			TotalRequests: uint64(requestCount),
 			Requests:      requests,
