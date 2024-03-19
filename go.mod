@@ -4,7 +4,9 @@ go 1.16
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
+	github.com/alecthomas/chroma/v2 v2.13.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+	github.com/andybalholm/brotli v1.0.6
 	github.com/elazarl/goproxy v0.0.0-20211114080932-d06c3be7c11b // indirect
 	github.com/forensant/goproxy v0.0.0-20230620193648-66cc989b2a48
 	github.com/getsentry/sentry-go v0.23.0
@@ -30,7 +32,6 @@ require (
 	gopkg.in/corvus-ch/zbase32.v1 v1.0.0
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/gorm v1.21.5
-	rogchap.com/v8go v0.9.0
 )
 
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
