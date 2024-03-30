@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,12 +16,13 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	assets "github.com/forensant/pakiki-core"
+	"github.com/alecthomas/chroma/v2"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/gorilla/mux"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"gorm.io/gorm"
-
-	"rogchap.com/v8go"
 )
 
 const RequestFilterSQL = "url LIKE ? OR id IN (SELECT request_id FROM data_packets WHERE request_id NOT IN (SELECT id FROM requests WHERE response_size > 10485760 OR request_size > 10485760) GROUP BY request_id HAVING GROUP_CONCAT(data) LIKE ? ORDER BY direction ASC, id ASC)"
@@ -28,8 +30,6 @@ const RequestNegativeFilterSQL = "url NOT LIKE ? AND id IN (SELECT request_id FR
 
 // Ensure that the code-based check is also updated in this scenario
 const FilterResourcesSQL = "(response_content_type NOT LIKE 'font/%' AND response_content_type NOT LIKE 'image/%' AND response_content_type NOT LIKE '%javascript%' AND response_content_type NOT LIKE 'text/css%' AND url NOT LIKE '%.jpg%' AND url NOT LIKE '%.gif%' AND url NOT LIKE '%.png%' AND url NOT LIKE '%.svg' AND url NOT LIKE '%.woff2%' AND url NOT LIKE '%.css%' AND url NOT LIKE '%.js' AND url NOT LIKE '%.js?%')"
-
-var v8vm *v8go.Isolate
 
 // RequestResponseContents contains the request and response in base64 format
 type RequestResponseContents struct {
@@ -1096,24 +1096,49 @@ func RequestDataSearch(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 }
 
 func syntaxHighlightText(text []byte, language string) []byte {
-	if v8vm == nil {
-		v8vm = v8go.NewIsolate()
-	}
-
-	encText := base64.StdEncoding.EncodeToString(text)
-
-	ctx := v8go.NewContext(v8vm)
-	ctx.RunScript(assets.HighlightJS, "highlight.js")
-	ctx.RunScript(assets.AtobJS, "atob.js")
-	ctx.RunScript("const result = atob('"+encText+"')", "script.js")
-	ctx.RunScript("const highlightedTxt = hljs.highlight(result, {language: '"+language+"'}).value", "script.js")
-	val, _ := ctx.RunScript("btoa(highlightedTxt)", "value.js")
-	retStr, err := base64.StdEncoding.DecodeString(val.String())
-
-	if err != nil {
-		fmt.Printf("Error decoding base64: %s\n", err)
+	if len(text) == 0 {
 		return []byte("")
 	}
 
-	return retStr
+	lexer := lexers.Get(language)
+	if lexer == nil {
+		lexer = lexers.Fallback
+	}
+	lexer = chroma.Coalesce(lexer)
+
+	style := styles.Get("monokai")
+	if style == nil {
+		style = styles.Fallback
+	}
+
+	r := bytes.NewReader(text)
+	contents, err := io.ReadAll(r)
+	if err != nil {
+		fmt.Printf("Error reading contents: %s\n", err)
+		return []byte("")
+	}
+	iterator, err := lexer.Tokenise(nil, string(contents))
+
+	if err != nil {
+		fmt.Printf("Error tokenizing: %s\n", err)
+		return []byte("")
+	}
+
+	w := &bytes.Buffer{}
+	formatter := chromahtml.New(
+		chromahtml.ClassPrefix("chroma-"),
+	)
+	formatter.Classes = true
+	err = formatter.Format(w, style, iterator)
+
+	if err != nil {
+		fmt.Printf("Error formatting: %s\n", err)
+		return []byte("")
+	}
+
+	b := w.Bytes()
+	b = bytes.ReplaceAll(b, []byte("<code>"), []byte(""))
+	b = bytes.ReplaceAll(b, []byte("</code>"), []byte(""))
+
+	return b
 }

@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	"github.com/forensant/goproxy"
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
@@ -413,6 +414,10 @@ func (request *Request) HandleResponse(resp *http.Response, ctx *goproxy.ProxyCt
 				isCompressed = true
 				bodyToRead = gzipBody
 			}
+		} else if resp.Header.Get("Content-Encoding") == "br" {
+			brBody := brotli.NewReader(originalBody)
+			bodyToRead = io.NopCloser(brBody)
+			isCompressed = true
 		} else {
 			bodyToRead = originalBody
 		}
