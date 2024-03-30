@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <string>
 #include <sys/stat.h>
+#include <stdlib.h>
+
+#include <cwchar>  // Include for std::mbstowcs
+#include <memory>  // Include for std::unique_ptr
 
 using std::cerr;
 using std::cout;
@@ -35,16 +39,32 @@ using std::wcout;
 #include <fcntl.h>
 #endif
 
-wchar_t *GetWC(const char *c) {
-  if (c == nullptr) {
-    return nullptr;
-  }
+wchar_t* GetWC(const char* c) {
+    if (c == nullptr) {
+        return nullptr;  // Handle null input gracefully
+    }
 
-  size_t length = mbstowcs(NULL, c, 0) + 1;
-  wchar_t* wc = new wchar_t[length];
-  mbstowcs (wc, c, length);
+    // Use std::mbstowcs_s for safer conversion with size check
+    size_t length;
+    errno_t result = mbstowcs_s(&length, nullptr, 0, c, 0);
+    if (result != 0) {
+        // Conversion failed, handle the error (e.g., throw an exception)
+        return nullptr;
+    }
+    length += 1;  // Account for null terminator
 
-  return wc;
+    // Use std::unique_ptr for memory management
+    std::unique_ptr<wchar_t[]> wc(new wchar_t[length]);
+
+    // Perform conversion with size check again
+    size_t converted;
+    result = mbstowcs_s(&converted, wc.get(), length, c, length - 1);
+    if (result != 0) {
+        // Conversion failed (buffer too small?), handle the error
+        return nullptr;
+    }
+
+    return wc.get();  // Safely return the unique_ptr
 }
 
 bool errorOccurred() {
@@ -91,7 +111,7 @@ bool errorOccurred() {
 
 char* concatenateDir(const char* path) {
   char* currDir = (char*)malloc(102400);
-  currDir = getcwd(currDir, 102400);
+  currDir = _getcwd(currDir, 102400);
   if(currDir == nullptr) {
     fprintf(stderr, "%d", errno);
   }
@@ -108,7 +128,7 @@ char* concatenateDir(const char* path) {
 
 char* getDir() {
 #ifdef _WIN32
-  char* dir = concatenateDir("\\python39");
+  char* dir = concatenateDir("\\python11");
 #elif defined(__linux__)
   const char* pythonSubdir = "/python311";
 

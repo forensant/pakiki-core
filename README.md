@@ -43,6 +43,11 @@ If you're going to be running a development build, then will also need to copy t
       > You may need to ensure that the go bin directory is in your path. On Unix, you can add ```export PATH=$PATH:~/go/bin``` to your .bashrc or similar.
   * npm for the HTML frontend https://www.npmjs.com/get-npm
 
+### Windows
+Make sure that a gcc environment is present and in the path (for example mingw)
+Prior to building, go into the tools directory and compile the PythonInterpreter. Then copy the output to build\pakikipythoninterpreter.exe.
+For commands below, use the .ps1 scripts rather than the bash scripts.
+
 ### MacOS Dependencies:
 
 #### Homebrew:
