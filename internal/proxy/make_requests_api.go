@@ -372,7 +372,12 @@ func initConnectionPool() {
 	updateConnectionPool(defaultConnectionPool, nil)
 }
 
-func makeRequestToSite(ssl bool, hostname string, requestData []byte, httpClient *http.Client, httpContext context.Context) (*project.Request, error) {
+func makeRequestToSite(ssl bool, hostname string, req []byte, httpClient *http.Client, httpContext context.Context) (*project.Request, error) {
+	requestData := req
+	if bytes.ContainsAny(req, "\r") && !bytes.ContainsAny(req, "\n") {
+		requestData = bytes.ReplaceAll(req, []byte("\r"), []byte("\n"))
+	}
+
 	blankReq := &project.Request{
 		URL:         "",
 		Protocol:    "HTTP",

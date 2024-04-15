@@ -373,10 +373,11 @@ func crash(w http.ResponseWriter, r *http.Request) {
 func createListener(portParameter int, hostname string) net.Listener {
 	listener, err := net.Listen("tcp4", hostname+":"+strconv.Itoa(portParameter))
 	if err != nil {
-		if strings.Contains(err.Error(), "address already in use") {
+		if strings.Contains(err.Error(), "address already in use") || strings.Contains(err.Error(), "Only one usage of each socket address") {
 			fmt.Printf("Error: Port %d is already in use, could not use it for the UI. Using a random one.\n", portParameter)
 			return createListener(0, hostname)
 		} else {
+			fmt.Fprintf(os.Stderr, "Error starting listener: %s", err)
 			panic(err)
 		}
 	}

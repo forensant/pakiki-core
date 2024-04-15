@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"html"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -910,7 +909,7 @@ func highlightAndEncode(req []byte, shouldHighlight bool, maxHighlightLength int
 // @Router /requests/highlight [post]
 func HighlightRequest(w http.ResponseWriter, r *http.Request) {
 	// read the request body
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
 		return
