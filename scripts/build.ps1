@@ -51,7 +51,7 @@ New-Item -ItemType Directory -Force -Path "build/python311/lib"
 # Build Pākiki Core
 Write-Host "## Building Pākiki Core"
 $ENV:CGO_ENABLED = "1"
-go build -ldflags "-s -w -X main.release=$commit_sha" -o build/pakikicore cmd/pakikicore/main.go
+go build -ldflags "-s -w -X main.release=$commit_sha" -o build/pakikicore.exe cmd/pakikicore/main.go
 
 Write-Output ""
 Write-Output ""

@@ -388,7 +388,7 @@ func createListener(portParameter int, hostname string) net.Listener {
 func ensureProcessExists(parentPID int32) {
 	exists, err := process.PidExists(parentPID)
 	if err != nil {
-		log.Println("Could not check whether parent process exists: ", err)
+		fmt.Println("Could not check whether parent process exists: ", err)
 		return
 	}
 
@@ -553,10 +553,8 @@ func monitorParentProcess(parentPID int32) {
 		defer sentry.Recover()
 
 		for {
-			select {
-			case <-ticker.C:
-				ensureProcessExists(parentPID)
-			}
+			<-ticker.C
+			ensureProcessExists(parentPID)
 		}
 	}()
 }

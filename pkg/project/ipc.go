@@ -98,7 +98,14 @@ func autosave() {
 }
 
 func CloseProject() {
-	autosaveTimer.Stop()
+	if autosaveTimer != nil {
+		autosaveTimer.Stop()
+	}
+	if writableDatabase == nil || projectPath == "" {
+		fmt.Printf("Project not open\n")
+		return
+	}
+
 	fmt.Printf("Saving and closing project - this could take a while for large projects\n")
 	saveProject()
 	err := os.Remove(decompressedDBPath)
