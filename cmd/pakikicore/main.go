@@ -70,7 +70,7 @@ func main() {
 	parameters := parseCommandLineFlags()
 
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn:                "https://aaf0b2237ce651346d15ff46debe9ff3@sentryio.pakikiproxy.com/3",
+		Dsn:                "https://68a19122f1b4bc9ac1ca2ac29dd367c8@sentry.pakikiproxy.com/5",
 		AttachStacktrace:   true,
 		Release:            release,
 		EnableTracing:      true,
