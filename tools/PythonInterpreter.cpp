@@ -40,10 +40,11 @@ using std::wcout;
 #endif
 
 wchar_t* GetWC(const char* c) {
-    if (c == nullptr) {
-        return nullptr;  // Handle null input gracefully
-    }
+  if (c == nullptr) {
+    return nullptr;  // Handle null input gracefully
+  }
 
+  #ifdef _WIN32
     // Use std::mbstowcs_s for safer conversion with size check
     size_t length;
     errno_t result = mbstowcs_s(&length, nullptr, 0, c, 0);
@@ -65,6 +66,12 @@ wchar_t* GetWC(const char* c) {
     }
 
     return wc.get();  // Safely return the unique_ptr
+  #else
+    size_t length = mbstowcs(NULL, c, 0) + 1;
+    wchar_t* wc = new wchar_t[length];
+    mbstowcs (wc, c, length);
+    return wc;
+  #endif
 }
 
 bool errorOccurred() {
@@ -111,7 +118,11 @@ bool errorOccurred() {
 
 char* concatenateDir(const char* path) {
   char* currDir = (char*)malloc(102400);
+#ifdef _WIN32
   currDir = _getcwd(currDir, 102400);
+#else
+  currDir = getcwd(currDir, 102400);
+#endif
   if(currDir == nullptr) {
     fprintf(stderr, "%d", errno);
   }
