@@ -41,13 +41,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     lipo -create -output build/pakikicore build/PakikiCore_x86_64 build/PakikiCore_arm64
     rm build/PakikiCore_*
 else
-    mkdir -p build/python311/lib
+    mkdir -p build/python313/lib
 
     # written on Linux, but would likely be similar for other Unix systems
     echo "# Building Python interpreter"
-    gcc $(python3.11-config --cflags) $(python3.11-config --ldflags) $(python3.11-config --libs) -std=c++17 -fPIC tools/PythonInterpreter.cpp -o build/pakikipythoninterpreter -lstdc++ -lpython3.11
+    gcc $(python3.13-config --cflags) $(python3.13-config --ldflags) $(python3.13-config --libs) -std=c++17 -fPIC tools/PythonInterpreter.cpp -o build/pakikipythoninterpreter -lstdc++ -lpython3.13
     
-    cp -r $(python3.11-config --prefix)/lib/python3.11 build/python311/lib
+    cp -r $(python3.13-config --prefix)/lib/python3.13 build/python313/lib
 
     scripts/copy_lib_linux.rb build/
 
