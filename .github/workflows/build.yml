@@ -102,7 +102,7 @@ jobs:
           path: build
 
   MacOS:
-    runs-on: macos-12
+    runs-on: macos-14
     
     needs: HTML-Frontend
       

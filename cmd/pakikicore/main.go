@@ -121,13 +121,14 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Web frontend is available at: http://%s/\n", listener.Addr().String())
+	// NOTE: The frontend is temporarily disabled until it is upgraded to use a later version of Vue.js and/or we have demand for it.
+	/*fmt.Printf("Web frontend is available at: http://%s/\n", listener.Addr().String())
 	frontendSubdirectory, err := fs.Sub(assets.HTMLFrontendDir, "www/html_frontend/dist")
 	if err != nil {
 		log.Fatal("Could not open the subdirectory for the frontend: " + err.Error())
 		return
 	}
-	frontendFilesystem := http.FileServer(http.FS(frontendSubdirectory))
+	frontendFilesystem := http.FileServer(http.FS(frontendSubdirectory))*/
 
 	browserHomeSubdir, err := fs.Sub(assets.BrowserHomepageDir, "www/browser_home")
 	if err != nil {
@@ -244,7 +245,6 @@ func main() {
 	}))
 	rtr.HandleFunc("/debug", project.Debug)
 
-	rtr.HandleFunc("/api_key.js", handleAPIKey)
 	rtr.HandleFunc("/swagger/doc.json", handleSwaggerJSON)
 
 	rtr.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
@@ -258,7 +258,9 @@ func main() {
 	rtr.PathPrefix("/docs/").Handler(http.StripPrefix("/docs", docsFilesystem))
 	rtr.PathPrefix("/cyberchef/").Handler(http.StripPrefix("/cyberchef/", cyberchefFilesystem))
 	rtr.PathPrefix("/_media/").Handler(http.StripPrefix("", docsFilesystem))
-	rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
+
+	rtr.PathPrefix("/").Handler(http.RedirectHandler("/docs/index.html", http.StatusFound))
+	// rtr.PathPrefix("/").Handler(http.StripPrefix("/", frontendFilesystem))
 
 	http.Handle("/", rtr)
 
@@ -505,16 +507,6 @@ func getProjectPath(requested string, requestedTempPath string) (projectPath str
 	}
 
 	return
-}
-
-func handleAPIKey(w http.ResponseWriter, r *http.Request) {
-	key := ""
-	if isLocalhost(r) {
-		key = apiToken
-	}
-
-	js := "CORE_API_KEY = '" + key + "'"
-	w.Write([]byte(js))
 }
 
 func handleCrashReporting(w http.ResponseWriter, r *http.Request) {
