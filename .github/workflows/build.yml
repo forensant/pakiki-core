@@ -30,7 +30,7 @@ jobs:
         run: npm run build
         
       - name: Upload build
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v4
         with:
           name: www
           # A file, directory or wildcard pattern that describes what to upload
@@ -48,13 +48,18 @@ jobs:
           submodules: true
           
       - name: Download frontend
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: www
           path: www/html_frontend/dist/
             
       - name: Install system dependencies
-        run: sudo apt install build-essential python3.11-dev
+        run: sudo apt install build-essential
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
 
       - name: Install golang
         uses: actions/setup-go@v3
@@ -90,7 +95,7 @@ jobs:
         run: rm build/coverage.txt
   
       - name: Upload build
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v4
         with:
           name: Linux
           # A file, directory or wildcard pattern that describes what to upload
@@ -108,12 +113,12 @@ jobs:
           submodules: true
           
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.10.6
       
       - name: Download frontend
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: www
           path: www/html_frontend/dist/
@@ -139,7 +144,7 @@ jobs:
 #        run: rm build/coverage.txt
   
       - name: Upload build
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v4
         with:
           name: MacOS
           # A file, directory or wildcard pattern that describes what to upload

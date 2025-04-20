@@ -40,8 +40,8 @@ var crashHandlingEnabled bool = false
 var release string = "development"
 
 type commandLineParameters struct {
-	APIKey           string
-	BindAddress      string
+	APIKey string
+	//BindAddress      string  // disabled for now, until there can be more thinking about mitigating all of the risk around it (EG: How scripts can be run safely)
 	ProjectPath      string
 	TempProjectPath  string
 	ParentPID        int32
@@ -94,7 +94,8 @@ func main() {
 	defer sentry.Flush(5 * time.Second)
 	defer sentry.Recover()
 
-	listener := createListener(parameters.APIPort, parameters.BindAddress)
+	bindAddress := "localhost" // parameters.BindAddress
+	listener := createListener(parameters.APIPort, bindAddress)
 	port = strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 
 	if parameters.ParentPID != 0 {
@@ -560,8 +561,10 @@ func monitorParentProcess(parentPID int32) {
 }
 
 func parseCommandLineFlags() commandLineParameters {
+	// bind address is disabled for now, until there can be more thinking about mitigating all of the risk around it (EG: How scripts can be run safely)
+
 	apiKeyPtr := flag.String("api-key", "", "A key required to be passed to the X-API-Key header for every request")
-	bindAddressPtr := flag.String("bind-address", "localhost", "The IP address to bind the API and UI to (default 127.0.0.1)")
+	//bindAddressPtr := flag.String("bind-address", "localhost", "The IP address to bind the API and UI to (default 127.0.0.1)")
 	parentPIDInt := flag.Int("parentpid", 0, "The process id (PID) of the proxy parent process")
 	projectPathPtr := flag.String("project", "", "The path to the project to open")
 	tempProjectPathPtr := flag.String("temp-project", "", "The path to the temporary project file to open")
@@ -581,7 +584,7 @@ func parseCommandLineFlags() commandLineParameters {
 
 	params := commandLineParameters{
 		*apiKeyPtr,
-		*bindAddressPtr,
+		//*bindAddressPtr,
 		*projectPathPtr,
 		*tempProjectPathPtr,
 		parentPID,
